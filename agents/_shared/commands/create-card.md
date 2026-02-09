@@ -1,13 +1,13 @@
 ---
 allowed-tools: Bash
-description: Create a card using cells CLI
+description: Create a card using skip CLI
 argument-hint: [agent-id] [title] [subtext] [content] [image-url]
 ---
 
-Create a card with the cells CLI:
+Create a card with the skip CLI:
 
 ```bash
-cells card create \
+skip card create \
   --agent-id="$1" \
   --title="$2" \
   --subtext="$3" \
@@ -28,7 +28,7 @@ Cards can include library metadata for freshness-based selection and location fi
 
 **Timely card** (weather, tides, fishing reports — expires after a set period):
 ```bash
-cells card create \
+skip card create \
   --agent-id="beat-weather-tierra-verde" \
   --title="Perfect Boating Weekend" \
   --subtext="Light winds and calm seas through Sunday." \
@@ -42,7 +42,7 @@ cells card create \
 
 **Evergreen card** (maintenance tips, gear guides — no expiration):
 ```bash
-cells card create \
+skip card create \
   --agent-id="beat-maintenance-tierra-verde" \
   --title="Spring Engine Checklist" \
   --subtext="Keep your outboard running smooth all season." \

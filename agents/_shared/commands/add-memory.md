@@ -7,5 +7,5 @@ argument-hint: [user-id] [category] [content]
 Add a memory:
 
 ```bash
-cells memory add --user=$1 --category=$2 --content="$3"
+skip memory add --user=$1 --category=$2 --content="$3"
 ```

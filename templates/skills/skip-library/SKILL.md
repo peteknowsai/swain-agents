@@ -1,7 +1,7 @@
 ---
-name: cells-library
+name: skip-library
 description: Browse and understand the card library for content selection.
-metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["cells"] } } }
+metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["skip"] } } }
 ---
 
 # Card Library
@@ -11,7 +11,7 @@ The card library is the pool of all available content cards. Cards are created b
 ## Browsing
 
 ```bash
-cells card library --user=<userId> --json
+skip card library --user=<userId> --json
 ```
 
 Returns:

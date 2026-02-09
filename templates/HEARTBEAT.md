@@ -4,8 +4,8 @@
 
 Every morning, check if today's briefing has been created:
 
-1. Run `cells briefing list --user={{userId}} --json` and check if a briefing exists for today's date
-2. If no briefing exists for today, use the **cells-advisor** skill to create one
+1. Run `skip briefing list --user={{userId}} --json` and check if a briefing exists for today's date
+2. If no briefing exists for today, use the **skip-advisor** skill to create one
 3. Check if any timely cards are expiring in the next 24 hours and prioritize them
 
 ## Weekly Memory Review (Sunday 8:00 AM)

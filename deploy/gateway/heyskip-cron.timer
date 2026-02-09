@@ -1,0 +1,10 @@
+[Unit]
+Description=Hey Skip Cron Scheduler (runs every minute, checks crons.json)
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

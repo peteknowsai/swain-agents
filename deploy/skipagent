@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Interactive agent selector — connects to VPS agents via TUI
+# Usage: skipagent [agent-id]
+#
+# With no args, presents a menu then opens TUI.
+# With agent name, opens TUI directly.
+#
+#   skipagent              → menu → TUI
+#   skipagent commodore    → TUI with Commodore
+#   skipagent zero         → TUI with Zero
+
+set -euo pipefail
+
+VPS="root@76.13.106.143"
+
+# Display names → VPS agent IDs
+declare -A AGENT_IDS=(
+  [commodore]="commodore"
+  [mr-content]="mr-content"
+  [zero]="main"
+)
+declare -A AGENTS=(
+  [commodore]="Fleet Commander (Hey Skip ops)"
+  [mr-content]="Editor-in-Chief (content pipeline)"
+  [zero]="Zero — Personal agent (Home0)"
+)
+AGENT_ORDER=(commodore mr-content zero)
+
+pick_agent() {
+  if command -v fzf &>/dev/null; then
+    for id in "${AGENT_ORDER[@]}"; do
+      printf "%s — %s\n" "$id" "${AGENTS[$id]}"
+    done | fzf --prompt="agent> " --height=10 --reverse | cut -d' ' -f1
+  else
+    echo "Skip Agents" >&2
+    echo "===========" >&2
+    for i in "${!AGENT_ORDER[@]}"; do
+      printf "  %d) %-14s %s\n" $((i+1)) "${AGENT_ORDER[$i]}" "${AGENTS[${AGENT_ORDER[$i]}]}" >&2
+    done
+    echo "" >&2
+    read -rp "Select (1-${#AGENT_ORDER[@]}): " choice
+    if [[ ! "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#AGENT_ORDER[@]} )); then
+      echo "Invalid selection" >&2
+      exit 1
+    fi
+    echo "${AGENT_ORDER[$((choice-1))]}"
+  fi
+}
+
+if [[ $# -ge 1 ]]; then
+  AGENT="$1"
+  if [[ -z "${AGENTS[$AGENT]+x}" ]]; then
+    echo "Unknown agent: $AGENT"
+    echo "Available: ${AGENT_ORDER[*]}"
+    exit 1
+  fi
+else
+  AGENT=$(pick_agent)
+  [[ -z "$AGENT" ]] && exit 0
+fi
+
+VPS_ID="${AGENT_IDS[$AGENT]}"
+
+echo "Connecting to $AGENT..."
+ssh -t "$VPS" "openclaw tui --session agent:$VPS_ID:tui"

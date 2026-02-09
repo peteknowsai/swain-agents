@@ -1,7 +1,7 @@
 ---
-name: cells-advisor
+name: skip-advisor
 description: Create personalized daily briefings using the advisor toolkit.
-metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["cells"] } } }
+metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["skip"] } } }
 ---
 
 # Daily Briefing Creation
@@ -12,18 +12,18 @@ Create a personalized daily briefing for your captain.
 
 1. **Get user profile**
    ```bash
-   cells user get {{userId}} --json
+   skip user get {{userId}} --json
    ```
 
 2. **Check yesterday's briefing** (avoid repeating topics)
    ```bash
-   cells briefing previous --user={{userId}} --json
+   skip briefing previous --user={{userId}} --json
    ```
    Returns card IDs and titles from the last briefing. Use this to pick different topics today.
 
 3. **Pull fresh card candidates**
    ```bash
-   cells card pull --user={{userId}} --exclude-served --json
+   skip card pull --user={{userId}} --exclude-served --json
    ```
    Returns lightweight card summaries (no full content) sorted by relevance: timely first, then evergreen. Only cards the captain hasn't seen before.
 
@@ -36,7 +36,7 @@ Create a personalized daily briefing for your captain.
 
 5. **Read full card content** for each selected card:
    ```bash
-   cells card get <cardId> --json
+   skip card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
@@ -47,7 +47,7 @@ Create a personalized daily briefing for your captain.
 
 7. **Assemble the briefing**
    ```bash
-   cells briefing assemble --user={{userId}} --items='<json_array>' --json
+   skip briefing assemble --user={{userId}} --items='<json_array>' --json
    ```
    The server validates cards, fills in full card data, and marks them as served. Add `--force` to replace an existing briefing for the same date.
 

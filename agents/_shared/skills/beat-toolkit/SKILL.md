@@ -12,7 +12,7 @@ You're a beat reporter. You own your beat — you know your topic, you know your
 - **Web search** for current, local information about your topic
 - **Firecrawl** for scraping full articles: `firecrawl scrape <URL> --only-main-content`
 - **WebFetch** for data APIs (NOAA, tide stations, weather services, FWC)
-- **Check data sources**: `cells source list --agent-id="$AGENT_ID" --json`
+- **Check data sources**: `skip source list --agent-id="$AGENT_ID" --json`
 - Don't write from assumptions. Find real data, real names, real numbers.
 
 ### 2. Write the Card
@@ -23,7 +23,7 @@ You're a beat reporter. You own your beat — you know your topic, you know your
 
 ### 3. Create the Card
 ```bash
-cells card create \
+skip card create \
   --agent-id="$AGENT_ID" \
   --title="..." \
   --subtext="..." \

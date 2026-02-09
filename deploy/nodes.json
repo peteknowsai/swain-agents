@@ -1,0 +1,80 @@
+{
+  "sprites": {
+    "commodore": {
+      "type": "orchestrator",
+      "env": {
+        "AGENT_ID": "commodore",
+        "SKIP_API_URL": "${SKIP_API_URL}",
+        "SKIP_API_TOKEN": "${SKIP_API_TOKEN}"
+      },
+      "workspace": ["agents/commodore/"],
+      "skills": ["skip-cli"],
+      "notes": "Top-level orchestrator. Wakes on Pete's messages via gateway routing."
+    },
+    "mr-content": {
+      "type": "editor",
+      "env": {
+        "AGENT_ID": "mr-content",
+        "SKIP_API_URL": "${SKIP_API_URL}",
+        "SKIP_API_TOKEN": "${SKIP_API_TOKEN}"
+      },
+      "workspace": ["agents/mr-content/", "agents/_shared/"],
+      "skills": ["skip-cli", "skip-card-create"],
+      "notes": "Content operations. Dispatches to beat reporters, reviews library health."
+    },
+    "stylist": {
+      "type": "system",
+      "env": {
+        "AGENT_ID": "stylist",
+        "SKIP_API_URL": "${SKIP_API_URL}",
+        "SKIP_API_TOKEN": "${SKIP_API_TOKEN}"
+      },
+      "workspace": ["agents/stylist/"],
+      "skills": ["skip-cli"],
+      "bins": ["nanobanana"],
+      "notes": "Card styling — picks art style, generates images, assigns to cards."
+    },
+    "strategist": {
+      "type": "system",
+      "env": {
+        "AGENT_ID": "strategist",
+        "SKIP_API_URL": "${SKIP_API_URL}",
+        "SKIP_API_TOKEN": "${SKIP_API_TOKEN}"
+      },
+      "workspace": ["agents/strategist/"],
+      "skills": ["skip-cli", "skip-library"],
+      "notes": "Weekly library health analysis. Reports to Mr. Content."
+    }
+  },
+  "advisors": {
+    "_template": {
+      "type": "advisor",
+      "env": {
+        "AGENT_ID": "advisor-${CAPTAIN_SLUG}",
+        "SKIP_API_URL": "${SKIP_API_URL}",
+        "SKIP_API_TOKEN": "${SKIP_API_TOKEN}",
+        "USER_ID": "${USER_ID}"
+      },
+      "workspace": ["templates/"],
+      "skills": ["skip-advisor", "skip-library", "skip-onboarding", "skip-cli"],
+      "bins": ["skip"],
+      "notes": "One Sprite per captain. Provisioned dynamically — sprite name: advisor-{captain-slug}"
+    }
+  },
+  "beatReporters": {
+    "runtime": "cron-triggered",
+    "notes": "Beat reporters run as isolated sessions on the gateway VPS via sprite exec. No persistent Sprite — they wake, create cards, and exit.",
+    "env": {
+      "SKIP_API_URL": "${SKIP_API_URL}",
+      "SKIP_API_TOKEN": "${SKIP_API_TOKEN}"
+    },
+    "workspace": ["agents/_shared/"],
+    "skills": ["skip-cli", "skip-card-create", "beat-toolkit"]
+  },
+  "gateway": {
+    "type": "vps",
+    "runtime": "clawdbot",
+    "command": "clawdbot gateway run --bind loopback --port 18789 --force",
+    "notes": "Always-on VPS. Runs clawdbot gateway, cron scheduler, message routing. Triggers Sprites via sprite exec."
+  }
+}

@@ -53,13 +53,13 @@ Process yesterday's data before creating the briefing. Your task `input.reflecti
 
 ```bash
 # Add new memory
-cells memory add --user=<userId> --category=preference --content="Prefers detailed weather forecasts"
+skip memory add --user=<userId> --category=preference --content="Prefers detailed weather forecasts"
 
 # Update existing memory
-cells memory update --id=mem_xxx --content="Updated understanding..."
+skip memory update --id=mem_xxx --content="Updated understanding..."
 
 # Archive stale memory
-cells memory forget --id=mem_xxx
+skip memory forget --id=mem_xxx
 ```
 
 ### Memory Categories
@@ -259,15 +259,15 @@ Brief and warm. Maybe one specific suggestion.
 
 ```bash
 # Save the briefing
-cells briefing create \
+skip briefing create \
   --user-id="user_xxx" \
   --date="2025-01-25" \
   --items='[...]'
 
 # Memory management
-cells memory add --user=<userId> --category=<cat> --content="..."
-cells memory update --id=mem_xxx --content="..."
-cells memory forget --id=mem_xxx
+skip memory add --user=<userId> --category=<cat> --content="..."
+skip memory update --id=mem_xxx --content="..."
+skip memory forget --id=mem_xxx
 ```
 
 ---
@@ -276,10 +276,10 @@ cells memory forget --id=mem_xxx
 
 ```bash
 # 1. Reflection - review input.reflection, update memories
-cells memory add --user=user_pete --category=goal --content="Planning Keys trip in March"
+skip memory add --user=user_pete --category=goal --content="Planning Keys trip in March"
 
 # 2. Create briefing with personalized commentary
-cells briefing create \
+skip briefing create \
   --user-id="user_pete" \
   --date="2025-01-25" \
   --items='[

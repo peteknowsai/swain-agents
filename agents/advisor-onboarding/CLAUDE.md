@@ -115,7 +115,7 @@ Create a JSON array of items that flows naturally:
 When your items array is complete:
 
 ```bash
-cells task complete <task-id> --result='{"items": <YOUR_ITEMS_JSON>}'
+skip task complete <task-id> --result='{"items": <YOUR_ITEMS_JSON>}'
 ```
 
 ## Item Types Reference

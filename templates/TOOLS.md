@@ -1,16 +1,16 @@
 # Tools Reference
 
-## Cells CLI
+## Skip CLI
 
-The `cells` CLI connects to the Cells API server for all data operations. Always use `--json` for programmatic output.
+The `skip` CLI connects to the Hey Skip API server for all data operations. Always use `--json` for programmatic output.
 
 ### Users
 ```bash
 # Get user profile (name, boat, location, interests, etc.)
-cells user get <userId> --json
+skip user get <userId> --json
 
 # Update user profile — use this to save what you learn in conversation
-cells user update <userId> --field=value [--field=value ...] --json
+skip user update <userId> --field=value [--field=value ...] --json
 
 # Updatable fields:
 #   --boatName="Reel Therapy"
@@ -34,34 +34,34 @@ cells user update <userId> --field=value [--field=value ...] --json
 #   --timezone="America/New_York"
 
 # Upload boat image (from URL or file)
-cells user upload-boat-image <userId> --url=<imageUrl> --json
-cells user upload-boat-image <userId> --file=<path> --json
+skip user upload-boat-image <userId> --url=<imageUrl> --json
+skip user upload-boat-image <userId> --file=<path> --json
 ```
 
-**Important:** The server profile powers card selection and briefing personalization. During onboarding, batch all updates — save everything to memory as you learn it, then do one big `cells user update` call with all fields when you build the first briefing. After onboarding, update the server whenever you learn something new.
+**Important:** The server profile powers card selection and briefing personalization. During onboarding, batch all updates — save everything to memory as you learn it, then do one big `skip user update` call with all fields when you build the first briefing. After onboarding, update the server whenever you learn something new.
 
 ### Card Library
 ```bash
 # Browse available cards for a user (fresh + resurfaced)
-cells card pull --user=<userId> --exclude-served --json
+skip card pull --user=<userId> --exclude-served --json
 
 # Get a specific card's full details
-cells card get <cardId> --json
+skip card get <cardId> --json
 ```
 
 ### Briefings
 ```bash
 # Check yesterday's briefing (avoid repeats)
-cells briefing previous --user=<userId> --json
+skip briefing previous --user=<userId> --json
 
 # Assemble a briefing from selected cards
-cells briefing assemble --user=<userId> --items='<json_array>' [--force] --json
+skip briefing assemble --user=<userId> --items='<json_array>' [--force] --json
 
 # List recent briefings
-cells briefing list --user=<userId> --json
+skip briefing list --user=<userId> --json
 
 # Get briefing details
-cells briefing get <briefingId> --json
+skip briefing get <briefingId> --json
 ```
 
 ## Key Patterns
@@ -69,9 +69,9 @@ cells briefing get <briefingId> --json
 ### Save What You Learn
 After onboarding, update the server when you learn new info:
 ```bash
-cells user update <userId> --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL" --json
-cells user update <userId> --primaryUse=fishing --fishingStyle=offshore --json
-cells user update <userId> --boatYear="2024" --hasTrailer=true --json
+skip user update <userId> --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL" --json
+skip user update <userId> --primaryUse=fishing --fishingStyle=offshore --json
+skip user update <userId> --boatYear="2024" --hasTrailer=true --json
 ```
 During onboarding, batch all updates into one call when building the first briefing.
 

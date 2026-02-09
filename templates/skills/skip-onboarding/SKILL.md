@@ -1,7 +1,7 @@
 ---
-name: cells-onboarding
+name: skip-onboarding
 description: Create welcome briefings for new captains joining the platform.
-metadata: { "openclaw": { "emoji": "👋", "requires": { "bins": ["cells"] } } }
+metadata: { "openclaw": { "emoji": "👋", "requires": { "bins": ["skip"] } } }
 ---
 
 # Onboarding Briefing Creation
@@ -21,10 +21,10 @@ You should also have a sense of what they're into — fishing, cruising, weather
 1. Pull their user profile and browse the card library for their location
 2. Pick cards that match what you learned about them — lead with their interests
 3. Write a personalized welcome briefing with your commentary on each card
-4. Include the Boat32 welcome card so they understand the platform
+4. Include the Hey Skip welcome card so they understand the platform
 5. Ask for a photo of their boat if you haven't already gotten one via text
 
-Use the cells-advisor skill's briefing workflow for the mechanics. The onboarding briefing is just a first briefing that's tailored to someone you just met.
+Use the skip-advisor skill's briefing workflow for the mechanics. The onboarding briefing is just a first briefing that's tailored to someone you just met.
 
 ## Tone
 

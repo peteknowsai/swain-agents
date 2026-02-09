@@ -1,0 +1,44 @@
+{
+  "nodes": [
+    {
+      "id": "commodore",
+      "agent": "commodore",
+      "type": "orchestrator",
+      "runtime": "sprite",
+      "alwaysOn": false,
+      "notes": "Top-level orchestrator. Wakes on Pete's messages."
+    },
+    {
+      "id": "mr-content",
+      "agent": "mr-content",
+      "type": "editor",
+      "runtime": "sprite",
+      "alwaysOn": false,
+      "notes": "Content operations. Wakes for daily sweeps and dispatches."
+    },
+    {
+      "id": "stylist",
+      "agent": "stylist",
+      "type": "system",
+      "runtime": "sprite",
+      "alwaysOn": false,
+      "notes": "Card styling. Wakes after beat reporters create cards."
+    },
+    {
+      "id": "advisor-template",
+      "agent": "advisor-*",
+      "type": "advisor",
+      "runtime": "sprite",
+      "alwaysOn": false,
+      "notes": "One Sprite per captain. Provisioned dynamically from templates/."
+    },
+    {
+      "id": "beat-reporters",
+      "agent": "beat-*",
+      "type": "beat",
+      "runtime": "cron-triggered",
+      "alwaysOn": false,
+      "notes": "Cron-triggered isolated sessions. No persistent Sprite needed."
+    }
+  ]
+}

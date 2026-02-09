@@ -1,0 +1,44 @@
+{
+  "crons": [
+    {
+      "id": "daily-briefings",
+      "schedule": "0 6 * * *",
+      "timezone": "America/New_York",
+      "target": "advisor-*",
+      "action": "create-briefing",
+      "description": "Trigger daily briefing creation for all active captains."
+    },
+    {
+      "id": "daily-news-sweep",
+      "schedule": "0 4 * * *",
+      "timezone": "America/New_York",
+      "target": "beat-*",
+      "action": "content-sweep",
+      "description": "Beat reporters run daily content sweeps. Cards ready before briefing time."
+    },
+    {
+      "id": "daily-styling",
+      "schedule": "0 5 * * *",
+      "timezone": "America/New_York",
+      "target": "stylist",
+      "action": "style-unstyled",
+      "description": "Style any unstyled cards from the overnight sweep."
+    },
+    {
+      "id": "weekly-memory-review",
+      "schedule": "0 8 * * 0",
+      "timezone": "America/New_York",
+      "target": "advisor-*",
+      "action": "memory-review",
+      "description": "Advisors review and consolidate captain memories."
+    },
+    {
+      "id": "weekly-library-health",
+      "schedule": "0 9 * * 1",
+      "timezone": "America/New_York",
+      "target": "mr-content",
+      "action": "library-health-check",
+      "description": "Mr. Content reviews card library coverage and freshness."
+    }
+  ]
+}

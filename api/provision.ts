@@ -168,14 +168,3 @@ export async function listAdvisors(): Promise<unknown[]> {
   }
   return [];
 }
-
-/** Send a message to an advisor */
-export async function messageAdvisor(
-  agentId: string,
-  text: string
-): Promise<string> {
-  if (!agentId.startsWith("advisor-")) {
-    throw new Error("Can only message advisor agents");
-  }
-  return openclaw(["agent", "--agent", agentId, "--message", text, "--json"]);
-}

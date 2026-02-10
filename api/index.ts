@@ -2,16 +2,9 @@ import {
   provisionAdvisor,
   deleteAdvisor,
   listAdvisors,
-  messageAdvisor,
   lookupByUserId,
 } from "./provision";
-import {
-  listTemplates,
-  getTemplate,
-  putTemplate,
-  previewWorkspace,
-  type CaptainInput,
-} from "./templates";
+import { type CaptainInput } from "./templates";
 
 const PORT = 3847;
 const TOKEN = process.env.SKIP_AGENT_API_TOKEN;
@@ -59,18 +52,6 @@ function matchRoute(
     }
   }
   return params;
-}
-
-/** Match wildcard route: /templates/* captures the rest as 'filename' */
-function matchWildcard(
-  pathname: string,
-  prefix: string
-): { filename: string } | null {
-  const clean = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  if (!clean.startsWith(prefix + "/")) return null;
-  const filename = clean.slice(prefix.length + 1);
-  if (!filename) return null;
-  return { filename };
 }
 
 const server = Bun.serve({
@@ -129,52 +110,6 @@ const server = Bun.serve({
       if (deleteMatch && method === "DELETE") {
         await deleteAdvisor(deleteMatch.agentId);
         return json({ status: "deleted", agentId: deleteMatch.agentId });
-      }
-
-      // --- POST /advisors/:agentId/message ---
-      const msgMatch = matchRoute(pathname, "/advisors/:agentId/message");
-      if (msgMatch && method === "POST") {
-        const body = (await req.json()) as { text: string };
-        if (!body.text) {
-          return error("text is required");
-        }
-        const output = await messageAdvisor(msgMatch.agentId, body.text);
-        return json({ agentId: msgMatch.agentId, output });
-      }
-
-      // --- GET /templates ---
-      if (pathname === "/templates" && method === "GET") {
-        const templates = await listTemplates();
-        return json({ templates });
-      }
-
-      // --- POST /templates/preview ---
-      if (pathname === "/templates/preview" && method === "POST") {
-        const body = (await req.json()) as CaptainInput;
-        if (!body.userId || !body.name) {
-          return error("userId and name are required");
-        }
-        const preview = await previewWorkspace(body);
-        return json(preview);
-      }
-
-      // --- GET /templates/:filename (wildcard) ---
-      const getTemplateMatch = matchWildcard(pathname, "/templates");
-      if (getTemplateMatch && method === "GET") {
-        const content = await getTemplate(getTemplateMatch.filename);
-        return new Response(content, {
-          headers: { "Content-Type": "text/markdown" },
-        });
-      }
-
-      // --- PUT /templates/:filename (wildcard) ---
-      if (getTemplateMatch && method === "PUT") {
-        const content = await req.text();
-        if (!content) {
-          return error("Body content is required");
-        }
-        await putTemplate(getTemplateMatch.filename, content);
-        return json({ status: "updated", filename: getTemplateMatch.filename });
       }
 
       return error("Not found", 404);

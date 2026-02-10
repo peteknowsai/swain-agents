@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'api/**'
-      - 'templates/**'
 
 jobs:
   deploy:
@@ -19,7 +18,7 @@ jobs:
           host: 76.13.106.143
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "api/*,templates/"
+          source: "api/*"
           target: /root/skip-agent-api/
           overwrite: true
 

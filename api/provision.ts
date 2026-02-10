@@ -12,6 +12,27 @@ import {
 const WORKSPACES_ROOT = "/root/workspaces";
 const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
+const REGISTRY_FILE = "/root/skip-agent-api/registry.json";
+
+type Registry = Record<string, string>; // userId → agentId
+
+async function loadRegistry(): Promise<Registry> {
+  try {
+    return JSON.parse(await readFile(REGISTRY_FILE, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+async function saveRegistry(reg: Registry): Promise<void> {
+  await writeFile(REGISTRY_FILE, JSON.stringify(reg, null, 2));
+}
+
+/** Look up an advisor agentId by userId */
+export async function lookupByUserId(userId: string): Promise<string | null> {
+  const reg = await loadRegistry();
+  return reg[userId] || null;
+}
 
 interface ProvisionResult {
   agentId: string;
@@ -104,6 +125,11 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   // 7. Copy auth profile
   await copyAuthProfile(agentId);
 
+  // 8. Register userId → agentId mapping
+  const reg = await loadRegistry();
+  reg[input.userId] = agentId;
+  await saveRegistry(reg);
+
   return { agentId, status: "provisioned", workspace };
 }
 
@@ -120,6 +146,13 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   // Remove workspace
   const workspace = join(WORKSPACES_ROOT, agentId);
   await rm(workspace, { recursive: true, force: true });
+
+  // Remove from registry
+  const reg = await loadRegistry();
+  for (const [uid, aid] of Object.entries(reg)) {
+    if (aid === agentId) delete reg[uid];
+  }
+  await saveRegistry(reg);
 }
 
 /** List all advisor agents */

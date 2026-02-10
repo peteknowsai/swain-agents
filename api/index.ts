@@ -3,6 +3,7 @@ import {
   deleteAdvisor,
   listAdvisors,
   messageAdvisor,
+  lookupByUserId,
 } from "./provision";
 import {
   listTemplates,
@@ -114,6 +115,11 @@ const server = Bun.serve({
 
       // --- GET /advisors ---
       if (pathname === "/advisors" && method === "GET") {
+        const userId = url.searchParams.get("userId");
+        if (userId) {
+          const agentId = await lookupByUserId(userId);
+          return json({ agentId });
+        }
         const advisors = await listAdvisors();
         return json({ advisors });
       }

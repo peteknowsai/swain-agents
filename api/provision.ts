@@ -228,7 +228,13 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   reg[input.userId] = agentId;
   await saveRegistry(reg);
 
-  // 9. Seed Honcho with captain/advisor peers and initial conclusions
+  // 9. Write .honcho.json for plugin peer resolution
+  await writeFile(join(workspace, ".honcho.json"), JSON.stringify({
+    peerId: `captain-${input.userId}`,
+    selfPeerId: `advisor-${input.userId}`,
+  }, null, 2));
+
+  // 10. Seed Honcho with captain/advisor peers and initial conclusions
   try {
     await seedHoncho(input, agentId);
   } catch (err) {

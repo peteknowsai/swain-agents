@@ -8,6 +8,8 @@ export interface CaptainInput {
   name: string;
   phone?: string;
   boatName?: string;
+  boatMake?: string;
+  boatModel?: string;
 }
 
 /** Generate a URL-safe slug from captain name + userId prefix */
@@ -51,9 +53,12 @@ export function generateIdentity(input: CaptainInput, agentId: string): string {
 
 /** Generate USER.md for a captain */
 export function generateUser(input: CaptainInput): string {
+  const boatLine = [input.boatName, input.boatMake, input.boatModel]
+    .filter(Boolean)
+    .join(" — ") || "Unknown";
   return `# Captain ${input.name}
 - **User ID:** ${input.userId}
-- **Boat:** ${input.boatName || "Unknown"}
+- **Boat:** ${boatLine}
 - **Phone:** ${input.phone || "Unknown"}
 - **Marina:** Not yet set (will be learned during onboarding)
 `;

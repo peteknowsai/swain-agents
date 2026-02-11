@@ -8,8 +8,8 @@ Quick fleet health check (< 2 minutes):
 
 1. **Run health** — Check for failures and stuck runs:
    ```bash
-   skip run list --status=failed --json
-   skip run list --status=running --json
+   swain run list --status=failed --json
+   swain run list --status=running --json
    ```
    Flag any failures that need retry. Flag runs older than 30 minutes as potentially stuck.
 
@@ -38,7 +38,7 @@ When asked for a daily review:
 
 1. **Run success rate** (last 24h):
    ```bash
-   skip run list --json
+   swain run list --json
    ```
    Calculate: successful / total runs. Target: >90%.
 
@@ -98,7 +98,7 @@ When asked for a weekly review:
 
 4. **Advisor performance:**
    ```bash
-   skip advisor memories --json
+   swain advisor memories --json
    swain briefing list --limit=50 --json
    ```
    - Briefings per advisor this week

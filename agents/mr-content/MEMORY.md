@@ -14,9 +14,9 @@
 - **swain CLI** — connects to Skip API. `swain agent run` had socket timeout issues on 2026-02-06 — may need server-side fix.
 
 ## Repo & Specs
-- **Skip repo**: `~/Projects/skip/`
-- **Specs go in**: `~/Projects/skip/specs/` — ALWAYS put specs there, not in my workspace. That's where the engineering team looks.
-- **Worktrees**: `~/Projects/skip-worktrees/<name>` — feature branches off dev, launched with `cw create <name>`
+- **Swain repo**: `~/Projects/swain/`
+- **Specs go in**: `~/Projects/swain/specs/` — ALWAYS put specs there, not in my workspace. That's where the engineering team looks.
+- **Worktrees**: `~/Projects/swain-worktrees/<name>` — feature branches off dev, launched with `cw create <name>`
 - **`cw` script**: `~/.local/bin/cw` (symlink to `~/Projects/swain/tools/cw`) — creates worktree + tmux + Claude Code with agent teams
 
 ## Client: Port32 / Austin Schell

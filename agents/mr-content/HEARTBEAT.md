@@ -25,7 +25,7 @@ When asked for a daily review:
 
 3. **Run status** — Check all recent runs:
    ```bash
-   skip run list --json
+   swain run list --json
    ```
    Identify failures, retry if needed.
 
@@ -35,7 +35,7 @@ When asked for a daily review:
 
 6. **Advisor pulse** — Check advisor memories for emerging captain interests:
    ```bash
-   skip advisor memories --json
+   swain advisor memories --json
    ```
 
 ## Weekly Deep Research

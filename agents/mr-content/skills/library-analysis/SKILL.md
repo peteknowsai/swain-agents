@@ -12,7 +12,7 @@ Analyze the Skip card library to understand content health and identify gaps.
 
 1. **Get library analysis**
    ```bash
-   skip library analyze --json
+   swain library analyze --json
    ```
    This returns:
    - Card counts by location and category

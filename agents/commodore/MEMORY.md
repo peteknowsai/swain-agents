@@ -50,7 +50,7 @@ Each advisor is a personal Skip for one captain:
 - **Messaging audit** (2026-02-07): All 14 advisor workspaces + templates clean. No stale `swain message` references.
 - **Onboarding conversation flow** added to template AGENTS.md (2026-02-07): advisors now have guidance on first-conversation discovery (boating style, experience, interests, goals, schedule). Natural conversation, not a form.
 - **swain-onboarding skill** updated (2026-02-07): briefing creation now explicitly follows the text conversation. Advisors personalize card selection based on what they learned.
-- Template source of truth: `/Users/pete/Projects/skip/server/openclaw/templates/`
+- Template source of truth: `/Users/pete/Projects/swain/server/openclaw/templates/`
 
 ## Tools
 - **swain CLI** — connects to Skip API at localhost:8787 (dev) or production
@@ -60,12 +60,12 @@ Each advisor is a personal Skip for one captain:
 - **sessions_spawn** — delegate tasks to other agents via OpenClaw
 
 ## Repos & Paths
-- **Skip repo** — `/Users/pete/Projects/skip/` (backend + API)
-- **Skip specs** — `/Users/pete/Projects/skip/specs/` (always put backend specs here)
+- **Swain repo** — `/Users/pete/Projects/swain/` (backend + API)
+- **Swain specs** — `/Users/pete/Projects/swain/specs/` (always put backend specs here)
 - **swain-app repo** — `/Users/pete/Projects/swain-app/` (iOS native app, SwiftUI, bundle: com.heyswain.ios)
 - **swain-app specs** — `/Users/pete/Projects/swain-app/specs/` (mobile specs go here)
-- **Worktrees** — `/Users/pete/Projects/skip-worktrees/<feature-name>/`
-- **Worktree pipeline**: write spec → drop in `skip/specs/` → create worktree (`cw create <name>` or manual git worktree add) → Pete launches Claude Code agents to implement
+- **Worktrees** — `/Users/pete/Projects/swain-worktrees/<feature-name>/`
+- **Worktree pipeline**: write spec → drop in `swain/specs/` → create worktree (`cw create <name>` or manual git worktree add) → Pete launches Claude Code agents to implement
 - Expo app in swain is **sunset** — iOS native only
 
 ## Coordination Protocols
@@ -117,7 +117,7 @@ Each advisor is a personal Skip for one captain:
 - Session routing: system trigger may land in linq session — narration fix mitigates this
 
 ### Specs Written
-- `skip/specs/cli-user-update.md` — BUILT AND SHIPPED by engineering
+- `swain/specs/cli-user-update.md` — BUILT AND SHIPPED by engineering
 - Engineering added: PATCH /users/:userId, `swain user update`, upload-boat-image --url
 
 ### messaging_phone Override (2026-02-08)

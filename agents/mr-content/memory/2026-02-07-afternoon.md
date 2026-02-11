@@ -1,14 +1,14 @@
 # 2026-02-07 Afternoon Session
 
 ## Stylist Agent Spec
-- Spec at `~/Projects/skip/specs/auto-style-assignment.md` — on dev, pushed
+- Spec at `~/Projects/swain/specs/auto-style-assignment.md` — on dev, pushed
 - Stylist is a Claude Agent SDK agent (like beat reporters), NOT OpenClaw
 - Advisors ARE OpenClaw agents — different architecture. Don't confuse them.
 - Stylist responsibilities: pick style, generate image, pick dark background color (from image analysis)
 - Background color: use Haiku vision to analyze the actual card image and pick a complementary dark color — NOT a static style-to-color map
 - Variation tracking: check `usageCount` on styles + recent styled cards filter
-- Worktree ready: `~/Projects/skip-worktrees/stylist-agent` on `feature/stylist-agent`
-- Also `~/Projects/skip-worktrees/auto-style-assignment` on `feature/auto-style-assignment` (older, may be stale)
+- Worktree ready: `~/Projects/swain-worktrees/stylist-agent` on `feature/stylist-agent`
+- Also `~/Projects/swain-worktrees/auto-style-assignment` on `feature/auto-style-assignment` (older, may be stale)
 
 ## Categories — Canonical 10 (SHIPPED to dev)
 - `weather`, `fishing`, `safety`, `destinations`, `dining`, `events`, `maintenance`, `regulations`, `port32`, `lifestyle`

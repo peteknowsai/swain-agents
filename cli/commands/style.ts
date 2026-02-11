@@ -2,7 +2,7 @@
 
 /**
  * Style Commands
- * skip style list|get|create|update|delete|restore|regen-example
+ * swain style list|get|create|update|delete|restore|regen-example
  */
 
 import {
@@ -35,7 +35,7 @@ function parseArgs(args: string[]): Record<string, string> {
 }
 
 /**
- * skip style list
+ * swain style list
  * List all available styles
  */
 async function listStyles(args: string[]): Promise<void> {
@@ -70,7 +70,7 @@ async function listStyles(args: string[]): Promise<void> {
 }
 
 /**
- * skip style get <styleId>
+ * swain style get <styleId>
  * Get style details
  */
 async function getStyle(args: string[]): Promise<void> {
@@ -79,7 +79,7 @@ async function getStyle(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!styleId || styleId.startsWith('--')) {
-    printError('Usage: skip style get <styleId> or --style=<id>');
+    printError('Usage: swain style get <styleId> or --style=<id>');
     process.exit(1);
   }
 
@@ -118,7 +118,7 @@ async function getStyle(args: string[]): Promise<void> {
 }
 
 /**
- * skip style create --name="..." --prompt="..." [--description="..."]
+ * swain style create --name="..." --prompt="..." [--description="..."]
  */
 async function createStyle(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -130,13 +130,13 @@ async function createStyle(args: string[]): Promise<void> {
 
   if (!name) {
     printError('--name is required');
-    printError('Usage: skip style create --name="Warm Watercolor" --prompt="Warm watercolor..."');
+    printError('Usage: swain style create --name="Warm Watercolor" --prompt="Warm watercolor..."');
     process.exit(1);
   }
 
   if (!promptText) {
     printError('--prompt is required');
-    printError('Usage: skip style create --name="Warm Watercolor" --prompt="Warm watercolor..."');
+    printError('Usage: swain style create --name="Warm Watercolor" --prompt="Warm watercolor..."');
     process.exit(1);
   }
 
@@ -158,7 +158,7 @@ async function createStyle(args: string[]): Promise<void> {
 }
 
 /**
- * skip style update <styleId> [--name=X] [--prompt=X] [--description=X] [--active=true|false]
+ * swain style update <styleId> [--name=X] [--prompt=X] [--description=X] [--active=true|false]
  */
 async function updateStyle(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -166,7 +166,7 @@ async function updateStyle(args: string[]): Promise<void> {
   const styleId = args.find(a => !a.startsWith('--'));
 
   if (!styleId) {
-    printError('Usage: skip style update <styleId> [--name=X] [--prompt=X] [--description=X] [--active=true|false]');
+    printError('Usage: swain style update <styleId> [--name=X] [--prompt=X] [--description=X] [--active=true|false]');
     process.exit(1);
   }
 
@@ -193,7 +193,7 @@ async function updateStyle(args: string[]): Promise<void> {
 }
 
 /**
- * skip style delete <styleId>
+ * swain style delete <styleId>
  */
 async function deleteStyle(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -201,7 +201,7 @@ async function deleteStyle(args: string[]): Promise<void> {
   const styleId = args.find(a => !a.startsWith('--'));
 
   if (!styleId) {
-    printError('Usage: skip style delete <styleId>');
+    printError('Usage: swain style delete <styleId>');
     process.exit(1);
   }
 
@@ -216,7 +216,7 @@ async function deleteStyle(args: string[]): Promise<void> {
 }
 
 /**
- * skip style restore <styleId>
+ * swain style restore <styleId>
  */
 async function restoreStyle(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -224,7 +224,7 @@ async function restoreStyle(args: string[]): Promise<void> {
   const styleId = args.find(a => !a.startsWith('--'));
 
   if (!styleId) {
-    printError('Usage: skip style restore <styleId>');
+    printError('Usage: swain style restore <styleId>');
     process.exit(1);
   }
 
@@ -240,7 +240,7 @@ async function restoreStyle(args: string[]): Promise<void> {
 }
 
 /**
- * skip style regen-example <styleId>
+ * swain style regen-example <styleId>
  */
 async function regenExample(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -248,7 +248,7 @@ async function regenExample(args: string[]): Promise<void> {
   const styleId = args.find(a => !a.startsWith('--'));
 
   if (!styleId) {
-    printError('Usage: skip style regen-example <styleId>');
+    printError('Usage: swain style regen-example <styleId>');
     process.exit(1);
   }
 
@@ -268,10 +268,10 @@ async function regenExample(args: string[]): Promise<void> {
 
 function showHelp(): void {
   print(`
-${colors.bold}skip style${colors.reset} - Style management
+${colors.bold}swain style${colors.reset} - Style management
 
 ${colors.bold}USAGE${colors.reset}
-  skip style <subcommand> [options]
+  swain style <subcommand> [options]
 
 ${colors.bold}SUBCOMMANDS${colors.reset}
   list                  List all available styles
@@ -290,12 +290,12 @@ ${colors.bold}OPTIONS${colors.reset}
   --active=true|false   Active status (update)
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip style list
-  skip style create --name="Bold Graphic" --prompt="Bold graphic illustration"
-  skip style update style_abc123 --description="Updated desc"
-  skip style delete style_abc123
-  skip style restore style_abc123
-  skip style regen-example style_abc123
+  swain style list
+  swain style create --name="Bold Graphic" --prompt="Bold graphic illustration"
+  swain style update style_abc123 --description="Updated desc"
+  swain style delete style_abc123
+  swain style restore style_abc123
+  swain style regen-example style_abc123
 `);
 }
 

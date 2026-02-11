@@ -7,10 +7,10 @@ import {
 import { type CaptainInput } from "./templates";
 
 const PORT = 3847;
-const TOKEN = process.env.SKIP_AGENT_API_TOKEN;
+const TOKEN = process.env.SWAIN_AGENT_API_TOKEN;
 
 if (!TOKEN) {
-  console.error("SKIP_AGENT_API_TOKEN env var is required");
+  console.error("SWAIN_AGENT_API_TOKEN env var is required");
   process.exit(1);
 }
 
@@ -72,7 +72,7 @@ const server = Bun.serve({
       }
       return json({
         status: "ok",
-        service: "skip-agent-api",
+        service: "swain-agent-api",
         agentCount,
         uptime: process.uptime(),
       });
@@ -121,4 +121,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`skip-agent-api running on http://localhost:${PORT}`);
+console.log(`swain-agent-api running on http://localhost:${PORT}`);

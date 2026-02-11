@@ -5,12 +5,12 @@
  * Command-line interface for the Swain platform
  *
  * Usage:
- *   skip agent list|get|create|update|delete
- *   skip card list|get|create
- *   skip edition list|get
- *   skip briefing list|get|assemble
- *   skip user list|get|update
- *   skip style list|get
+ *   swain agent list|get|create|update|delete
+ *   swain card list|get|create
+ *   swain edition list|get
+ *   swain briefing list|get|assemble
+ *   swain user list|get|update
+ *   swain style list|get
  */
 
 import { run as runAgent } from './commands/agent';
@@ -27,15 +27,15 @@ import { print, colors } from './lib/worker-client';
 const VERSION = '0.5.0';
 
 function showVersion(): void {
-  print(`skip v${VERSION}`);
+  print(`swain v${VERSION}`);
 }
 
 function showHelp(): void {
   print(`
-${colors.bold}skip${colors.reset} - Swain CLI v${VERSION}
+${colors.bold}swain${colors.reset} - Swain CLI v${VERSION}
 
 ${colors.bold}USAGE${colors.reset}
-  skip <command> [subcommand] [options]
+  swain <command> [subcommand] [options]
 
 ${colors.bold}COMMANDS${colors.reset}
   agent                   Manage agents (list, get, create, update, delete)
@@ -57,21 +57,21 @@ ${colors.bold}GLOBAL OPTIONS${colors.reset}
 ${colors.bold}ENVIRONMENTS${colors.reset}
   prod (default):  https://wandering-sparrow-224.convex.site
   dev/local:       https://calm-basilisk-210.convex.site
-  Override with SKIP_API_URL or --env=local|prod
+  Override with SWAIN_API_URL or --env=local|prod
 
 ${colors.bold}ENVIRONMENT VARIABLES${colors.reset}
-  SKIP_API_URL            Override API URL (takes precedence over --env)
-  SKIP_API_TOKEN          Admin token for authenticated API access
+  SWAIN_API_URL            Override API URL (takes precedence over --env)
+  SWAIN_API_TOKEN          Admin token for authenticated API access
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip agent list                           List all agents
-  skip card list --desk=tampa-bay           List cards by desk
-  skip card coverage --desk=tampa-bay       Show coverage report
-  skip briefing list --user=user_abc        List briefings for user
-  skip user get user_bobby_b08861b8         Get user details
+  swain agent list                           List all agents
+  swain card list --desk=tampa-bay           List cards by desk
+  swain card coverage --desk=tampa-bay       Show coverage report
+  swain briefing list --user=user_abc        List briefings for user
+  swain user get user_bobby_b08861b8         Get user details
 
 ${colors.bold}MORE INFO${colors.reset}
-  skip <command> --help                     Show command-specific help
+  swain <command> --help                     Show command-specific help
 `);
 }
 

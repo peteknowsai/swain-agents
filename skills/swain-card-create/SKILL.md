@@ -1,7 +1,7 @@
 ---
-name: skip-card-create
+name: swain-card-create
 description: Create content cards for the Swain platform. Used by beat reporters after researching and writing.
-metadata: { "openclaw": { "emoji": "🃏", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "🃏", "requires": { "bins": ["swain"] } } }
 ---
 
 # Card Creation
@@ -19,7 +19,7 @@ Before creating a card, you must have:
 ## Create the Card
 
 ```bash
-skip card create \
+swain card create \
   --agent-id="$AGENT_ID" \
   --title="Your Title" \
   --subtext="Brief preview text" \
@@ -46,7 +46,7 @@ From your agent ID, the server determines:
 For timely content where you want explicit control:
 
 ```bash
-skip card create \
+swain card create \
   --agent-id="$AGENT_ID" \
   --title="Weekend Fishing Report" \
   --subtext="Snook stacked on channel edges through Sunday" \

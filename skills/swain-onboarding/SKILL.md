@@ -1,7 +1,7 @@
 ---
-name: skip-onboarding
+name: swain-onboarding
 description: Create welcome briefings for new captains joining the platform.
-metadata: { "openclaw": { "emoji": "👋", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "👋", "requires": { "bins": ["swain"] } } }
 ---
 
 # Onboarding Briefing Creation
@@ -24,7 +24,7 @@ You should also have a sense of what they're into — fishing, cruising, weather
 4. Include the Swain welcome card so they understand the platform
 5. Ask for a photo of their boat if you haven't already gotten one via text
 
-Use the skip-advisor skill's briefing workflow for the mechanics. The onboarding briefing is just a first briefing that's tailored to someone you just met.
+Use the swain-advisor skill's briefing workflow for the mechanics. The onboarding briefing is just a first briefing that's tailored to someone you just met.
 
 ## Tone
 

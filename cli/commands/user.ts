@@ -2,7 +2,7 @@
 
 /**
  * User Commands
- * skip user list|get|onboard-status|upload-boat-image
+ * swain user list|get|onboard-status|upload-boat-image
  */
 
 import {
@@ -16,7 +16,7 @@ import { parseArgs } from '../lib/args';
 import { readFileSync, existsSync } from 'fs';
 
 /**
- * skip user list
+ * swain user list
  */
 async function listUsers(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -48,7 +48,7 @@ async function listUsers(args: string[]): Promise<void> {
 }
 
 /**
- * skip user get <userId>
+ * swain user get <userId>
  */
 async function getUser(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -56,7 +56,7 @@ async function getUser(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId) {
-    printError('Usage: skip user get <userId>');
+    printError('Usage: swain user get <userId>');
     process.exit(1);
   }
 
@@ -104,7 +104,7 @@ async function getUser(args: string[]): Promise<void> {
 }
 
 /**
- * skip user onboard-status <userId> [--status=completed] [--json]
+ * swain user onboard-status <userId> [--status=completed] [--json]
  * Get or set onboarding status
  */
 async function onboardStatus(args: string[]): Promise<void> {
@@ -114,7 +114,7 @@ async function onboardStatus(args: string[]): Promise<void> {
   const newStatus = params['status'];
 
   if (!userId) {
-    printError('Usage: skip user onboard-status <userId> [--status=in_progress|completed] [--json]');
+    printError('Usage: swain user onboard-status <userId> [--status=in_progress|completed] [--json]');
     process.exit(1);
   }
 
@@ -162,7 +162,7 @@ async function onboardStatus(args: string[]): Promise<void> {
 }
 
 /**
- * skip user upload-boat-image <userId> --file=<path> [--json]
+ * swain user upload-boat-image <userId> --file=<path> [--json]
  * Upload boat image for a user
  */
 async function uploadBoatImage(args: string[]): Promise<void> {
@@ -173,13 +173,13 @@ async function uploadBoatImage(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId || (!filePath && !imageUrl)) {
-    printError('Usage: skip user upload-boat-image <userId> --file=<path> | --url=<imageUrl> [--json]');
+    printError('Usage: swain user upload-boat-image <userId> --file=<path> | --url=<imageUrl> [--json]');
     process.exit(1);
   }
 
   const { getBaseUrl } = await import('../lib/worker-client');
   const baseUrl = await getBaseUrl();
-  const ADMIN_TOKEN = process.env.SKIP_API_TOKEN;
+  const ADMIN_TOKEN = process.env.SWAIN_API_TOKEN;
 
   let response: Response;
 
@@ -242,7 +242,7 @@ async function uploadBoatImage(args: string[]): Promise<void> {
 }
 
 /**
- * skip user update <userId> --field=value [--json]
+ * swain user update <userId> --field=value [--json]
  * Update user profile fields
  */
 async function updateUser(args: string[]): Promise<void> {
@@ -251,7 +251,7 @@ async function updateUser(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId) {
-    printError('Usage: skip user update <userId> --field=value [--json]');
+    printError('Usage: swain user update <userId> --field=value [--json]');
     process.exit(1);
   }
 
@@ -308,7 +308,7 @@ async function updateUser(args: string[]): Promise<void> {
 
 function showHelp(): void {
   print(`
-${colors.bold}skip user${colors.reset} - User management
+${colors.bold}swain user${colors.reset} - User management
 
 ${colors.bold}COMMANDS${colors.reset}
   list                    List all users
@@ -347,14 +347,14 @@ ${colors.bold}OPTIONS${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip user list
-  skip user list --json
-  skip user get user_abc123
-  skip user update user_abc123 --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL"
-  skip user update user_abc123 --experienceLevel=beginner --primaryUse="fishing,diving" --json
-  skip user onboard-status user_abc123
-  skip user onboard-status user_abc123 --status=completed
-  skip user upload-boat-image user_abc123 --file=boat.jpg
+  swain user list
+  swain user list --json
+  swain user get user_abc123
+  swain user update user_abc123 --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL"
+  swain user update user_abc123 --experienceLevel=beginner --primaryUse="fishing,diving" --json
+  swain user onboard-status user_abc123
+  swain user onboard-status user_abc123 --status=completed
+  swain user upload-boat-image user_abc123 --file=boat.jpg
 `);
 }
 

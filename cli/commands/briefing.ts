@@ -2,7 +2,7 @@
 
 /**
  * Briefing Commands
- * skip briefing list|get
+ * swain briefing list|get
  */
 
 import {
@@ -15,7 +15,7 @@ import {
 import { parseArgs } from '../lib/args';
 
 /**
- * skip briefing list
+ * swain briefing list
  * List briefings (optionally filtered by user) via dashboard endpoint
  */
 async function listBriefings(args: string[]): Promise<void> {
@@ -66,7 +66,7 @@ async function listBriefings(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing get
+ * swain briefing get
  * Get briefing details
  */
 async function getBriefing(args: string[]): Promise<void> {
@@ -75,7 +75,7 @@ async function getBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!briefingId || briefingId.startsWith('--')) {
-    printError('Usage: skip briefing get <briefingId>');
+    printError('Usage: swain briefing get <briefingId>');
     process.exit(1);
   }
 
@@ -123,7 +123,7 @@ async function getBriefing(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing create --user=<userId> [--date=YYYY-MM-DD]
+ * swain briefing create --user=<userId> [--date=YYYY-MM-DD]
  * Trigger briefing creation for a user
  */
 async function createBriefing(args: string[]): Promise<void> {
@@ -133,7 +133,7 @@ async function createBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId) {
-    printError('Usage: skip briefing create --user=<userId> [--date=YYYY-MM-DD]');
+    printError('Usage: swain briefing create --user=<userId> [--date=YYYY-MM-DD]');
     process.exit(1);
   }
 
@@ -172,7 +172,7 @@ async function createBriefing(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing previous --user=<userId>
+ * swain briefing previous --user=<userId>
  * Get summary of user's last briefing (card IDs + titles)
  */
 async function previousBriefing(args: string[]): Promise<void> {
@@ -182,7 +182,7 @@ async function previousBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId) {
-    printError('Usage: skip briefing previous --user=<userId> [--date=YYYY-MM-DD] [--json]');
+    printError('Usage: swain briefing previous --user=<userId> [--date=YYYY-MM-DD] [--json]');
     process.exit(1);
   }
 
@@ -214,7 +214,7 @@ async function previousBriefing(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing assemble --user=<userId> --items=<json>
+ * swain briefing assemble --user=<userId> --items=<json>
  * Create briefing from advisor's selections (validates, hydrates, marks served)
  */
 async function assembleBriefing(args: string[]): Promise<void> {
@@ -226,7 +226,7 @@ async function assembleBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId || !itemsJson) {
-    printError('Usage: skip briefing assemble --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--force] [--json]');
+    printError('Usage: swain briefing assemble --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--force] [--json]');
     process.exit(1);
   }
 
@@ -274,7 +274,7 @@ async function assembleBriefing(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing history --user=<id> [--days=7] [--json]
+ * swain briefing history --user=<id> [--days=7] [--json]
  * Briefing history for a user over N days
  */
 async function briefingHistory(args: string[]): Promise<void> {
@@ -284,7 +284,7 @@ async function briefingHistory(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId) {
-    printError('Usage: skip briefing history --user=<userId> [--days=7] [--json]');
+    printError('Usage: swain briefing history --user=<userId> [--days=7] [--json]');
     process.exit(1);
   }
 
@@ -327,7 +327,7 @@ async function briefingHistory(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing validate --user=<id> --items=<json> [--json]
+ * swain briefing validate --user=<id> --items=<json> [--json]
  * Dry-run validation of briefing items
  */
 async function validateBriefing(args: string[]): Promise<void> {
@@ -338,7 +338,7 @@ async function validateBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId || !itemsJson) {
-    printError('Usage: skip briefing validate --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--json]');
+    printError('Usage: swain briefing validate --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--json]');
     process.exit(1);
   }
 
@@ -411,7 +411,7 @@ async function validateBriefing(args: string[]): Promise<void> {
 }
 
 /**
- * skip briefing delete <briefingId> --confirm [--json]
+ * swain briefing delete <briefingId> --confirm [--json]
  * Delete a briefing and un-serve its cards
  */
 async function deleteBriefing(args: string[]): Promise<void> {
@@ -421,7 +421,7 @@ async function deleteBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!briefingId || briefingId.startsWith('--')) {
-    printError('Usage: skip briefing delete <briefingId> --confirm [--json]');
+    printError('Usage: swain briefing delete <briefingId> --confirm [--json]');
     process.exit(1);
   }
 
@@ -455,7 +455,7 @@ async function deleteBriefing(args: string[]): Promise<void> {
  */
 function showHelp(): void {
   print(`
-${colors.bold}skip briefing${colors.reset} - User briefings
+${colors.bold}swain briefing${colors.reset} - User briefings
 
 ${colors.bold}COMMANDS${colors.reset}
   list                    List briefings
@@ -479,16 +479,16 @@ ${colors.bold}OPTIONS${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip briefing list
-  skip briefing list --user=user_abc123
-  skip briefing get briefing_xyz789
-  skip briefing create --user=user_abc123
-  skip briefing previous --user=user_abc123
-  skip briefing previous --user=user_abc123 --date=2026-02-05
-  skip briefing history --user=user_abc123 --days=14
-  skip briefing validate --user=user_abc123 --items='[{"type":"card","id":"card_abc"}]'
-  skip briefing delete briefing_xyz789 --confirm
-  skip briefing assemble --user=user_abc123 --items='[{"type":"text","content":"Morning!"},{"type":"card","id":"card_abc"}]'
+  swain briefing list
+  swain briefing list --user=user_abc123
+  swain briefing get briefing_xyz789
+  swain briefing create --user=user_abc123
+  swain briefing previous --user=user_abc123
+  swain briefing previous --user=user_abc123 --date=2026-02-05
+  swain briefing history --user=user_abc123 --days=14
+  swain briefing validate --user=user_abc123 --items='[{"type":"card","id":"card_abc"}]'
+  swain briefing delete briefing_xyz789 --confirm
+  swain briefing assemble --user=user_abc123 --items='[{"type":"text","content":"Morning!"},{"type":"card","id":"card_abc"}]'
 `);
 }
 

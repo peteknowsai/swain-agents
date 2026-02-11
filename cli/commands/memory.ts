@@ -2,7 +2,7 @@
 
 /**
  * Memory Commands
- * skip memory list|add|update|forget
+ * swain memory list|add|update|forget
  *
  * Manages advisor memories for users
  */
@@ -17,7 +17,7 @@ import {
 import { parseArgs } from '../lib/args';
 
 /**
- * skip memory list
+ * swain memory list
  * List memories for a user
  */
 async function listMemories(args: string[]): Promise<void> {
@@ -26,7 +26,7 @@ async function listMemories(args: string[]): Promise<void> {
   const userId = params['user'] || params['user-id'];
 
   if (!userId) {
-    printError('Usage: skip memory list --user=<userId>');
+    printError('Usage: swain memory list --user=<userId>');
     process.exit(1);
   }
 
@@ -56,7 +56,7 @@ async function listMemories(args: string[]): Promise<void> {
 }
 
 /**
- * skip memory get
+ * swain memory get
  * Get memory details
  */
 async function getMemory(args: string[]): Promise<void> {
@@ -65,7 +65,7 @@ async function getMemory(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!memoryId || memoryId.startsWith('--')) {
-    printError('Usage: skip memory get <memoryId> or --id=<id>');
+    printError('Usage: swain memory get <memoryId> or --id=<id>');
     process.exit(1);
   }
 
@@ -96,7 +96,7 @@ async function getMemory(args: string[]): Promise<void> {
 }
 
 /**
- * skip memory add
+ * swain memory add
  * Add a new memory
  */
 async function addMemory(args: string[]): Promise<void> {
@@ -143,7 +143,7 @@ async function addMemory(args: string[]): Promise<void> {
 }
 
 /**
- * skip memory update
+ * swain memory update
  * Update an existing memory
  */
 async function updateMemory(args: string[]): Promise<void> {
@@ -184,7 +184,7 @@ async function updateMemory(args: string[]): Promise<void> {
 }
 
 /**
- * skip memory forget
+ * swain memory forget
  * Archive (soft delete) a memory
  */
 async function forgetMemory(args: string[]): Promise<void> {
@@ -193,7 +193,7 @@ async function forgetMemory(args: string[]): Promise<void> {
   const memoryId = params['id'] || args[0];
 
   if (!memoryId || memoryId.startsWith('--')) {
-    printError('Usage: skip memory forget <memoryId> or --id=<id>');
+    printError('Usage: swain memory forget <memoryId> or --id=<id>');
     process.exit(1);
   }
 
@@ -217,7 +217,7 @@ async function forgetMemory(args: string[]): Promise<void> {
  */
 function showHelp(): void {
   print(`
-${colors.bold}skip memory${colors.reset} - Advisor memories
+${colors.bold}swain memory${colors.reset} - Advisor memories
 
 ${colors.bold}COMMANDS${colors.reset}
   list                    List memories for a user
@@ -256,17 +256,17 @@ ${colors.bold}MEMORY CATEGORIES${colors.reset}
   schedule                Schedule patterns (e.g., "Usually fishes weekends")
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip memory list --user=user_pete_abc123
-  skip memory get mem_xyz789
+  swain memory list --user=user_pete_abc123
+  swain memory get mem_xyz789
 
-  skip memory add --user=user_pete_abc123 \\
+  swain memory add --user=user_pete_abc123 \\
     --category=preference \\
     --content="Prefers detailed weather forecasts"
 
-  skip memory update --id=mem_xyz789 \\
+  swain memory update --id=mem_xyz789 \\
     --content="Updated: Now prefers brief summaries"
 
-  skip memory forget mem_xyz789
+  swain memory forget mem_xyz789
 `);
 }
 

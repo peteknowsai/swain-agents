@@ -12,7 +12,7 @@ import {
 const WORKSPACES_ROOT = "/root/workspaces";
 const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
-const REGISTRY_FILE = "/root/skip-agent-api/registry.json";
+const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 
 // Honcho configuration
 const HONCHO_API_KEY = process.env.HONCHO_API_KEY;

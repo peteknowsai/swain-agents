@@ -2,7 +2,7 @@
 
 /**
  * Agent Commands
- * skip agent list|get|create|update|delete|run
+ * swain agent list|get|create|update|delete|run
  */
 
 import {
@@ -24,7 +24,7 @@ interface Agent {
 }
 
 /**
- * skip agent list
+ * swain agent list
  * List all agents from registry
  */
 async function listAgents(args: string[]): Promise<void> {
@@ -57,7 +57,7 @@ async function listAgents(args: string[]): Promise<void> {
 }
 
 /**
- * skip agent get
+ * swain agent get
  * Get detailed agent metadata
  */
 async function getAgent(args: string[]): Promise<void> {
@@ -66,7 +66,7 @@ async function getAgent(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!agentId || agentId.startsWith('--')) {
-    printError('Usage: skip agent get <agentId> or --agent=<id>');
+    printError('Usage: swain agent get <agentId> or --agent=<id>');
     process.exit(1);
   }
 
@@ -95,7 +95,7 @@ async function getAgent(args: string[]): Promise<void> {
 }
 
 /**
- * skip agent create
+ * swain agent create
  * Create a new agent in registry
  */
 async function createAgent(args: string[]): Promise<void> {
@@ -110,7 +110,7 @@ async function createAgent(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!agentId) {
-    printError('Usage: skip agent create --agent=<id> [--type=<type>] [--name=<name>] [--model=<model>]');
+    printError('Usage: swain agent create --agent=<id> [--type=<type>] [--name=<name>] [--model=<model>]');
     process.exit(1);
   }
 
@@ -136,7 +136,7 @@ async function createAgent(args: string[]): Promise<void> {
 }
 
 /**
- * skip agent update
+ * swain agent update
  * Update agent metadata
  */
 async function updateAgent(args: string[]): Promise<void> {
@@ -145,7 +145,7 @@ async function updateAgent(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!agentId) {
-    printError('Usage: skip agent update --agent=<id> [--name=...] [--model=...] [--description=...]');
+    printError('Usage: swain agent update --agent=<id> [--name=...] [--model=...] [--description=...]');
     process.exit(1);
   }
 
@@ -175,7 +175,7 @@ async function updateAgent(args: string[]): Promise<void> {
 }
 
 /**
- * skip agent delete
+ * swain agent delete
  * Delete an agent from registry
  */
 async function deleteAgent(args: string[]): Promise<void> {
@@ -185,7 +185,7 @@ async function deleteAgent(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!agentId) {
-    printError('Usage: skip agent delete --agent=<id> [--force]');
+    printError('Usage: swain agent delete --agent=<id> [--force]');
     process.exit(1);
   }
 
@@ -216,7 +216,7 @@ async function deleteAgent(args: string[]): Promise<void> {
 }
 
 /**
- * skip agent run <agentId> <prompt>
+ * swain agent run <agentId> <prompt>
  * Run an agent via /agent/stream and stream output to terminal
  */
 async function runAgent(args: string[]): Promise<void> {
@@ -249,8 +249,8 @@ async function runAgent(args: string[]): Promise<void> {
   }
 
   if (!agentId) {
-    printError('Usage: skip agent run <agentId> <prompt>');
-    printError('       skip agent run --agent=<id> --prompt="..."');
+    printError('Usage: swain agent run <agentId> <prompt>');
+    printError('       swain agent run --agent=<id> --prompt="..."');
     process.exit(1);
   }
 
@@ -364,7 +364,7 @@ async function runAgent(args: string[]): Promise<void> {
  */
 function showHelp(): void {
   print(`
-${colors.bold}skip agent${colors.reset} - Manage agents
+${colors.bold}swain agent${colors.reset} - Manage agents
 
 ${colors.bold}COMMANDS${colors.reset}
   list                    List all agents (use --type to filter)
@@ -388,15 +388,15 @@ ${colors.bold}OPTIONS${colors.reset}
   --prompt=<text>         Prompt text (for run)
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip agent list
-  skip agent list --type=beat
-  skip agent list --type=beat --json
-  skip agent get beat-fishing-fl
-  skip agent create --agent=my-agent --type=beat-reporter --name="My Agent"
-  skip agent update --agent=beat-fishing-fl --name="New Name"
-  skip agent delete --agent=my-agent --force
-  skip agent run beat-fishing-fl "Write today's fishing report"
-  skip agent run --agent=beat-fishing-fl --prompt="Write report" --session=sess_xxx
+  swain agent list
+  swain agent list --type=beat
+  swain agent list --type=beat --json
+  swain agent get beat-fishing-fl
+  swain agent create --agent=my-agent --type=beat-reporter --name="My Agent"
+  swain agent update --agent=beat-fishing-fl --name="New Name"
+  swain agent delete --agent=my-agent --force
+  swain agent run beat-fishing-fl "Write today's fishing report"
+  swain agent run --agent=beat-fishing-fl --prompt="Write report" --session=sess_xxx
 `);
 }
 

@@ -1,5 +1,5 @@
 ---
-name: skip-honcho-advisor
+name: swain-honcho-advisor
 description: Use Honcho memory to learn about your captain and personalize everything.
 metadata: { "openclaw": { "emoji": "🧠" } }
 ---

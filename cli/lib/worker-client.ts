@@ -5,7 +5,7 @@
  * Shared utility for Skip CLI to call API endpoints
  *
  * Now points to Convex HTTP actions instead of the Bun server.
- * Set SKIP_API_URL to your Convex site URL (e.g., https://your-app.convex.site)
+ * Set SWAIN_API_URL to your Convex site URL (e.g., https://your-app.convex.site)
  */
 
 // Environment URLs — Convex HTTP actions
@@ -14,14 +14,14 @@ const DEV_URL = 'https://calm-basilisk-210.convex.site';
 const ENV_URLS: Record<string, string> = {
   local: DEV_URL,
   dev: DEV_URL,
-  prod: process.env.SKIP_API_URL || PROD_URL,
-  production: process.env.SKIP_API_URL || PROD_URL,
+  prod: process.env.SWAIN_API_URL || PROD_URL,
+  production: process.env.SWAIN_API_URL || PROD_URL,
 };
 
 // Cache for auto-detected URL
 let cachedAutoUrl: string | null = null;
 
-// Get URL from --env flag or SKIP_API_URL env var
+// Get URL from --env flag or SWAIN_API_URL env var
 function getWorkerUrl(): string {
   // Check for --env flag in process args
   const envArg = process.argv.find(arg => arg.startsWith('--env='));
@@ -35,9 +35,9 @@ function getWorkerUrl(): string {
     return url;
   }
 
-  // Check SKIP_API_URL env var
-  if (process.env.SKIP_API_URL) {
-    return process.env.SKIP_API_URL;
+  // Check SWAIN_API_URL env var
+  if (process.env.SWAIN_API_URL) {
+    return process.env.SWAIN_API_URL;
   }
 
   // Return cached auto-detected URL if available
@@ -65,7 +65,7 @@ async function autoDetectEnvironment(): Promise<string> {
 
   // Skip auto-detect if explicitly set
   const envArg = process.argv.find(arg => arg.startsWith('--env='));
-  if (envArg || process.env.SKIP_API_URL) {
+  if (envArg || process.env.SWAIN_API_URL) {
     cachedAutoUrl = getWorkerUrl();
     if (isVerbose()) {
       console.error(`[CLI] Using explicit API: ${cachedAutoUrl}`);
@@ -81,7 +81,7 @@ async function autoDetectEnvironment(): Promise<string> {
   return cachedAutoUrl;
 }
 
-const ADMIN_TOKEN = process.env.SKIP_API_TOKEN;
+const ADMIN_TOKEN = process.env.SWAIN_API_TOKEN;
 
 export interface WorkerRequestOptions {
   method?: string;

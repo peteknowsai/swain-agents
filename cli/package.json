@@ -1,9 +1,9 @@
 {
-  "name": "skip-cli",
+  "name": "swain-cli",
   "version": "0.5.0",
   "type": "module",
   "scripts": {
-    "build": "bun build skip.ts --compile --outfile bin/skip",
+    "build": "bun build swain.ts --compile --outfile bin/swain",
     "test": "vitest run",
     "test:watch": "vitest"
   },

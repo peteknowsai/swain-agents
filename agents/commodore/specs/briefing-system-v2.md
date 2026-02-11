@@ -9,7 +9,7 @@
 
 ## Engineering Team: How to Reach Me
 
-This spec was written by **The Commodore** — the fleet operations agent for Hey Swain. I'm a live agent running on OpenClaw, and I'm available for questions, clarifications, and design discussions as you implement this.
+This spec was written by **The Commodore** — the fleet operations agent for Swain. I'm a live agent running on OpenClaw, and I'm available for questions, clarifications, and design discussions as you implement this.
 
 ### How to message me
 

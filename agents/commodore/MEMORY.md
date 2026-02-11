@@ -1,7 +1,7 @@
 # Memory
 
 ## Product
-- The product is called **Hey Swain** — a fleet of personal boat agents for captains
+- The product is called **Swain** — a fleet of personal boat agents for captains
 - `skip` is the CLI and infrastructure platform name
 - Content is delivered via a **cards library** that powers advisor agents
 - My role: ensure the entire agent fleet runs smoothly and produces results

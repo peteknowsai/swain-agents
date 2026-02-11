@@ -1,5 +1,5 @@
 ---
-description: Use the skip CLI for task coordination, card creation, messaging, sessions, and agent management. Invoke this skill when you need to interact with the Hey Swain platform - claim tasks, update status, create cards, send messages, or manage workflows.
+description: Use the skip CLI for task coordination, card creation, messaging, sessions, and agent management. Invoke this skill when you need to interact with the Swain platform - claim tasks, update status, create cards, send messages, or manage workflows.
 ---
 
 # Skip CLI v0.3.0

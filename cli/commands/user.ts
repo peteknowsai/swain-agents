@@ -1,0 +1,397 @@
+#!/usr/bin/env bun
+
+/**
+ * User Commands
+ * skip user list|get|onboard-status|upload-boat-image
+ */
+
+import {
+  workerRequest,
+  print,
+  printError,
+  printSuccess,
+  colors
+} from '../lib/worker-client';
+import { parseArgs } from '../lib/args';
+import { readFileSync, existsSync } from 'fs';
+
+/**
+ * skip user list
+ */
+async function listUsers(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const jsonOutput = params['json'] === 'true';
+  const limit = params['limit'] || '200';
+
+  const result = await workerRequest(`/dashboard/users?limit=${limit}`);
+  const users = result.users || [];
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({ success: true, users, count: users.length }, null, 2));
+    return;
+  }
+
+  if (users.length === 0) {
+    print('No users found');
+    return;
+  }
+
+  print(`\n${colors.bold}USERS (${users.length})${colors.reset}\n`);
+  print(`${'ID'.padEnd(20)} ${'CAPTAIN'.padEnd(18)} ${'BOAT'.padEnd(18)} ${'LOCATION'.padEnd(18)} ${'ADVISOR'}`);
+  print(`${'-'.repeat(20)} ${'-'.repeat(18)} ${'-'.repeat(18)} ${'-'.repeat(18)} ${'-'.repeat(20)}`);
+
+  for (const user of users) {
+    const advisor = user.advisorAgentId ? `${colors.green}${user.advisorAgentId}${colors.reset}` : `${colors.dim}none${colors.reset}`;
+    print(`${(user.id || '').slice(0, 19).padEnd(20)} ${(user.captainName || '-').slice(0, 17).padEnd(18)} ${(user.boatName || '-').slice(0, 17).padEnd(18)} ${(user.marinaLocation || user.location || '-').slice(0, 17).padEnd(18)} ${advisor}`);
+  }
+  print('');
+}
+
+/**
+ * skip user get <userId>
+ */
+async function getUser(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: skip user get <userId>');
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/dashboard/users/${userId}`);
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (!result.success || !result.user) {
+    printError('User not found');
+    process.exit(1);
+  }
+
+  const u = result.user;
+  print(`\n${colors.bold}USER: ${u.captainName || u.id}${colors.reset}\n`);
+  print(`  ID:           ${u.id}`);
+  print(`  Email:        ${u.email || '-'}`);
+  print(`  Captain:      ${u.captainName || '-'}`);
+  print(`  Boat:         ${u.boatName || '-'} ${u.boatYear ? `(${u.boatYear})` : ''}`);
+  print(`  Make/Model:   ${u.boatMakeModel || '-'}`);
+  print(`  Location:     ${u.marinaLocation || u.location || '-'}`);
+  print(`  Timezone:     ${u.timezone || '-'}`);
+  print(`  Phone:        ${u.phone || '-'}`);
+  print(`  Onboarding:   ${u.onboardingStatus || 'pending'}`);
+  print(`  Onboard Step: ${u.onboardingStep || '-'}`);
+  print(`  Advisor:      ${u.advisorAgentId || 'none'} ${u.advisorExists ? `${colors.green}✓${colors.reset}` : ''}`);
+  print(`  Created:      ${u.createdAt || '-'}`);
+
+  if (result.stats) {
+    print(`\n${colors.bold}STATS${colors.reset}`);
+    print(`  Briefings:    ${result.stats.briefingCount || 0}`);
+    print(`  Viewed:       ${result.stats.totalViewed || 0}`);
+  }
+
+  if (result.memories && result.memories.length > 0) {
+    print(`\n${colors.bold}ADVISOR MEMORIES (${result.memories.length})${colors.reset}`);
+    for (const m of result.memories) {
+      const cat = m.category ? `${colors.cyan}[${m.category}]${colors.reset}` : '';
+      print(`  ${cat} ${m.content}`);
+    }
+  }
+  print('');
+}
+
+/**
+ * skip user onboard-status <userId> [--status=completed] [--json]
+ * Get or set onboarding status
+ */
+async function onboardStatus(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
+  const jsonOutput = params['json'] === 'true';
+  const newStatus = params['status'];
+
+  if (!userId) {
+    printError('Usage: skip user onboard-status <userId> [--status=in_progress|completed] [--json]');
+    process.exit(1);
+  }
+
+  if (newStatus) {
+    // Set status
+    const result = await workerRequest(`/users/${userId}/onboarding-status`, {
+      method: 'POST',
+      body: { status: newStatus },
+    });
+
+    if (jsonOutput) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    if (result.success) {
+      printSuccess(`Onboarding status updated to "${newStatus}" for ${userId}`);
+    } else {
+      printError(result.error || 'Failed to update status');
+    }
+  } else {
+    // Get status
+    const result = await workerRequest(`/users/${userId}/onboarding-status`);
+
+    if (jsonOutput) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    if (result.success) {
+      print(`\n${colors.bold}ONBOARDING STATUS${colors.reset} for ${userId}\n`);
+      print(`  Status:       ${result.status}`);
+      print(`  Step:         ${result.onboardingStep || '-'}`);
+      print(`  Advisor:      ${result.advisorName || '-'} (${result.advisorAgentId || 'none'})`);
+      print(`  Started:      ${result.startedAt ? new Date(result.startedAt * 1000).toISOString() : '-'}`);
+      print(`  Completed:    ${result.completedAt ? new Date(result.completedAt * 1000).toISOString() : '-'}`);
+      if (result.firstBriefingId) {
+        print(`  1st Briefing: ${result.firstBriefingId}`);
+      }
+      print('');
+    } else {
+      printError(result.error || 'Failed to get status');
+    }
+  }
+}
+
+/**
+ * skip user upload-boat-image <userId> --file=<path> [--json]
+ * Upload boat image for a user
+ */
+async function uploadBoatImage(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
+  const filePath = params['file'];
+  const imageUrl = params['url'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId || (!filePath && !imageUrl)) {
+    printError('Usage: skip user upload-boat-image <userId> --file=<path> | --url=<imageUrl> [--json]');
+    process.exit(1);
+  }
+
+  const { getBaseUrl } = await import('../lib/worker-client');
+  const baseUrl = await getBaseUrl();
+  const ADMIN_TOKEN = process.env.SKIP_API_TOKEN;
+
+  let response: Response;
+
+  if (imageUrl) {
+    // Pass URL directly — server stores it as boat_image_url
+    response = await fetch(`${baseUrl}/users/${userId}/boat-image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(ADMIN_TOKEN ? { 'Authorization': `Bearer ${ADMIN_TOKEN}` } : {}),
+      },
+      body: JSON.stringify({ imageUrl }),
+    });
+  } else {
+    // File upload path
+    if (!existsSync(filePath!)) {
+      printError(`File not found: ${filePath}`);
+      process.exit(1);
+    }
+
+    const buffer = readFileSync(filePath!);
+    const ext = filePath!.split('.').pop()?.toLowerCase() || 'png';
+    const mimeTypes: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+    };
+    const mimeType = mimeTypes[ext];
+    if (!mimeType) {
+      printError(`Unsupported file type: .${ext}. Use JPEG, PNG, or WebP`);
+      process.exit(1);
+    }
+
+    const formData = new FormData();
+    formData.append('image', new Blob([buffer], { type: mimeType }), `boat.${ext}`);
+
+    response = await fetch(`${baseUrl}/users/${userId}/boat-image`, {
+      method: 'POST',
+      headers: {
+        ...(ADMIN_TOKEN ? { 'Authorization': `Bearer ${ADMIN_TOKEN}` } : {}),
+      },
+      body: formData,
+    });
+  }
+
+  const result = await response.json() as any;
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.success) {
+    printSuccess(`Boat image uploaded for ${userId}`);
+    print(`  URL: ${result.imageUrl}`);
+  } else {
+    printError(result.error || 'Upload failed');
+  }
+}
+
+/**
+ * skip user update <userId> --field=value [--json]
+ * Update user profile fields
+ */
+async function updateUser(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: skip user update <userId> --field=value [--json]');
+    process.exit(1);
+  }
+
+  // All updatable fields (camelCase keys match API body)
+  const updatableFields = [
+    'boatName', 'boatMakeModel', 'boatYear', 'boatImageUrl',
+    'location', 'marinaLocation', 'timezone', 'interests',
+    'captainName', 'phone', 'messagingPhone',
+    'experienceLevel', 'primaryUse', 'fishingStyle', 'targetSpecies',
+    'typicalCrew', 'typicalTripDuration', 'homeWaters',
+    'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
+  ];
+
+  // Build update body from provided flags
+  const body: Record<string, any> = {};
+  for (const field of updatableFields) {
+    if (params[field] !== undefined) {
+      let value: any = params[field];
+      // Parse booleans
+      if (value === 'true') value = true;
+      else if (value === 'false') value = false;
+      // Parse numbers for numeric fields
+      else if (field === 'boatLength') value = parseInt(value, 10);
+      body[field] = value;
+    }
+  }
+
+  if (Object.keys(body).length === 0) {
+    printError('No fields provided. Use --fieldName=value to set fields.');
+    print(`\nAvailable fields: ${updatableFields.join(', ')}`);
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/users/${userId}`, {
+    method: 'PATCH',
+    body,
+  });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.success) {
+    printSuccess(`Updated ${result.updated.length} field(s) for ${userId}`);
+    for (const field of result.updated) {
+      print(`  ${colors.cyan}${field}${colors.reset} = ${body[field]}`);
+    }
+  } else {
+    printError(result.error || 'Update failed');
+    process.exit(1);
+  }
+}
+
+function showHelp(): void {
+  print(`
+${colors.bold}skip user${colors.reset} - User management
+
+${colors.bold}COMMANDS${colors.reset}
+  list                    List all users
+  get <userId>            Get user details (includes advisor memories)
+  update <userId>         Update user profile fields
+  onboard-status <id>     Get or set onboarding status
+  upload-boat-image <id>  Upload boat image for a user
+
+${colors.bold}UPDATE FIELDS${colors.reset}
+  --boatName=<name>                 Boat name
+  --boatMakeModel=<make>            Boat make/model
+  --boatYear=<year>                 Boat year
+  --boatLength=<ft>                 Boat length in feet
+  --boatType=<type>                 center-console|bowrider|pontoon|sailboat|...
+  --engineType=<type>               outboard|inboard|sterndrive|jet
+  --fuelType=<type>                 gas|diesel
+  --hasTrailer=<bool>               true|false
+  --messagingPhone=<phone>          Override phone for messaging (E.164)
+  --location=<text>                 Free-text location
+  --marinaLocation=<slug>           Location slug (validated)
+  --experienceLevel=<level>         beginner|intermediate|experienced
+  --primaryUse=<uses>               Comma-separated: fishing,cruising,diving
+  --fishingStyle=<style>            inshore|offshore|both
+  --targetSpecies=<species>         Comma-separated species
+  --typicalCrew=<crew>              family|solo|friends|mixed
+  --typicalTripDuration=<dur>       half-day|full-day|overnight|weekend
+  --homeWaters=<waters>             Home waters description
+  --interests=<topics>              Comma-separated interests
+  --timezone=<tz>                   IANA timezone
+
+${colors.bold}OPTIONS${colors.reset}
+  --limit=<n>             Limit results (for list, default: 200)
+  --status=<status>       Set onboarding status (in_progress|completed)
+  --file=<path>           Image file path (for upload-boat-image)
+  --url=<imageUrl>        Image URL (for upload-boat-image, alternative to --file)
+  --json                  Output as JSON
+
+${colors.bold}EXAMPLES${colors.reset}
+  skip user list
+  skip user list --json
+  skip user get user_abc123
+  skip user update user_abc123 --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL"
+  skip user update user_abc123 --experienceLevel=beginner --primaryUse="fishing,diving" --json
+  skip user onboard-status user_abc123
+  skip user onboard-status user_abc123 --status=completed
+  skip user upload-boat-image user_abc123 --file=boat.jpg
+`);
+}
+
+export async function run(args: string[]): Promise<void> {
+  const command = args[0];
+  const commandArgs = args.slice(1);
+
+  try {
+    switch (command) {
+      case 'list':
+        await listUsers(commandArgs);
+        break;
+      case 'get':
+        await getUser(commandArgs);
+        break;
+      case 'update':
+        await updateUser(commandArgs);
+        break;
+      case 'onboard-status':
+        await onboardStatus(commandArgs);
+        break;
+      case 'upload-boat-image':
+        await uploadBoatImage(commandArgs);
+        break;
+      case 'help':
+      case '--help':
+      case '-h':
+      case undefined:
+        showHelp();
+        break;
+      default:
+        printError(`Unknown command: ${command}`);
+        showHelp();
+        process.exit(1);
+    }
+  } catch (err: any) {
+    printError(err.message);
+    process.exit(1);
+  }
+}

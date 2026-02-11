@@ -1,0 +1,17 @@
+{
+  "name": "skip-cli",
+  "version": "0.5.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build skip.ts --compile --outfile bin/skip",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "jsdom": "^27.4.0",
+    "vitest": "~3.2.0"
+  }
+}

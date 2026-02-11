@@ -2,7 +2,7 @@
 
 /**
  * Swain CLI
- * Command-line interface for the Hey Swain platform
+ * Command-line interface for the Swain platform
  *
  * Usage:
  *   skip agent list|get|create|update|delete
@@ -32,7 +32,7 @@ function showVersion(): void {
 
 function showHelp(): void {
   print(`
-${colors.bold}skip${colors.reset} - Hey Swain CLI v${VERSION}
+${colors.bold}skip${colors.reset} - Swain CLI v${VERSION}
 
 ${colors.bold}USAGE${colors.reset}
   skip <command> [subcommand] [options]

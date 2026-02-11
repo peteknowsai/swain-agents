@@ -1,8 +1,8 @@
 # Memory
 
 ## Product
-- The product is called **Hey Skip** (not Skip — `skip` is just the CLI tool name)
-- Hey Skip is a fleet of personal boat agents for captains
+- The product is called **Swain** (not Skip — `skip` is just the CLI tool name)
+- Swain is a fleet of personal boat agents for captains
 - Content is delivered via a **cards library** that powers the agents
 - My role: supply the agents with great boating content through the cards library
 

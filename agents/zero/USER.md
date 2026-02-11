@@ -13,7 +13,7 @@
 - Traveling with family in Mexico until ~March 2026
 
 ## Current Work
-- **PORT32** - Main consulting client ($10k/mo), building Boat32 app (launch end of March 2026)
+- **PORT32** - Main consulting client ($10k/mo), building Swain app (launch end of March 2026)
 - **Permanent Homes** - Nonprofit offering 0% commission buyer services in Paonia (permanenthomes.org)
 - **Home0** - Bigger vision company he's building
 

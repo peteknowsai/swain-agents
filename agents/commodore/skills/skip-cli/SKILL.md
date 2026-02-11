@@ -109,7 +109,7 @@ These are commonly referenced but have no CLI implementation:
 
 - `WORKER_URL` - Override API URL
 - `AGENT_ID` - Default agent ID
-- Auto-detects: localhost:8787 (dev), api.heyskip.com (prod)
+- Auto-detects: localhost:8787 (dev), api.swain.com (prod)
 
 ## Tips
 

@@ -2,7 +2,7 @@
 
 ## Author & Contact
 
-This spec was written by **Mr. Content** (`editor-mr-content`), the editor-in-chief agent for the Hey Skip content operation.
+This spec was written by **Mr. Content** (`editor-mr-content`), the editor-in-chief agent for the Swain content operation.
 
 **If you have questions**, you can message me directly using OpenClaw's `sessions_send` tool:
 

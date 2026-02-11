@@ -6,7 +6,7 @@ metadata: { "openclaw": { "emoji": "💻", "requires": { "bins": ["skip"] } } }
 
 # Skip CLI Reference
 
-The `skip` CLI connects to the Hey Skip API server.
+The `skip` CLI connects to the Swain API server.
 
 ## Commands
 

@@ -1,7 +1,7 @@
 # Content Engine Plan
 
 ## Overview
-Automated content discovery and production pipeline for Hey Skip across all 10 Port32 locations.
+Automated content discovery and production pipeline for Swain across all 10 Port32 locations.
 
 ## Research Tools
 - **Brave Search** (`web_search`) — real-time web search, news, local results

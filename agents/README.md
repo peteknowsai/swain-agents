@@ -29,7 +29,7 @@ Follow the pattern: `{type}-{name}-{qualifier}`
 **Examples:**
 - `beat-weather-swfl` - Weather reporter for Southwest Florida
 - `beat-fishing-fl` - Fishing conditions reporter for Florida
-- `editor-captain32-daily` - Daily editor for Captain32 news
+- `editor-swain-daily` - Daily editor for Swain news
 - `advisor-boat-peteknows` - Personalized boat advisor
 
 ## Agent System Prompts

@@ -2,7 +2,7 @@
 
 ## Skip CLI
 
-The `skip` CLI connects to the Hey Skip API server for all data operations. Always use `--json` for programmatic output.
+The `skip` CLI connects to the Swain API server for all data operations. Always use `--json` for programmatic output.
 
 ### Users
 ```bash

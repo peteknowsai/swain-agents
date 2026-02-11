@@ -1,7 +1,7 @@
 # Memory
 
 ## Product
-- The product is called **Hey Skip** — a fleet of personal boat agents for captains
+- The product is called **Hey Swain** — a fleet of personal boat agents for captains
 - `skip` is the CLI and infrastructure platform name
 - Content is delivered via a **cards library** that powers advisor agents
 - My role: ensure the entire agent fleet runs smoothly and produces results
@@ -62,11 +62,11 @@ Each advisor is a personal Skip for one captain:
 ## Repos & Paths
 - **Skip repo** — `/Users/pete/Projects/skip/` (backend + API)
 - **Skip specs** — `/Users/pete/Projects/skip/specs/` (always put backend specs here)
-- **boat32 repo** — `/Users/pete/Projects/boat32/` (iOS native app, SwiftUI, bundle: com.boat32.ios)
-- **boat32 specs** — `/Users/pete/Projects/boat32/specs/` (mobile specs go here)
+- **heyswain-app repo** — `/Users/pete/Projects/heyswain-app/` (iOS native app, SwiftUI, bundle: com.heyswain.ios)
+- **heyswain-app specs** — `/Users/pete/Projects/heyswain-app/specs/` (mobile specs go here)
 - **Worktrees** — `/Users/pete/Projects/skip-worktrees/<feature-name>/`
 - **Worktree pipeline**: write spec → drop in `skip/specs/` → create worktree (`cw create <name>` or manual git worktree add) → Pete launches Claude Code agents to implement
-- Expo app in boat32 is **sunset** — iOS native only
+- Expo app in swain is **sunset** — iOS native only
 
 ## Coordination Protocols
 - **Mr. Content → Commodore**: Pings on timely/urgent card pushes (safety, weather). I check advisor surfacing.

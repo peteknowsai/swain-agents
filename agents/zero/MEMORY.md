@@ -4,7 +4,7 @@
 - **Name:** Pete McCarthy
 - **Location:** Currently traveling Mexico by RV (Jan 2026: San Cristobal de las Casas)
 - **Home base:** Paonia, CO (previously SF)
-- **Main client:** PORT32 ($10k/mo) - building Boat32 app, launching end of March 2026
+- **Main client:** PORT32 ($10k/mo) - building Swain app, launching end of March 2026
 - **Family:** Has kids (school notices from NFSIS)
 
 ## WhatsApp Groups

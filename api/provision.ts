@@ -14,6 +14,11 @@ const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 const REGISTRY_FILE = "/root/skip-agent-api/registry.json";
 
+// Honcho configuration
+const HONCHO_API_KEY = process.env.HONCHO_API_KEY;
+const HONCHO_BASE_URL = process.env.HONCHO_BASE_URL || "https://api.honcho.dev";
+const HONCHO_WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID || "swain";
+
 type Registry = Record<string, string>; // userId → agentId
 
 async function loadRegistry(): Promise<Registry> {
@@ -86,6 +91,99 @@ async function openclaw(args: string[]): Promise<string> {
   return stdout.trim();
 }
 
+/** Seed Honcho with captain and advisor peers + initial conclusions */
+async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
+  if (!HONCHO_API_KEY) {
+    console.warn("HONCHO_API_KEY not set — skipping Honcho seeding");
+    return;
+  }
+
+  const captainPeerId = `captain-${input.userId}`;
+  const advisorPeerId = `advisor-${input.userId}`;
+
+  const headers = {
+    "Authorization": `Bearer ${HONCHO_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+  const base = `${HONCHO_BASE_URL}/v2/workspaces/${HONCHO_WORKSPACE_ID}`;
+
+  // Ensure workspace exists
+  const wsRes = await fetch(`${HONCHO_BASE_URL}/v2/workspaces`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ id: HONCHO_WORKSPACE_ID }),
+  });
+  if (!wsRes.ok && wsRes.status !== 409) {
+    console.warn(`Honcho workspace create returned ${wsRes.status}`);
+  }
+
+  // Create captain peer (observe_me: true so Honcho reasons about them)
+  await fetch(`${base}/peers`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      id: captainPeerId,
+      metadata: {
+        userId: input.userId,
+        name: input.name,
+        boatName: input.boatName || null,
+        phone: input.phone || null,
+        role: "captain",
+      },
+    }),
+  });
+
+  // Create advisor peer (observe_me: true, will observe captain in sessions)
+  await fetch(`${base}/peers`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      id: advisorPeerId,
+      metadata: {
+        agentId,
+        captainUserId: input.userId,
+        role: "advisor",
+      },
+    }),
+  });
+
+  // Seed initial conclusions about the captain from onboarding data
+  const conclusions: Array<{ content: string; observer_id: string; observed_id: string }> = [];
+
+  conclusions.push({
+    content: `Captain's name is ${input.name}.`,
+    observer_id: advisorPeerId,
+    observed_id: captainPeerId,
+  });
+
+  if (input.boatName) {
+    conclusions.push({
+      content: `Captain's boat is named "${input.boatName}".`,
+      observer_id: advisorPeerId,
+      observed_id: captainPeerId,
+    });
+  }
+
+  if (input.boatMake || input.boatModel) {
+    const boatDesc = [input.boatMake, input.boatModel].filter(Boolean).join(" ");
+    conclusions.push({
+      content: `Captain's boat is a ${boatDesc}.`,
+      observer_id: advisorPeerId,
+      observed_id: captainPeerId,
+    });
+  }
+
+  if (conclusions.length > 0) {
+    await fetch(`${base}/conclusions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ conclusions }),
+    });
+  }
+
+  console.log(`Honcho seeded: captain=${captainPeerId} advisor=${advisorPeerId} conclusions=${conclusions.length}`);
+}
+
 /** Provision a new advisor agent */
 export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionResult> {
   const agentId = makeSlug(input.name, input.userId);
@@ -129,6 +227,13 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   const reg = await loadRegistry();
   reg[input.userId] = agentId;
   await saveRegistry(reg);
+
+  // 9. Seed Honcho with captain/advisor peers and initial conclusions
+  try {
+    await seedHoncho(input, agentId);
+  } catch (err) {
+    console.error(`Honcho seeding failed (non-fatal): ${err}`);
+  }
 
   return { agentId, status: "provisioned", workspace };
 }

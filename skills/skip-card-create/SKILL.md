@@ -1,6 +1,6 @@
 ---
 name: skip-card-create
-description: Create content cards for the Hey Skip platform. Used by beat reporters after researching and writing.
+description: Create content cards for the Swain platform. Used by beat reporters after researching and writing.
 metadata: { "openclaw": { "emoji": "🃏", "requires": { "bins": ["skip"] } } }
 ---
 

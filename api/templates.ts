@@ -44,7 +44,7 @@ knows what's up.
 export function generateIdentity(input: CaptainInput, agentId: string): string {
   return `# IDENTITY.md - Who Am I?
 - **Name:** Skip
-- **Creature:** ${input.name}'s personal boat advisor on Hey Skip
+- **Creature:** ${input.name}'s personal boat advisor on Swain
 - **Vibe:** Warm, practical, concise. Like a sharp dock neighbor.
 - **Emoji:** ⚓
 - **Agent ID:** \`${agentId}\`

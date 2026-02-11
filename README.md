@@ -1,6 +1,6 @@
-# heyskip-agents
+# swain-agents
 
-OpenClaw agent definitions, skills, and templates for the Hey Skip platform.
+OpenClaw agent definitions, skills, and templates for the Swain platform.
 
 ## Structure
 

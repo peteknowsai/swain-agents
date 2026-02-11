@@ -1,7 +1,7 @@
 ---
 name: coverage-tracker
 description: Track content coverage across all Port32 locations, identify gaps, and plan dispatches.
-metadata: { "openclaw": { "emoji": "🗺️", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "🗺️", "requires": { "bins": ["swain"] } } }
 ---
 
 # Coverage Tracker
@@ -73,14 +73,14 @@ Every **state** should have:
 ### Quick count by location
 ```bash
 # Get all cards and analyze by location
-skip card list --limit=200 --json
+swain card list --limit=200 --json
 ```
 
 Parse the JSON and count cards per location field.
 
 ### Beat agents per location
 ```bash
-skip beat list --json
+swain beat list --json
 ```
 
 ### Check for gaps

@@ -105,7 +105,7 @@ DELETE /briefings/:briefingId
 
 ### CLI
 ```
-skip briefing delete <briefingId> [--confirm] [--json]
+swain briefing delete <briefingId> [--confirm] [--json]
 ```
 
 ### Behavior
@@ -136,7 +136,7 @@ Body: { userId, date?, items, force?: boolean }
 
 ### CLI Change
 ```
-skip briefing assemble --user=<id> --items='[...]' [--force] [--json]
+swain briefing assemble --user=<id> --items='[...]' [--force] [--json]
 ```
 
 ### Behavior When `force=true`
@@ -166,7 +166,7 @@ GET /briefings/previous/:userId?date=YYYY-MM-DD
 
 ### CLI Change
 ```
-skip briefing previous --user=<id> [--date=YYYY-MM-DD] --json
+swain briefing previous --user=<id> [--date=YYYY-MM-DD] --json
 ```
 
 ### Behavior
@@ -287,7 +287,7 @@ GET /briefings/history/:userId?days=7
 
 ### CLI
 ```
-skip briefing history --user=<id> [--days=7] --json
+swain briefing history --user=<id> [--days=7] --json
 ```
 
 ### Response
@@ -340,7 +340,7 @@ Body: { userId, date?, items }
 
 ### CLI
 ```
-skip briefing validate --user=<id> --items='[...]' --json
+swain briefing validate --user=<id> --items='[...]' --json
 ```
 
 ### Response
@@ -388,8 +388,8 @@ skip briefing validate --user=<id> --items='[...]' --json
 
 **Card pull filter options:**
 ```
-skip card pull --user=<id> --exclude-served --json    # Current behavior: exclude all served
-skip card pull --user=<id> --exclude-viewed --json    # New: only exclude actually viewed
+swain card pull --user=<id> --exclude-served --json    # Current behavior: exclude all served
+swain card pull --user=<id> --exclude-viewed --json    # New: only exclude actually viewed
 ```
 
 **Default behavior:**
@@ -424,10 +424,10 @@ Body: { userId, action: "viewed"|"expanded"|"bookmarked"|"thumbs_up"|"thumbs_dow
 **Feed back to card pull:**
 - Over time, build a per-user engagement profile: which categories they engage with most
 - Use this to refine interest-weighted sorting (Section 8b)
-- Surface engagement summary in `skip user get --json` so advisors can read it
+- Surface engagement summary in `swain user get --json` so advisors can read it
 
 **Feed back to advisors:**
-- `skip advisor engagement --user=<userId> --json` returns:
+- `swain advisor engagement --user=<userId> --json` returns:
   ```json
   {
     "topCategories": ["weather-tides", "dining", "activities-events"],
@@ -476,12 +476,12 @@ This is the complete workflow an advisor follows with all features implemented:
    - Load advisor memories: preferences, past interactions, personal notes
 
 2. CHECK HISTORY
-   skip briefing history --user=<userId> --days=7 --json
+   swain briefing history --user=<userId> --days=7 --json
    → See what cards were served this week
    → Note category distribution (too much maintenance? no dining?)
 
 3. PULL CANDIDATES
-   skip card pull --user=<userId> --exclude-viewed --json
+   swain card pull --user=<userId> --exclude-viewed --json
    → Get eligible cards, sorted by relevance
    → Note the weather priority card
    → Note any "missing" warnings (no fresh weather?)
@@ -503,12 +503,12 @@ This is the complete workflow an advisor follows with all features implemented:
    - Closing: warm sendoff, maybe tease tomorrow's content
 
 6. VALIDATE (optional safety net)
-   skip briefing validate --user=<userId> --items='[...]' --json
+   swain briefing validate --user=<userId> --items='[...]' --json
    → Check for expired cards, overlaps, missing weather
    → Fix any issues
 
 7. ASSEMBLE
-   skip briefing assemble --user=<userId> --items='[...]' --json
+   swain briefing assemble --user=<userId> --items='[...]' --json
    → Briefing saved, cards marked as served
    → Done.
 

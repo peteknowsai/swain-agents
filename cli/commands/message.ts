@@ -2,7 +2,7 @@
 
 /**
  * Message Commands
- * skip message send --to=<phone> --text=<message> [--effect=<effect>] [--media=<url>] [--user=<userId>]
+ * swain message send --to=<phone> --text=<message> [--effect=<effect>] [--media=<url>] [--user=<userId>]
  */
 
 import {
@@ -15,7 +15,7 @@ import {
 import { parseArgs } from '../lib/args';
 
 /**
- * skip message send --to=<phone> --text="Hello!" [--effect=fireworks] [--media=<url>] [--user=<userId>]
+ * swain message send --to=<phone> --text="Hello!" [--effect=fireworks] [--media=<url>] [--user=<userId>]
  */
 async function sendMessage(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -28,7 +28,7 @@ async function sendMessage(args: string[]): Promise<void> {
   const userId = params['user'];
 
   if (!to) {
-    printError('Usage: skip message send --to=<phone> --text="message"');
+    printError('Usage: swain message send --to=<phone> --text="message"');
     process.exit(1);
   }
   if (!text && !mediaUrl) {
@@ -61,16 +61,16 @@ async function sendMessage(args: string[]): Promise<void> {
 
 function showHelp(): void {
   print(`
-${colors.bold}skip message${colors.reset} - Send iMessage/SMS via Linq
+${colors.bold}swain message${colors.reset} - Send iMessage/SMS via Linq
 
 ${colors.bold}COMMANDS${colors.reset}
   send    Send a text or media message
 
 ${colors.bold}USAGE${colors.reset}
-  skip message send --to=+14155551234 --text="Hey there!"
-  skip message send --to=+14155551234 --text="Happy birthday!" --effect=balloons
-  skip message send --to=+14155551234 --media=https://example.com/photo.jpg --caption="Check this out"
-  skip message send --to=+14155551234 --text="Hello" --user=user_abc --json
+  swain message send --to=+14155551234 --text="Hey there!"
+  swain message send --to=+14155551234 --text="Happy birthday!" --effect=balloons
+  swain message send --to=+14155551234 --media=https://example.com/photo.jpg --caption="Check this out"
+  swain message send --to=+14155551234 --text="Hello" --user=user_abc --json
 
 ${colors.bold}OPTIONS${colors.reset}
   --to=<phone>       Recipient phone number (E.164 format)

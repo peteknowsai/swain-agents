@@ -1,7 +1,7 @@
 ---
 name: beat-monitoring
 description: Monitor specific beat output — runs, cards produced, freshness, reliability.
-metadata: { "openclaw": { "emoji": "📡", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "📡", "requires": { "bins": ["swain"] } } }
 ---
 
 # Beat Monitoring
@@ -12,19 +12,19 @@ Drill into a specific beat reporter's performance, or scan all beats for issues.
 
 ### Recent runs
 ```bash
-skip run list --agent-id=<beat-agent-id> --json
+swain run list --agent-id=<beat-agent-id> --json
 ```
 Look at: success/failure rate, last run time, run duration.
 
 ### Cards produced
 ```bash
-skip card list --agent=<beat-agent-id> --json
+swain card list --agent=<beat-agent-id> --json
 ```
 Look at: total cards, most recent card date, card quality (titles, content length).
 
 ### Coverage audit for that agent
 ```bash
-skip card audit --agent=<beat-agent-id> --json
+swain card audit --agent=<beat-agent-id> --json
 ```
 Check: are cards fresh? Any expired timely content?
 
@@ -32,7 +32,7 @@ Check: are cards fresh? Any expired timely content?
 
 ### List all beat agents
 ```bash
-skip beat list --json
+swain beat list --json
 ```
 
 ### For each beat, check:

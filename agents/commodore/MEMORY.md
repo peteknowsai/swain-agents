@@ -2,7 +2,7 @@
 
 ## Product
 - The product is called **Swain** — a fleet of personal boat agents for captains
-- `skip` is the CLI and infrastructure platform name
+- `swain` is the CLI and infrastructure platform name
 - Content is delivered via a **cards library** that powers advisor agents
 - My role: ensure the entire agent fleet runs smoothly and produces results
 
@@ -46,14 +46,14 @@ Each advisor is a personal Skip for one captain:
 10. Morehead City, NC — Portside marina
 
 ## Onboarding
-- **Linq plugin** installed (2026-02-07) — iMessage/RCS/SMS channel for advisors. No more `skip message send` CLI. Replies auto-deliver via Linq.
-- **Messaging audit** (2026-02-07): All 14 advisor workspaces + templates clean. No stale `skip message` references.
+- **Linq plugin** installed (2026-02-07) — iMessage/RCS/SMS channel for advisors. No more `swain message send` CLI. Replies auto-deliver via Linq.
+- **Messaging audit** (2026-02-07): All 14 advisor workspaces + templates clean. No stale `swain message` references.
 - **Onboarding conversation flow** added to template AGENTS.md (2026-02-07): advisors now have guidance on first-conversation discovery (boating style, experience, interests, goals, schedule). Natural conversation, not a form.
-- **skip-onboarding skill** updated (2026-02-07): briefing creation now explicitly follows the text conversation. Advisors personalize card selection based on what they learned.
+- **swain-onboarding skill** updated (2026-02-07): briefing creation now explicitly follows the text conversation. Advisors personalize card selection based on what they learned.
 - Template source of truth: `/Users/pete/Projects/skip/server/openclaw/templates/`
 
 ## Tools
-- **skip CLI** — connects to Skip API at localhost:8787 (dev) or production
+- **swain CLI** — connects to Skip API at localhost:8787 (dev) or production
 - **Firecrawl** — web scraping (managed by Mr. Content)
 - **nanobanana** — image generation for cards
 - **sessions_send** — agent-to-agent messaging via OpenClaw
@@ -62,8 +62,8 @@ Each advisor is a personal Skip for one captain:
 ## Repos & Paths
 - **Skip repo** — `/Users/pete/Projects/skip/` (backend + API)
 - **Skip specs** — `/Users/pete/Projects/skip/specs/` (always put backend specs here)
-- **heyswain-app repo** — `/Users/pete/Projects/heyswain-app/` (iOS native app, SwiftUI, bundle: com.heyswain.ios)
-- **heyswain-app specs** — `/Users/pete/Projects/heyswain-app/specs/` (mobile specs go here)
+- **swain-app repo** — `/Users/pete/Projects/swain-app/` (iOS native app, SwiftUI, bundle: com.heyswain.ios)
+- **swain-app specs** — `/Users/pete/Projects/swain-app/specs/` (mobile specs go here)
 - **Worktrees** — `/Users/pete/Projects/skip-worktrees/<feature-name>/`
 - **Worktree pipeline**: write spec → drop in `skip/specs/` → create worktree (`cw create <name>` or manual git worktree add) → Pete launches Claude Code agents to implement
 - Expo app in swain is **sunset** — iOS native only
@@ -105,8 +105,8 @@ Each advisor is a personal Skip for one captain:
 ### Fixes Applied
 - USER.md → points to API, no hardcoded data
 - SOUL.md → no hardcoded boat info
-- AGENTS.md → two-session messaging, narration warning (don't think out loud), onboarding checklist, `skip user update` integration, nanobanana skill
-- TOOLS.md → full `skip user update` reference
+- AGENTS.md → two-session messaging, narration warning (don't think out loud), onboarding checklist, `swain user update` integration, nanobanana skill
+- TOOLS.md → full `swain user update` reference
 - nanobanana skill → copied to advisor workspace
 - OpenAI key → all agents (for memory_search embeddings)
 - Template AGENTS.md + TOOLS.md → updated for future advisors
@@ -118,11 +118,11 @@ Each advisor is a personal Skip for one captain:
 
 ### Specs Written
 - `skip/specs/cli-user-update.md` — BUILT AND SHIPPED by engineering
-- Engineering added: PATCH /users/:userId, `skip user update`, upload-boat-image --url
+- Engineering added: PATCH /users/:userId, `swain user update`, upload-boat-image --url
 
 ### messaging_phone Override (2026-02-08)
 - `messaging_phone` column added to mobile_users
 - Auto-sets when signup phone matches +1555555xxxx (using DEV_MESSAGING_PHONE env var)
-- `skip user get` returns `messaging_phone ?? phone` as `phone` — advisor sees right number transparently
+- `swain user get` returns `messaging_phone ?? phone` as `phone` — advisor sees right number transparently
 - No agent changes needed — advisor just reads `phone` field
 - Requires `DEV_MESSAGING_PHONE=+14156239773` in server env

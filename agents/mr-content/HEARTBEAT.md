@@ -5,9 +5,9 @@ These routines run when Pete invokes them or on a scheduled heartbeat.
 ## On Every Heartbeat
 
 Quick health check (< 2 minutes):
-1. `skip run list --status=running --json` — check for stuck or long-running reporters
-2. `skip run list --status=failed --json` — check for failures that need retry
-3. `skip card list --limit=10 --json` — glance at newest cards, spot any obvious issues
+1. `swain run list --status=running --json` — check for stuck or long-running reporters
+2. `swain run list --status=failed --json` — check for failures that need retry
+3. `swain card list --limit=10 --json` — glance at newest cards, spot any obvious issues
 4. Check if any timely cards are expiring today/tomorrow
 5. If something needs attention, report it. Otherwise, HEARTBEAT_OK.
 
@@ -17,7 +17,7 @@ When asked for a daily review:
 
 1. **Coverage audit by location** — For each Port32 marina, count active cards:
    ```bash
-   skip card list --limit=100 --json
+   swain card list --limit=100 --json
    ```
    Flag any location with fewer than 5 active cards.
 

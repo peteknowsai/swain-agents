@@ -1,7 +1,7 @@
 ---
 name: morning-check
 description: Daily morning check — verify all advisor briefings ran, flag failures, check content pipeline health.
-metadata: { "openclaw": { "emoji": "☀️", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "☀️", "requires": { "bins": ["swain"] } } }
 ---
 
 # Morning Check
@@ -12,7 +12,7 @@ Run every morning after the 6 AM advisor briefing window (6:00-6:10 AM ET). Veri
 
 ### 1. Verify briefings were created
 ```bash
-skip briefing list --limit=20 --json
+swain briefing list --limit=20 --json
 ```
 Check that all 6 advisors produced a briefing for today's date:
 - user_bobby_b08861b8
@@ -24,19 +24,19 @@ Check that all 6 advisors produced a briefing for today's date:
 
 ### 2. Check for failed advisor runs
 ```bash
-skip run list --status=failed --json
+swain run list --status=failed --json
 ```
 Filter for advisor agent IDs. Any failures in the last 12 hours need attention.
 
 ### 3. Check today's card production
 ```bash
-skip card list-today --json
+swain card list-today --json
 ```
 Are new cards flowing? Mr. Content's beats should be producing.
 
 ### 4. Quick card audit
 ```bash
-skip card audit --location=tierra-verde --json
+swain card audit --location=tierra-verde --json
 ```
 Tierra Verde is where all current captains are. Make sure coverage is healthy.
 

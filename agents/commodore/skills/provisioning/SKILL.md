@@ -1,7 +1,7 @@
 ---
 name: provisioning
 description: Create new beat agents, provision advisors, expand to new locations.
-metadata: { "openclaw": { "emoji": "🏗️", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "🏗️", "requires": { "bins": ["swain"] } } }
 ---
 
 # Provisioning
@@ -11,7 +11,7 @@ Create new agents and expand fleet operations.
 ## Create a New Beat Agent
 
 ```bash
-skip beat create --topic=<topic> --location=<location> --json
+swain beat create --topic=<topic> --location=<location> --json
 ```
 
 This provisions a full beat agent with:
@@ -41,11 +41,11 @@ Every location should eventually have:
 2. **Research the location** — Ask Mr. Content to research via sessions_send
 3. **Create foundational beats:**
    ```bash
-   skip beat create --topic=fishing --location=<loc> --json
-   skip beat create --topic=destinations --location=<loc> --json
-   skip beat create --topic=dining --location=<loc> --json
-   skip beat create --topic=port32 --location=<loc> --json
-   skip beat create --topic=safety --location=<loc> --json
+   swain beat create --topic=fishing --location=<loc> --json
+   swain beat create --topic=destinations --location=<loc> --json
+   swain beat create --topic=dining --location=<loc> --json
+   swain beat create --topic=port32 --location=<loc> --json
+   swain beat create --topic=safety --location=<loc> --json
    ```
 4. **Dispatch foundational content** — Ask Mr. Content to dispatch:
    - First-Timer's Guide for the marina
@@ -62,11 +62,11 @@ Advisor provisioning is handled by the Skip server (advisor-runner). But you sho
 
 1. **Verify the user exists:**
    ```bash
-   skip user get <userId> --json
+   swain user get <userId> --json
    ```
 2. **Check their location has content:**
    ```bash
-   skip card audit --location=<loc> --json
+   swain card audit --location=<loc> --json
    ```
 3. **Report readiness to Pete** — "User [name] at [location] has [N] cards available. Advisor provisioning can proceed."
 

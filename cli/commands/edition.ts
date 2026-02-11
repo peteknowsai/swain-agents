@@ -2,7 +2,7 @@
 
 /**
  * Edition Commands
- * skip edition list|get|create
+ * swain edition list|get|create
  */
 
 import {
@@ -15,7 +15,7 @@ import {
 import { parseArgs } from '../lib/args';
 
 /**
- * skip edition list
+ * swain edition list
  * List editions
  */
 async function listEditions(args: string[]): Promise<void> {
@@ -48,7 +48,7 @@ async function listEditions(args: string[]): Promise<void> {
 }
 
 /**
- * skip edition get
+ * swain edition get
  * Get edition details with cards
  */
 async function getEdition(args: string[]): Promise<void> {
@@ -61,7 +61,7 @@ async function getEdition(args: string[]): Promise<void> {
   const endpoint = latest ? '/editions/latest' : `/editions/${editionId}`;
 
   if (!latest && (!editionId || editionId.startsWith('--'))) {
-    printError('Usage: skip edition get <editionId> or --latest');
+    printError('Usage: swain edition get <editionId> or --latest');
     process.exit(1);
   }
 
@@ -113,7 +113,7 @@ async function getEdition(args: string[]): Promise<void> {
 }
 
 /**
- * skip edition create
+ * swain edition create
  * Create a new edition
  */
 async function createEdition(args: string[]): Promise<void> {
@@ -126,7 +126,7 @@ async function createEdition(args: string[]): Promise<void> {
   const selectionsStr = params['selections'];
 
   if (!date || !cardIdsStr || !curator) {
-    printError('Usage: skip edition create --date=YYYY-MM-DD --card-ids="card_a,card_b" --curator=<agentId>');
+    printError('Usage: swain edition create --date=YYYY-MM-DD --card-ids="card_a,card_b" --curator=<agentId>');
     printError('       Optional: --selections=\'[{"cardId":"card_a","selected":true,"position":1,"editorialComment":"..."}]\'');
     process.exit(1);
   }
@@ -184,7 +184,7 @@ async function createEdition(args: string[]): Promise<void> {
  */
 function showHelp(): void {
   print(`
-${colors.bold}skip edition${colors.reset} - Daily editions
+${colors.bold}swain edition${colors.reset} - Daily editions
 
 ${colors.bold}COMMANDS${colors.reset}
   list                    List editions
@@ -202,11 +202,11 @@ ${colors.bold}OPTIONS${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip edition list
-  skip edition list --limit=10
-  skip edition get edition_abc123
-  skip edition get --latest
-  skip edition create --date="2025-02-02" --card-ids="card_a,card_b" --curator="editor-tierra-verde"
+  swain edition list
+  swain edition list --limit=10
+  swain edition get edition_abc123
+  swain edition get --latest
+  swain edition create --date="2025-02-02" --card-ids="card_a,card_b" --curator="editor-tierra-verde"
 `);
 }
 

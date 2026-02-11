@@ -1,7 +1,7 @@
 ---
 name: content-quality
 description: Delegate content quality audits to Mr. Content via agent-to-agent messaging.
-metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["swain"] } } }
 ---
 
 # Content Quality

@@ -2,15 +2,15 @@
 
 ## Skip CLI
 
-The `skip` CLI connects to the Swain API server for all data operations. Always use `--json` for programmatic output.
+The `swain` CLI connects to the Swain API server for all data operations. Always use `--json` for programmatic output.
 
 ### Users
 ```bash
 # Get user profile (name, boat, location, interests, etc.)
-skip user get <userId> --json
+swain user get <userId> --json
 
 # Update user profile — use this to save what you learn in conversation
-skip user update <userId> --field=value [--field=value ...] --json
+swain user update <userId> --field=value [--field=value ...] --json
 
 # Updatable fields:
 #   --boatName="Reel Therapy"
@@ -34,34 +34,34 @@ skip user update <userId> --field=value [--field=value ...] --json
 #   --timezone="America/New_York"
 
 # Upload boat image (from URL or file)
-skip user upload-boat-image <userId> --url=<imageUrl> --json
-skip user upload-boat-image <userId> --file=<path> --json
+swain user upload-boat-image <userId> --url=<imageUrl> --json
+swain user upload-boat-image <userId> --file=<path> --json
 ```
 
-**Important:** The server profile powers card selection and briefing personalization. During onboarding, batch all updates — save everything to memory as you learn it, then do one big `skip user update` call with all fields when you build the first briefing. After onboarding, update the server whenever you learn something new.
+**Important:** The server profile powers card selection and briefing personalization. During onboarding, batch all updates — save everything to memory as you learn it, then do one big `swain user update` call with all fields when you build the first briefing. After onboarding, update the server whenever you learn something new.
 
 ### Card Library
 ```bash
 # Browse available cards for a user (fresh + resurfaced)
-skip card pull --user=<userId> --exclude-served --json
+swain card pull --user=<userId> --exclude-served --json
 
 # Get a specific card's full details
-skip card get <cardId> --json
+swain card get <cardId> --json
 ```
 
 ### Briefings
 ```bash
 # Check yesterday's briefing (avoid repeats)
-skip briefing previous --user=<userId> --json
+swain briefing previous --user=<userId> --json
 
 # Assemble a briefing from selected cards
-skip briefing assemble --user=<userId> --items='<json_array>' [--force] --json
+swain briefing assemble --user=<userId> --items='<json_array>' [--force] --json
 
 # List recent briefings
-skip briefing list --user=<userId> --json
+swain briefing list --user=<userId> --json
 
 # Get briefing details
-skip briefing get <briefingId> --json
+swain briefing get <briefingId> --json
 ```
 
 ## Key Patterns
@@ -69,9 +69,9 @@ skip briefing get <briefingId> --json
 ### Save What You Learn
 After onboarding, update the server when you learn new info:
 ```bash
-skip user update <userId> --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL" --json
-skip user update <userId> --primaryUse=fishing --fishingStyle=offshore --json
-skip user update <userId> --boatYear="2024" --hasTrailer=true --json
+swain user update <userId> --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL" --json
+swain user update <userId> --primaryUse=fishing --fishingStyle=offshore --json
+swain user update <userId> --boatYear="2024" --hasTrailer=true --json
 ```
 During onboarding, batch all updates into one call when building the first briefing.
 

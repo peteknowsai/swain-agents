@@ -7,5 +7,5 @@ argument-hint: [user-id] [category] [content]
 Add a memory:
 
 ```bash
-skip memory add --user=$1 --category=$2 --content="$3"
+swain memory add --user=$1 --category=$2 --content="$3"
 ```

@@ -2,7 +2,7 @@
 
 /**
  * Image Commands
- * skip image queue|status|wait
+ * swain image queue|status|wait
  *
  * Async image generation for agents - queue images early and poll for completion
  */
@@ -37,7 +37,7 @@ function parseArgs(args: string[]): Record<string, string> {
 }
 
 /**
- * skip image queue "prompt" [--style=<styleId>] [--agent=<agentId>]
+ * swain image queue "prompt" [--style=<styleId>] [--agent=<agentId>]
  * Queue an image generation job, returns immediately with jobId
  */
 async function queueImage(args: string[]): Promise<void> {
@@ -48,7 +48,7 @@ async function queueImage(args: string[]): Promise<void> {
   const prompt = args.find(arg => !arg.startsWith('--'));
 
   if (!prompt) {
-    printError('Usage: skip image queue "prompt" [--style=<styleId>] [--agent=<agentId>]');
+    printError('Usage: swain image queue "prompt" [--style=<styleId>] [--agent=<agentId>]');
     process.exit(1);
   }
 
@@ -69,8 +69,8 @@ async function queueImage(args: string[]): Promise<void> {
       printSuccess(`Queued image job: ${result.jobId}`);
       print(`  Status: ${result.status}`);
       print(`  Poll:   ${result.pollUrl}`);
-      print(`\nUse 'skip image status ${result.jobId}' to check status`);
-      print(`Or  'skip image wait ${result.jobId}' to wait for completion`);
+      print(`\nUse 'swain image status ${result.jobId}' to check status`);
+      print(`Or  'swain image wait ${result.jobId}' to wait for completion`);
     }
   } catch (err: any) {
     printError(`Failed to queue image: ${err.message}`);
@@ -79,7 +79,7 @@ async function queueImage(args: string[]): Promise<void> {
 }
 
 /**
- * skip image status <jobId>
+ * swain image status <jobId>
  * Check status of an image generation job
  */
 async function statusImage(args: string[]): Promise<void> {
@@ -90,7 +90,7 @@ async function statusImage(args: string[]): Promise<void> {
   const jobId = args.find(arg => !arg.startsWith('--'));
 
   if (!jobId) {
-    printError('Usage: skip image status <jobId>');
+    printError('Usage: swain image status <jobId>');
     process.exit(1);
   }
 
@@ -114,7 +114,7 @@ async function statusImage(args: string[]): Promise<void> {
 }
 
 /**
- * skip image wait <jobId> [--timeout=120]
+ * swain image wait <jobId> [--timeout=120]
  * Wait for an image generation job to complete, polling until done
  */
 async function waitImage(args: string[]): Promise<void> {
@@ -127,7 +127,7 @@ async function waitImage(args: string[]): Promise<void> {
   const jobId = args.find(arg => !arg.startsWith('--'));
 
   if (!jobId) {
-    printError('Usage: skip image wait <jobId> [--timeout=120]');
+    printError('Usage: swain image wait <jobId> [--timeout=120]');
     process.exit(1);
   }
 
@@ -204,7 +204,7 @@ function colorStatus(status: string): string {
  */
 function showHelp(): void {
   print(`
-${colors.bold}skip image${colors.reset} - Async image generation
+${colors.bold}swain image${colors.reset} - Async image generation
 
 ${colors.bold}Commands:${colors.reset}
   queue "prompt"    Queue image generation, returns jobId immediately
@@ -223,18 +223,18 @@ ${colors.bold}Wait Options:${colors.reset}
 
 ${colors.bold}Examples:${colors.reset}
   # Queue an image and get jobId
-  skip image queue "sheepshead near dock pilings" --style=style_ocean-watercolor
+  swain image queue "sheepshead near dock pilings" --style=style_ocean-watercolor
 
   # Check status
-  skip image status img_abc123
+  swain image status img_abc123
 
   # Wait for completion
-  skip image wait img_abc123 --timeout=60
+  swain image wait img_abc123 --timeout=60
 
   # Full workflow (agent use)
-  JOB=$(skip image queue "fishing scene" --json | jq -r '.jobId')
+  JOB=$(swain image queue "fishing scene" --json | jq -r '.jobId')
   # ... do other work ...
-  URL=$(skip image wait $JOB --json | jq -r '.url')
+  URL=$(swain image wait $JOB --json | jq -r '.url')
 
 ${colors.bold}Notes:${colors.reset}
   - Images generate in the background using nanobanana (FREE via Gemini)

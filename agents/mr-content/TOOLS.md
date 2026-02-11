@@ -2,52 +2,52 @@
 
 ## Skip CLI
 
-The `skip` CLI connects to the Skip API server.
+The `swain` CLI connects to the Skip API server.
 
 ### Beat Reporters
 ```bash
 # Dispatch a generic beat reporter
-skip beat run --topic=<topic> --location=<location> [--instructions="..."] [--json]
+swain beat run --topic=<topic> --location=<location> [--instructions="..."] [--json]
 
 # List all registered beat reporters
-skip beat list [--json]
+swain beat list [--json]
 
 # Register a new permanent beat
-skip beat register --topic=<topic> --location=<location> [--name="..."] [--schedule=daily] [--json]
+swain beat register --topic=<topic> --location=<location> [--name="..."] [--schedule=daily] [--json]
 ```
 
 ### Library Analysis
 ```bash
 # Analyze card library health and coverage
-skip library analyze [--json]
+swain library analyze [--json]
 ```
 
 ### Advisor Communication
 ```bash
 # Read advisor memories (all users or specific user)
-skip advisor memories [--user=<userId>] [--json]
+swain advisor memories [--user=<userId>] [--json]
 
 # Leave a note for an advisor
-skip advisor note --user=<userId> --content="..." [--category=<cat>] [--json]
+swain advisor note --user=<userId> --content="..." [--category=<cat>] [--json]
 ```
 
 ### Cards
 ```bash
-skip card list [--agent=<id>] [--limit=<n>] [--json]
-skip card get <cardId> [--json]
-skip card library --user=<userId> [--json]
-skip card check --agent-id=<id> [--date=<YYYY-MM-DD>] [--json]
+swain card list [--agent=<id>] [--limit=<n>] [--json]
+swain card get <cardId> [--json]
+swain card library --user=<userId> [--json]
+swain card check --agent-id=<id> [--date=<YYYY-MM-DD>] [--json]
 ```
 
 ### Agents
 ```bash
-skip agent list [--type=<type>] [--json]
-skip agent get <agentId> [--json]
+swain agent list [--type=<type>] [--json]
+swain agent get <agentId> [--json]
 ```
 
 ### Users
 ```bash
-skip user get <userId> [--json]
+swain user get <userId> [--json]
 ```
 
 ## Environment

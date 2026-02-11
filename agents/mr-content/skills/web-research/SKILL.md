@@ -111,7 +111,7 @@ Then scrape individual articles for detailed content to adapt.
 
 After research, cross-reference findings with the library:
 ```bash
-skip card list --limit=50 --json
+swain card list --limit=50 --json
 ```
 
 Ask yourself:

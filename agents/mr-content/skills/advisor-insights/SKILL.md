@@ -1,7 +1,7 @@
 ---
 name: advisor-insights
 description: Read advisor memories and leave editorial notes for advisors.
-metadata: { "openclaw": { "emoji": "🧠", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "🧠", "requires": { "bins": ["swain"] } } }
 ---
 
 # Advisor Insights
@@ -12,12 +12,12 @@ Read what advisors know about their captains and communicate editorial decisions
 
 **All users (editorial overview):**
 ```bash
-skip advisor memories --json
+swain advisor memories --json
 ```
 
 **Specific user:**
 ```bash
-skip advisor memories --user=<userId> --json
+swain advisor memories --user=<userId> --json
 ```
 
 Memories include:
@@ -31,7 +31,7 @@ Memories include:
 Leave a note that advisors will see when creating briefings:
 
 ```bash
-skip advisor note --user=<userId> --content="..." [--category=<cat>] --json
+swain advisor note --user=<userId> --content="..." [--category=<cat>] --json
 ```
 
 **Categories:**
@@ -41,8 +41,8 @@ skip advisor note --user=<userId> --content="..." [--category=<cat>] --json
 
 **Examples:**
 ```bash
-skip advisor note --user=user_abc --content="New weather beat launching for their marina next week" --json
-skip advisor note --user=user_def --content="This captain mentioned interest in tarpon — prioritize fishing cards" --category=content-update --json
+swain advisor note --user=user_abc --content="New weather beat launching for their marina next week" --json
+swain advisor note --user=user_def --content="This captain mentioned interest in tarpon — prioritize fishing cards" --category=content-update --json
 ```
 
 ## Workflow

@@ -63,7 +63,7 @@ When creating cards, always include these flags:
 
 Example:
 ```
-skip card create --title "Fishing Report - Feb 5" --freshness timely --expires-at "2025-02-07T06:00:00Z" --location tierra-verde --body "..."
+swain card create --title "Fishing Report - Feb 5" --freshness timely --expires-at "2025-02-07T06:00:00Z" --location tierra-verde --body "..."
 ```
 
 - **Freshness**: `timely` — fishing reports stay relevant ~48 hours

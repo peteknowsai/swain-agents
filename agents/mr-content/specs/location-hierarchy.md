@@ -114,12 +114,12 @@ Should return: cards where `location` is any of `['tierra-verde', 'tampa-bay', '
 
 This is the **critical change**. It powers:
 - Advisor briefing card selection
-- `skip card list --location=X`
+- `swain card list --location=X`
 - Any future card recommendation logic
 
 ### 2. Briefing creation
 
-`skip briefing create --user=user_bobby_b08861b8` currently pulls cards — it should use Bobby's `marinaLocation` (`tierra-verde`) and resolve the full ancestor chain to find all relevant cards.
+`swain briefing create --user=user_bobby_b08861b8` currently pulls cards — it should use Bobby's `marinaLocation` (`tierra-verde`) and resolve the full ancestor chain to find all relevant cards.
 
 ### 3. Beat agent region alignment
 

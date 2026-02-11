@@ -15,13 +15,13 @@ Quick fleet health check (< 2 minutes):
 
 2. **Recent production** — Glance at newest cards:
    ```bash
-   skip card list --limit=10 --json
+   swain card list --limit=10 --json
    ```
    Verify cards are being produced. Spot obvious issues.
 
 3. **Beat coverage** — Quick beat list:
    ```bash
-   skip beat list --json
+   swain beat list --json
    ```
    Verify expected beats are registered.
 
@@ -44,7 +44,7 @@ When asked for a daily review:
 
 2. **Card production by agent/location:**
    ```bash
-   skip card list --limit=50 --json
+   swain card list --limit=50 --json
    ```
    Count cards produced in last 24h, grouped by agent and location.
 
@@ -52,13 +52,13 @@ When asked for a daily review:
 
 4. **Briefing delivery** — Check advisor output:
    ```bash
-   skip briefing list --limit=20 --json
+   swain briefing list --limit=20 --json
    ```
    Are advisors creating briefings? Any gaps?
 
 5. **Coverage gaps** — Any location with fewer than 5 active cards:
    ```bash
-   skip card audit --json
+   swain card audit --json
    ```
 
 6. **Status report format:**
@@ -99,7 +99,7 @@ When asked for a weekly review:
 4. **Advisor performance:**
    ```bash
    skip advisor memories --json
-   skip briefing list --limit=50 --json
+   swain briefing list --limit=50 --json
    ```
    - Briefings per advisor this week
    - Memory growth (are advisors learning about their captains?)

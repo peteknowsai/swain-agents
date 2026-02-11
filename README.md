@@ -13,11 +13,11 @@ agents/          # Agent definitions (CLAUDE.md, skills, commands)
   stylist/       # Style assignment agent
 
 skills/          # Shared skills (canonical source)
-  skip-advisor/  # Daily briefing creation
-  skip-library/  # Card library browsing
-  skip-onboarding/ # Welcome briefing for new captains
-  skip-card-create/ # Card creation for beat reporters
-  skip-cli/      # Full CLI command reference
+  swain-advisor/  # Daily briefing creation
+  swain-library/  # Card library browsing
+  swain-onboarding/ # Welcome briefing for new captains
+  swain-card-create/ # Card creation for beat reporters
+  swain-cli/      # Full CLI command reference
 
 templates/       # Workspace templates for new advisor provisioning
   AGENTS.md

@@ -116,7 +116,7 @@ Automated content discovery and production pipeline for Swain across all 10 Port
 - **copycat** — magazine article adaptations
 
 ### Data Sources per Beat:
-Each beat agent should have attached data sources (`skip source add`) so they write from REAL data, not hallucinations.
+Each beat agent should have attached data sources (`swain source add`) so they write from REAL data, not hallucinations.
 
 ## Cron Schedule
 

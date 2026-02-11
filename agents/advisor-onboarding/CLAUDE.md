@@ -48,7 +48,7 @@ Create a JSON array of items that flows naturally:
   // 2. The intro card (copy exactly from task input, includes image)
   {
     "type": "image_card",
-    "id": "heyswain_intro",
+    "id": "swain_intro",
     "title": "...",
     "subtext": "...",
     "content_markdown": "...",
@@ -115,7 +115,7 @@ Create a JSON array of items that flows naturally:
 When your items array is complete:
 
 ```bash
-skip task complete <task-id> --result='{"items": <YOUR_ITEMS_JSON>}'
+swain task complete <task-id> --result='{"items": <YOUR_ITEMS_JSON>}'
 ```
 
 ## Item Types Reference

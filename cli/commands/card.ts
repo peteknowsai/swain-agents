@@ -2,7 +2,7 @@
 
 /**
  * Card Commands
- * skip card list|get|create|check|update|audit|archive|unarchive|regen-image
+ * swain card list|get|create|check|update|audit|archive|unarchive|regen-image
  */
 
 import {
@@ -46,9 +46,9 @@ function parseArgs(args: string[]): Record<string, string> {
  * Get desk from args (primary identifier for new cards)
  */
 function getDesk(params: Record<string, string>): string {
-  const desk = params['desk'] || process.env.SKIP_DESK;
+  const desk = params['desk'] || process.env.SWAIN_DESK;
   if (!desk) {
-    printError('Desk required. Use --desk=<name> or set SKIP_DESK env var');
+    printError('Desk required. Use --desk=<name> or set SWAIN_DESK env var');
     process.exit(1);
   }
   return desk;
@@ -62,7 +62,7 @@ function getAgentId(params: Record<string, string>): string | undefined {
 }
 
 /**
- * skip card pull
+ * swain card pull
  * Pull lightweight card candidates for a user (advisor toolkit)
  */
 async function pullCards(args: string[]): Promise<void> {
@@ -74,7 +74,7 @@ async function pullCards(args: string[]): Promise<void> {
   const limit = params['limit'];
 
   if (!userId) {
-    printError('Usage: skip card pull --user=<userId> [--exclude-served] [--category=<cat>] [--limit=<n>] [--json]');
+    printError('Usage: swain card pull --user=<userId> [--exclude-served] [--category=<cat>] [--limit=<n>] [--json]');
     process.exit(1);
   }
 
@@ -117,7 +117,7 @@ async function pullCards(args: string[]): Promise<void> {
 }
 
 /**
- * skip card list
+ * swain card list
  * List/query cards
  */
 async function listCards(args: string[]): Promise<void> {
@@ -154,7 +154,7 @@ async function listCards(args: string[]): Promise<void> {
 }
 
 /**
- * skip card get
+ * swain card get
  * Get card details
  */
 async function getCard(args: string[]): Promise<void> {
@@ -163,7 +163,7 @@ async function getCard(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!cardId || cardId.startsWith('--')) {
-    printError('Usage: skip card get <cardId> or --card=<id>');
+    printError('Usage: swain card get <cardId> or --card=<id>');
     process.exit(1);
   }
 
@@ -197,7 +197,7 @@ async function getCard(args: string[]): Promise<void> {
 }
 
 /**
- * skip card list-today
+ * swain card list-today
  * List all cards created today (Eastern Time)
  */
 async function listTodayCards(args: string[]): Promise<void> {
@@ -230,7 +230,7 @@ async function listTodayCards(args: string[]): Promise<void> {
 }
 
 /**
- * skip card check
+ * swain card check
  * Check if a card exists for desk on a given date
  */
 async function checkCard(args: string[]): Promise<void> {
@@ -241,7 +241,7 @@ async function checkCard(args: string[]): Promise<void> {
   const date = params['date'] || getTodayDate();
 
   if (!desk && !agentId) {
-    printError('Usage: skip card check --desk=<name> [--date=YYYY-MM-DD] [--json]');
+    printError('Usage: swain card check --desk=<name> [--date=YYYY-MM-DD] [--json]');
     process.exit(1);
   }
 
@@ -275,7 +275,7 @@ async function checkCard(args: string[]): Promise<void> {
 }
 
 /**
- * skip card coverage
+ * swain card coverage
  * Show card coverage by category for a desk
  */
 async function coverageReport(args: string[]): Promise<void> {
@@ -315,7 +315,7 @@ async function coverageReport(args: string[]): Promise<void> {
 }
 
 /**
- * skip card create
+ * swain card create
  * Create a content card
  */
 async function createCard(args: string[]): Promise<void> {
@@ -422,7 +422,7 @@ async function createCard(args: string[]): Promise<void> {
 }
 
 /**
- * skip card update <cardId>
+ * swain card update <cardId>
  * Update card fields
  */
 async function updateCard(args: string[]): Promise<void> {
@@ -431,7 +431,7 @@ async function updateCard(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!cardId || cardId.startsWith('--')) {
-    printError('Usage: skip card update <cardId> --field=value');
+    printError('Usage: swain card update <cardId> --field=value');
     process.exit(1);
   }
 
@@ -490,7 +490,7 @@ async function updateCard(args: string[]): Promise<void> {
 }
 
 /**
- * skip card audit
+ * swain card audit
  * Audit cards for issues
  */
 async function auditCards(args: string[]): Promise<void> {
@@ -548,12 +548,12 @@ async function auditCards(args: string[]): Promise<void> {
     print('');
   }
 
-  print(`${colors.dim}Fix: skip card update <id> --location=X --style-id=X${colors.reset}`);
-  print(`${colors.dim}Archive expired: skip card archive <id>${colors.reset}\n`);
+  print(`${colors.dim}Fix: swain card update <id> --location=X --style-id=X${colors.reset}`);
+  print(`${colors.dim}Archive expired: swain card archive <id>${colors.reset}\n`);
 }
 
 /**
- * skip card archive <cardId>
+ * swain card archive <cardId>
  * Soft-archive a card
  */
 async function archiveCard(args: string[]): Promise<void> {
@@ -562,7 +562,7 @@ async function archiveCard(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!cardId || cardId.startsWith('--')) {
-    printError('Usage: skip card archive <cardId>');
+    printError('Usage: swain card archive <cardId>');
     process.exit(1);
   }
 
@@ -576,7 +576,7 @@ async function archiveCard(args: string[]): Promise<void> {
 }
 
 /**
- * skip card unarchive <cardId>
+ * swain card unarchive <cardId>
  * Restore an archived card
  */
 async function unarchiveCard(args: string[]): Promise<void> {
@@ -585,7 +585,7 @@ async function unarchiveCard(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!cardId || cardId.startsWith('--')) {
-    printError('Usage: skip card unarchive <cardId>');
+    printError('Usage: swain card unarchive <cardId>');
     process.exit(1);
   }
 
@@ -599,7 +599,7 @@ async function unarchiveCard(args: string[]): Promise<void> {
 }
 
 /**
- * skip card regen-image <cardId>
+ * swain card regen-image <cardId>
  * Regenerate card image
  */
 async function regenImage(args: string[]): Promise<void> {
@@ -609,7 +609,7 @@ async function regenImage(args: string[]): Promise<void> {
   const timeout = parseInt(params['timeout'] || '120', 10) * 1000;
 
   if (!cardId || cardId.startsWith('--')) {
-    printError('Usage: skip card regen-image <cardId> [--prompt="..."] [--style=X]');
+    printError('Usage: swain card regen-image <cardId> [--prompt="..."] [--style=X]');
     process.exit(1);
   }
 
@@ -688,7 +688,7 @@ async function regenImage(args: string[]): Promise<void> {
  */
 function showHelp(): void {
   print(`
-${colors.bold}skip card${colors.reset} - Content cards
+${colors.bold}swain card${colors.reset} - Content cards
 
 ${colors.bold}COMMANDS${colors.reset}
   pull                    Pull card candidates for a user (advisor toolkit)
@@ -716,7 +716,7 @@ ${colors.bold}OPTIONS (check)${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}OPTIONS (create)${colors.reset}
-  --desk=<name>           Desk name (required, or set SKIP_DESK env var)
+  --desk=<name>           Desk name (required, or set SWAIN_DESK env var)
   --marina=<string>       Marina/location within desk territory
   --title=<text>          Short headline, 3-6 words (required)
   --subtext=<text>        Preview text, 2-3 sentences (required)
@@ -761,14 +761,14 @@ ${colors.bold}OPTIONS (regen-image)${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip card list --desk=tampa-bay
-  skip card list --desk=tampa-bay --category=fishing --limit=10
-  skip card get card_abc123
+  swain card list --desk=tampa-bay
+  swain card list --desk=tampa-bay --category=fishing --limit=10
+  swain card get card_abc123
 
-  skip card check --desk=tampa-bay --date=2026-02-09 --json
-  skip card coverage --desk=tampa-bay --json
+  swain card check --desk=tampa-bay --date=2026-02-09 --json
+  swain card coverage --desk=tampa-bay --json
 
-  skip card create \\
+  swain card create \\
     --desk=tampa-bay \\
     --marina=tierra-verde \\
     --title="Perfect Boating Weekend" \\

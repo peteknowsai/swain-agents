@@ -1,7 +1,7 @@
 ---
-name: skip-library
+name: swain-library
 description: Browse and understand the card library for content selection.
-metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["swain"] } } }
 ---
 
 # Card Library
@@ -11,7 +11,7 @@ The card library is the pool of all available content cards. Cards are created b
 ## Browsing
 
 ```bash
-skip card library --user=<userId> --json
+swain card library --user=<userId> --json
 ```
 
 Returns:

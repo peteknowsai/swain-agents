@@ -1,7 +1,7 @@
 ---
 name: advisor-rollcall
 description: Contact all advisors, collect status reports, synthesize issues and content needs.
-metadata: { "openclaw": { "emoji": "📣", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "📣", "requires": { "bins": ["swain"] } } }
 ---
 
 # Advisor Roll Call

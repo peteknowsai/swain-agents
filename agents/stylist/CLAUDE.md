@@ -15,7 +15,7 @@ When dispatched, work through these steps:
 ### 1. Load the Style Library
 
 ```bash
-curl -s "$SKIP_API_URL/styles" | jq '.styles'
+curl -s "$SWAIN_API_URL/styles" | jq '.styles'
 ```
 
 This returns 133+ styles, each with: `id`, `name`, `description`, `promptText`, `mood`, `tags`, `usageCount`.
@@ -25,7 +25,7 @@ Save this list — you'll reference it for every card.
 ### 2. Check Recent Assignments
 
 ```bash
-curl -s "$SKIP_API_URL/cards?style=assigned&limit=30" | jq '[.cards[].styleId]'
+curl -s "$SWAIN_API_URL/cards?style=assigned&limit=30" | jq '[.cards[].styleId]'
 ```
 
 Note which styles were used recently. Avoid repeating them back-to-back.
@@ -33,12 +33,12 @@ Note which styles were used recently. Avoid repeating them back-to-back.
 ### 3. Fetch Unstyled Cards
 
 ```bash
-skip card list --style=none --limit=50 --json
+swain card list --style=none --limit=50 --json
 ```
 
 Or via API:
 ```bash
-curl -s "$SKIP_API_URL/cards?style=none&limit=50"
+curl -s "$SWAIN_API_URL/cards?style=none&limit=50"
 ```
 
 If no unstyled cards, report "No unstyled cards found" and stop.
@@ -90,7 +90,7 @@ Match color to content: fishing → deep navy or teal, dining → warm amber, sa
 #### d. Assign Style + Background
 
 ```bash
-curl -s -X PATCH "$SKIP_API_URL/cards/<cardId>" \
+curl -s -X PATCH "$SWAIN_API_URL/cards/<cardId>" \
   -H "Content-Type: application/json" \
   -d '{"styleId": "<styleId>", "backgroundColor": "<hex>"}'
 ```
@@ -123,7 +123,7 @@ When nanobanana returns, parse the JSON output:
 
 Update the card:
 ```bash
-curl -s -X PATCH "$SKIP_API_URL/cards/<cardId>" \
+curl -s -X PATCH "$SWAIN_API_URL/cards/<cardId>" \
   -H "Content-Type: application/json" \
   -d '{"image": "<url from nanobanana>"}'
 ```

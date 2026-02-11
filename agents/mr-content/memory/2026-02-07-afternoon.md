@@ -42,7 +42,7 @@
 - Beat toolkit rewritten: reporters own their beat, research independently, make editorial calls
 - Reporters told NOT to pick styles or categories — server/stylist handle those
 - `nanobanana -c` flag emphasized (always upload to Cloudflare)
-- skip-cli skill updated: removed old category list, removed style-id from examples
+- swain-cli skill updated: removed old category list, removed style-id from examples
 - My dispatch philosophy changed: give direction not dictation. Less prescriptive prompts.
 - All shared skills symlinked from `agents/_shared/skills/` — updating the shared copy updates everyone
 - Provisioner creates symlinks automatically for new agents

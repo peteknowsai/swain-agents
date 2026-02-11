@@ -1,7 +1,7 @@
 ---
 name: fleet-status
 description: Full fleet health scan — agents, runs, cards, briefings. Produces GREEN/YELLOW/RED status report.
-metadata: { "openclaw": { "emoji": "⚓", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "⚓", "requires": { "bins": ["swain"] } } }
 ---
 
 # Fleet Status
@@ -14,43 +14,43 @@ Run these commands and compile results:
 
 ### 1. Agent inventory
 ```bash
-skip agent list --json
+swain agent list --json
 ```
 Count agents by type (beat, advisor, editor). Verify expected count.
 
 ### 2. Run health (last 24h)
 ```bash
-skip run list --json
+swain run list --json
 ```
 Calculate success rate. Flag any failures with agent IDs.
 
 ### 3. Failed runs (needs attention)
 ```bash
-skip run list --status=failed --json
+swain run list --status=failed --json
 ```
 List each failure with agent ID, timestamp, and error if available.
 
 ### 4. Card production
 ```bash
-skip card list --limit=20 --json
+swain card list --limit=20 --json
 ```
 Count recent cards. Check production is flowing.
 
 ### 5. Coverage audit
 ```bash
-skip card audit --json
+swain card audit --json
 ```
 Identify locations with thin coverage (<5 active cards).
 
 ### 6. Beat agents
 ```bash
-skip beat list --json
+swain beat list --json
 ```
 Verify all expected beats are registered and active.
 
 ### 7. Briefing delivery
 ```bash
-skip briefing list --limit=20 --json
+swain briefing list --limit=20 --json
 ```
 Check advisors are producing briefings.
 

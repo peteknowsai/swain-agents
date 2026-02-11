@@ -1,7 +1,7 @@
 ---
 name: beat-assignment
 description: Create and dispatch beat reporters for topics and locations.
-metadata: { "openclaw": { "emoji": "📰", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "📰", "requires": { "bins": ["swain"] } } }
 ---
 
 # Beat Assignment
@@ -12,25 +12,25 @@ I'm the dispatcher. Beat reporters are fully agentic — I give them a detailed,
 
 ### To an existing beat agent
 ```bash
-skip beat dispatch --agent-id=<agent-id> --prompt="..." [--json]
+swain beat dispatch --agent-id=<agent-id> --prompt="..." [--json]
 ```
 
 ### One-off generic reporter
 ```bash
-skip beat run --topic=<topic> --location=<location> --instructions="..." --json
+swain beat run --topic=<topic> --location=<location> --instructions="..." --json
 ```
 
 ### Create a new permanent beat agent
 ```bash
-skip beat create --topic=<topic> --location=<location> --json
+swain beat create --topic=<topic> --location=<location> --json
 ```
 
 ### Monitor runs
 ```bash
-skip run list --status=running --json     # what's active
-skip run list --status=failed --json      # what broke
-skip run status <runId> --json            # specific run
-skip run list --agent-id=<id> --json      # runs for an agent
+swain run list --status=running --json     # what's active
+swain run list --status=failed --json      # what broke
+swain run status <runId> --json            # specific run
+swain run list --agent-id=<id> --json      # runs for an agent
 ```
 
 ## Location Hierarchy
@@ -145,9 +145,9 @@ The first gives the reporter a story to chase. The second writes the card for th
 ## Source Management
 
 ```bash
-skip source list --agent-id=<id> --json
-skip source add --agent-id=<id> --name="..." --url="..." --json
-skip source remove <sourceId> --json
+swain source list --agent-id=<id> --json
+swain source add --agent-id=<id> --name="..." --url="..." --json
+swain source remove <sourceId> --json
 ```
 
 ## Decision Framework

@@ -1,7 +1,7 @@
 ---
 name: library-analysis
 description: Analyze card library health, coverage gaps, and content freshness.
-metadata: { "openclaw": { "emoji": "📊", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "📊", "requires": { "bins": ["swain"] } } }
 ---
 
 # Library Analysis
@@ -30,12 +30,12 @@ Analyze the Skip card library to understand content health and identify gaps.
 
 3. **Check specific locations** (if needed)
    ```bash
-   skip card list --agent=beat-weather-tierra-verde --limit=5 --json
+   swain card list --agent=beat-weather-tierra-verde --limit=5 --json
    ```
 
 4. **List current beat reporters**
    ```bash
-   skip beat list --json
+   swain beat list --json
    ```
 
 5. **Recommend actions**

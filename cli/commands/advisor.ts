@@ -2,7 +2,7 @@
 
 /**
  * Advisor Commands
- * skip advisor list|memories|pool
+ * swain advisor list|memories|pool
  */
 
 import {
@@ -15,7 +15,7 @@ import {
 import { parseArgs } from '../lib/args';
 
 /**
- * skip advisor list
+ * swain advisor list
  * List all advisor agents
  */
 async function listAdvisors(args: string[]): Promise<void> {
@@ -46,7 +46,7 @@ async function listAdvisors(args: string[]): Promise<void> {
 }
 
 /**
- * skip advisor memories --user=<userId>
+ * swain advisor memories --user=<userId>
  * Read advisor memories for a user
  */
 async function readMemories(args: string[]): Promise<void> {
@@ -55,8 +55,8 @@ async function readMemories(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId) {
-    printError('Usage: skip advisor memories --user=<userId>');
-    print('  Get user IDs with: skip user list');
+    printError('Usage: swain advisor memories --user=<userId>');
+    print('  Get user IDs with: swain user list');
     process.exit(1);
   }
 
@@ -102,7 +102,7 @@ async function readMemories(args: string[]): Promise<void> {
 }
 
 /**
- * skip advisor pool create [--count=5]
+ * swain advisor pool create [--count=5]
  * Pre-provision pool advisors
  */
 async function poolCreate(args: string[]): Promise<void> {
@@ -138,7 +138,7 @@ async function poolCreate(args: string[]): Promise<void> {
 }
 
 /**
- * skip advisor pool list
+ * swain advisor pool list
  * List pool advisors (available + assigned)
  */
 async function poolList(args: string[]): Promise<void> {
@@ -176,7 +176,7 @@ async function poolList(args: string[]): Promise<void> {
 }
 
 /**
- * skip advisor pool status
+ * swain advisor pool status
  * Pool availability summary
  */
 async function poolStatus(args: string[]): Promise<void> {
@@ -202,7 +202,7 @@ async function poolStatus(args: string[]): Promise<void> {
 }
 
 /**
- * skip advisor pool <subcommand>
+ * swain advisor pool <subcommand>
  */
 async function poolCommand(args: string[]): Promise<void> {
   const sub = args[0];
@@ -220,7 +220,7 @@ async function poolCommand(args: string[]): Promise<void> {
       break;
     default:
       print(`
-${colors.bold}skip advisor pool${colors.reset} - Advisor pool management
+${colors.bold}swain advisor pool${colors.reset} - Advisor pool management
 
 ${colors.bold}COMMANDS${colors.reset}
   create [--count=5]    Pre-provision pool advisors
@@ -228,16 +228,16 @@ ${colors.bold}COMMANDS${colors.reset}
   status                Pool availability summary
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip advisor pool create --count=3
-  skip advisor pool list
-  skip advisor pool status --json
+  swain advisor pool create --count=3
+  swain advisor pool list
+  swain advisor pool status --json
 `);
   }
 }
 
 function showHelp(): void {
   print(`
-${colors.bold}skip advisor${colors.reset} - Advisor agent management
+${colors.bold}swain advisor${colors.reset} - Advisor agent management
 
 ${colors.bold}COMMANDS${colors.reset}
   list                    List all advisor agents
@@ -250,12 +250,12 @@ ${colors.bold}OPTIONS${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
-  skip advisor list
-  skip advisor list --json
-  skip advisor memories --user=user_abc123
-  skip advisor pool create --count=5
-  skip advisor pool list
-  skip advisor pool status
+  swain advisor list
+  swain advisor list --json
+  swain advisor memories --user=user_abc123
+  swain advisor pool create --count=5
+  swain advisor pool list
+  swain advisor pool status
 `);
 }
 

@@ -23,8 +23,8 @@ const CONVEX_SITE_URL = process.env.CONVEX_SITE_URL || 'https://calm-basilisk-21
 const ENV_URLS: Record<string, string> = {
   local: CONVEX_SITE_URL,
   dev: CONVEX_SITE_URL,
-  prod: process.env.SKIP_API_URL || CONVEX_SITE_URL,
-  production: process.env.SKIP_API_URL || CONVEX_SITE_URL,
+  prod: process.env.SWAIN_API_URL || CONVEX_SITE_URL,
+  production: process.env.SWAIN_API_URL || CONVEX_SITE_URL,
 };
 
 // Parse --env flag
@@ -40,8 +40,8 @@ function getWorkerUrl(): string {
     return url;
   }
 
-  // Check SKIP_API_URL env var
-  let url = process.env.SKIP_API_URL || ENV_URLS.prod;
+  // Check SWAIN_API_URL env var
+  let url = process.env.SWAIN_API_URL || ENV_URLS.prod;
 
   // Only do localhost replacement if running inside a container
   const isInContainer = existsSync('/.dockerenv') || process.env.HOSTNAME?.includes('container');

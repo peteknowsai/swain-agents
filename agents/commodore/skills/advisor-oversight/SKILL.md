@@ -1,7 +1,7 @@
 ---
 name: advisor-oversight
 description: Monitor advisor performance — briefings, runs, sessions, card availability.
-metadata: { "openclaw": { "emoji": "🔭", "requires": { "bins": ["skip"] } } }
+metadata: { "openclaw": { "emoji": "🔭", "requires": { "bins": ["swain"] } } }
 ---
 
 # Advisor Oversight
@@ -12,38 +12,38 @@ Monitor advisor agents to ensure captains are being well-served.
 
 ### List briefings (all users or specific user)
 ```bash
-skip briefing list --json                          # All recent briefings
-skip briefing list --user=<userId> --json          # Briefings for one user
-skip briefing list --user=<userId> --limit=5 --json
+swain briefing list --json                          # All recent briefings
+swain briefing list --user=<userId> --json          # Briefings for one user
+swain briefing list --user=<userId> --limit=5 --json
 ```
 
 ### Read a specific briefing
 ```bash
-skip briefing get <briefingId> --json
+swain briefing get <briefingId> --json
 ```
 Returns: greeting, card selections, commentary, closing note, date, items.
 
 ### Check advisor agent details
 ```bash
-skip agent list --type=advisor --json              # All advisor agents
-skip agent get <advisorId> --json                  # Specific advisor
+swain agent list --type=advisor --json              # All advisor agents
+swain agent get <advisorId> --json                  # Specific advisor
 ```
 
 ### Check advisor run history
 ```bash
-skip run list --agent-id=<advisorId> --json        # Advisor's runs
-skip run list --agent-id=<advisorId> --status=failed --json  # Failed runs
+swain run list --agent-id=<advisorId> --json        # Advisor's runs
+swain run list --agent-id=<advisorId> --status=failed --json  # Failed runs
 ```
 
 ### Check advisor sessions
 ```bash
-skip session list <advisorId>                      # List sessions
+swain session list <advisorId>                      # List sessions
 ```
 
 ### Check card availability for a location
 ```bash
-skip card audit --location=<loc> --json            # What's available for advisors
-skip card list --limit=20 --json                   # Recent cards across fleet
+swain card audit --location=<loc> --json            # What's available for advisors
+swain card list --limit=20 --json                   # Recent cards across fleet
 ```
 
 ## What You CANNOT Do (CLI gaps)
@@ -79,14 +79,14 @@ These capabilities don't exist in the CLI yet:
 
 ## Monitoring Workflow
 
-1. `skip agent list --type=advisor --json` → inventory
-2. For each advisor, `skip run list --agent-id=X --json` → run health
-3. `skip briefing list --json` → briefing production
-4. `skip card audit --json` → card availability per location
+1. `swain agent list --type=advisor --json` → inventory
+2. For each advisor, `swain run list --agent-id=X --json` → run health
+3. `swain briefing list --json` → briefing production
+4. `swain card audit --json` → card availability per location
 5. Compile status and report
 
 ## Escalation
 
 - **Content gap affecting advisor** → Message Mr. Content: "Advisor for [user] at [location] needs more cards"
 - **Advisor infrastructure issue** → Report to Pete
-- **Need to trigger briefing** → Ask Pete (or request `skip briefing create` CLI command)
+- **Need to trigger briefing** → Ask Pete (or request `swain briefing create` CLI command)

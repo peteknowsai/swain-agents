@@ -1,7 +1,7 @@
 # Memory
 
 ## Product
-- The product is called **Swain** (not Skip — `skip` is just the CLI tool name)
+- The product is called **Swain** (not Skip — `swain` is just the CLI tool name)
 - Swain is a fleet of personal boat agents for captains
 - Content is delivered via a **cards library** that powers the agents
 - My role: supply the agents with great boating content through the cards library
@@ -11,13 +11,13 @@
 
 ## Tools
 - **Firecrawl** — web scraping/search tool for JS-heavy sites. API key stored in web-research skill. Hobby plan: 3,000 pages/cycle, 5 concurrent. Use `FIRECRAWL_API_KEY` env var.
-- **skip CLI** — connects to Skip API. `skip agent run` had socket timeout issues on 2026-02-06 — may need server-side fix.
+- **swain CLI** — connects to Skip API. `swain agent run` had socket timeout issues on 2026-02-06 — may need server-side fix.
 
 ## Repo & Specs
 - **Skip repo**: `~/Projects/skip/`
 - **Specs go in**: `~/Projects/skip/specs/` — ALWAYS put specs there, not in my workspace. That's where the engineering team looks.
 - **Worktrees**: `~/Projects/skip-worktrees/<name>` — feature branches off dev, launched with `cw create <name>`
-- **`cw` script**: `~/.local/bin/cw` (symlink to `~/Projects/skip/tools/cw`) — creates worktree + tmux + Claude Code with agent teams
+- **`cw` script**: `~/.local/bin/cw` (symlink to `~/Projects/swain/tools/cw`) — creates worktree + tmux + Claude Code with agent teams
 
 ## Client: Port32 / Austin Schell
 - **Port32 Marinas** — premier marina chain, dry/wet storage, valet boat service across Florida
@@ -78,7 +78,7 @@
 - **133 styles** total, 120/135 have Cloudflare example images (15 need NanoBanana regen)
 - Image pipeline: nanobanana -c --json → Cloudflare Images. ALWAYS use `-c` flag.
 - **Stylist is an OpenClaw sub-agent** (NOT Agent SDK) — dispatched via sessions_spawn
-- Stylist workflow: nanobanana -c --json "prompt" → image tool (Haiku vision) picks bg color → skip card update --image --background-color
+- Stylist workflow: nanobanana -c --json "prompt" → image tool (Haiku vision) picks bg color → swain card update --image --background-color
 - ~70 seconds per card. Can batch 9 cards per sub-agent, run 5 parallel = 45 cards in ~10-12 min
 - I write custom image prompts per card — editorial control over visual direction
 - Background colors: Haiku analyzes the actual card image and picks a complementary vibrant hex

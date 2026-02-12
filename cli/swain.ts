@@ -10,7 +10,6 @@
  *   swain edition list|get
  *   swain briefing list|get|assemble
  *   swain user list|get|update
- *   swain style list|get
  */
 
 import { run as runAgent } from './commands/agent';
@@ -19,6 +18,7 @@ import { run as runEdition } from './commands/edition';
 import { run as runBriefing } from './commands/briefing';
 import { run as runImage } from './commands/image';
 import { run as runStyle } from './commands/style';
+import { run as runOnboarding } from './commands/onboarding';
 import { run as runUser } from './commands/user';
 import { run as runAdvisor } from './commands/advisor';
 import { run as runMessage } from './commands/message';
@@ -40,13 +40,14 @@ ${colors.bold}USAGE${colors.reset}
 ${colors.bold}COMMANDS${colors.reset}
   agent                   Manage agents (list, get, create, update, delete)
   card                    Content cards (list, get, create, coverage, audit)
-  style                   Image styles (list, get)
   edition                 Daily editions (list, get)
   briefing                User briefings (list, get, assemble, validate)
   user                    User management (list, get, update, onboard-status, upload-boat-image)
   advisor                 Advisor agents (list, memories, pool)
   message                 Send iMessage/SMS (send)
-  image                   Async image generation (queue, status, wait)
+  style                   Browse image styles (list, get)
+  onboarding              Onboarding templates (list, seed)
+  image                   Image generation (generate, queue, status, wait)
 
 ${colors.bold}GLOBAL OPTIONS${colors.reset}
   --help, -h              Show help
@@ -105,11 +106,14 @@ async function main(): Promise<void> {
     case 'briefing':
       await runBriefing(subArgs);
       break;
-    case 'image':
-      await runImage(subArgs);
+    case 'onboarding':
+      await runOnboarding(subArgs);
       break;
     case 'style':
       await runStyle(subArgs);
+      break;
+    case 'image':
+      await runImage(subArgs);
       break;
     case 'user':
       await runUser(subArgs);

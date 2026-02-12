@@ -2,9 +2,9 @@
 
 /**
  * Image Commands
- * swain image queue|status|wait
+ * swain image generate|queue|status|wait
  *
- * Async image generation for agents - queue images early and poll for completion
+ * Image generation for agents — synchronous via Replicate, or async via Convex jobs
  */
 
 import {
@@ -14,6 +14,7 @@ import {
   printError,
   colors
 } from '../lib/worker-client';
+import { generateImage } from '../lib/replicate-image';
 
 /**
  * Parse CLI arguments
@@ -37,7 +38,69 @@ function parseArgs(args: string[]): Record<string, string> {
 }
 
 /**
- * swain image queue "prompt" [--style=<styleId>] [--agent=<agentId>]
+ * Append technical requirements to the agent's creative prompt.
+ * Aspect ratio is handled by the model parameter, not the prompt.
+ */
+function wrapPrompt(creativePrompt: string): string {
+  return `${creativePrompt.trim()}. Full-bleed, no text or labels.`;
+}
+
+/**
+ * swain image generate "prompt" [--style=<styleId>] [--json]
+ * Synchronous image generation via Replicate → Cloudflare Images.
+ * The --style flag is stored as metadata (cataloging) but NOT sent to the model.
+ * The prompt is wrapped with technical boilerplate (aspect ratio, bleed, no-text).
+ */
+async function generateImageCommand(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const jsonOutput = params['json'] === 'true';
+  const styleId = params['style'];
+
+  // Find prompt (first non-flag argument)
+  const prompt = args.find(arg => !arg.startsWith('--'));
+
+  if (!prompt) {
+    printError('Usage: swain image generate "prompt" [--style=<styleId>] [--json]');
+    process.exit(1);
+  }
+
+  try {
+    if (!jsonOutput) {
+      print('Generating image via Replicate...');
+      if (styleId) print(`  Style (catalog): ${styleId}`);
+    }
+
+    // Wrap the agent's creative prompt with technical boilerplate
+    const fullPrompt = wrapPrompt(prompt);
+    const result = await generateImage(fullPrompt);
+
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        status: 'complete',
+        url: result.url,
+        imageId: result.imageId,
+        replicateId: result.replicateId,
+        ...(styleId ? { styleId } : {}),
+      }, null, 2));
+    } else {
+      printSuccess(`Image ready: ${result.url}`);
+      if (styleId) print(`  Style: ${styleId}`);
+    }
+  } catch (err: any) {
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        status: 'failed',
+        error: err.message,
+      }, null, 2));
+    } else {
+      printError(`Image generation failed: ${err.message}`);
+    }
+    process.exit(1);
+  }
+}
+
+/**
+ * swain image queue "prompt" [--agent=<agentId>]
  * Queue an image generation job, returns immediately with jobId
  */
 async function queueImage(args: string[]): Promise<void> {
@@ -48,7 +111,7 @@ async function queueImage(args: string[]): Promise<void> {
   const prompt = args.find(arg => !arg.startsWith('--'));
 
   if (!prompt) {
-    printError('Usage: swain image queue "prompt" [--style=<styleId>] [--agent=<agentId>]');
+    printError('Usage: swain image queue "prompt" [--agent=<agentId>]');
     process.exit(1);
   }
 
@@ -57,7 +120,6 @@ async function queueImage(args: string[]): Promise<void> {
       method: 'POST',
       body: {
         prompt,
-        styleId: params['style'],
         agentId: params['agent'] || params['agent-id'] || process.env.AGENT_ID,
         cardId: params['card-id'],
       },
@@ -103,7 +165,6 @@ async function statusImage(args: string[]): Promise<void> {
       print(`\n${colors.bold}Image Job: ${result.jobId}${colors.reset}\n`);
       print(`  Status: ${colorStatus(result.status)}`);
       if (result.url) print(`  URL:    ${result.url}`);
-      if (result.styleId) print(`  Style:  ${result.styleId}`);
       if (result.error) print(`  Error:  ${colors.red}${result.error}${colors.reset}`);
       print('');
     }
@@ -204,26 +265,39 @@ function colorStatus(status: string): string {
  */
 function showHelp(): void {
   print(`
-${colors.bold}swain image${colors.reset} - Async image generation
+${colors.bold}swain image${colors.reset} - Image generation
 
 ${colors.bold}Commands:${colors.reset}
-  queue "prompt"    Queue image generation, returns jobId immediately
-  status <jobId>    Check status of a job
-  wait <jobId>      Wait for job to complete (with polling)
+  generate "prompt"   Generate image synchronously (Replicate → CF Images)
+  queue "prompt"      Queue image generation, returns jobId immediately
+  status <jobId>      Check status of a job
+  wait <jobId>        Wait for job to complete (with polling)
+
+${colors.bold}Generate Options:${colors.reset}
+  --style=<id>        Style ID for cataloging (NOT sent to model)
+  --json              Output as JSON
 
 ${colors.bold}Queue Options:${colors.reset}
-  --style=<id>      Style ID (e.g., style_ocean-watercolor)
-  --agent=<id>      Agent ID (or set AGENT_ID env var)
-  --card-id=<id>    Card ID (optional, auto-generated if not provided)
-  --json            Output as JSON
+  --agent=<id>        Agent ID (or set AGENT_ID env var)
+  --card-id=<id>      Card ID (optional, auto-generated if not provided)
+  --json              Output as JSON
 
 ${colors.bold}Wait Options:${colors.reset}
-  --timeout=<sec>   Max wait time in seconds (default: 120)
-  --json            Output as JSON
+  --timeout=<sec>     Max wait time in seconds (default: 120)
+  --json              Output as JSON
 
 ${colors.bold}Examples:${colors.reset}
-  # Queue an image and get jobId
-  swain image queue "sheepshead near dock pilings" --style=style_ocean-watercolor
+  # Generate an image (prompt is wrapped with technical boilerplate automatically)
+  swain image generate "sheepshead near dock pilings, soft watercolor wash"
+
+  # Generate with style cataloging
+  swain image generate "fishing scene at sunset, warm golden haze" --style=golden-hour
+
+  # JSON output (for agents)
+  swain image generate "fishing scene at sunset" --json
+
+  # Queue an image job (async)
+  swain image queue "fishing scene"
 
   # Check status
   swain image status img_abc123
@@ -231,14 +305,11 @@ ${colors.bold}Examples:${colors.reset}
   # Wait for completion
   swain image wait img_abc123 --timeout=60
 
-  # Full workflow (agent use)
-  JOB=$(swain image queue "fishing scene" --json | jq -r '.jobId')
-  # ... do other work ...
-  URL=$(swain image wait $JOB --json | jq -r '.url')
-
 ${colors.bold}Notes:${colors.reset}
-  - Images generate in the background using nanobanana (FREE via Gemini)
-  - Queue returns immediately; use wait to block until complete
+  - 'generate' uses Replicate API (lucataco/nano-banana-txt2img)
+  - Your prompt is the creative vision — aspect ratio, bleed, no-text are added automatically
+  - Use 'swain style list' to browse styles, then infuse the style into your prompt
+  - Pass --style=<id> to catalog which style was used (metadata only)
   - Typical generation time: 10-30 seconds
 `);
 }
@@ -252,6 +323,9 @@ export async function run(args: string[]): Promise<void> {
 
   try {
     switch (command) {
+      case 'generate':
+        await generateImageCommand(commandArgs);
+        break;
       case 'queue':
         await queueImage(commandArgs);
         break;

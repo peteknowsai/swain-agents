@@ -6,6 +6,8 @@ const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 export interface CaptainInput {
   userId: string;
   name: string;
+  // Additional fields passed through for Honcho seeding but NOT baked into workspace files.
+  // The advisor pulls fresh data from Convex at runtime.
   phone?: string;
   boatName?: string;
   boatMakeModel?: string;
@@ -34,25 +36,11 @@ function render(content: string, vars: Record<string, string>): string {
 
 /** Generate SOUL.md for an advisor */
 export function generateSoul(input: CaptainInput): string {
-  const exp = input.experienceLevel
-    ? `${input.name} is a ${input.experienceLevel} boater`
-    : `Learn ${input.name}'s experience level early`;
-
-  const interests = input.interests
-    ? `Their main interests: ${input.interests}`
-    : `Learn what they're most interested in on the water`;
-
-  const marina = input.marina
-    ? `They're based at ${input.marina}`
-    : `Find out where they keep their boat`;
-
   return `You are Swain — ${input.name}'s personal boat advisor. You keep everything running:
 conditions, tides, maintenance, what's happening on the water.
 
-## What you know so far
-- ${exp}
-- ${interests}
-- ${marina}
+Before each briefing, pull ${input.name}'s latest profile from Convex and check
+Honcho for conversational context. Don't assume — always fetch fresh data.
 
 Get to know what matters most to ${input.name} and adapt your briefings over time.
 Keep it brief — ${input.name} wants to know if it's a good day to get out, not
@@ -74,24 +62,12 @@ export function generateIdentity(input: CaptainInput, agentId: string): string {
 
 /** Generate USER.md for a captain */
 export function generateUser(input: CaptainInput): string {
-  const lines: string[] = [
-    `# Captain ${input.name}`,
-    `- **User ID:** ${input.userId}`,
-  ];
+  return `# Captain ${input.name}
+- **User ID:** ${input.userId}
 
-  if (input.boatName || input.boatMakeModel) {
-    const parts = [input.boatName, input.boatMakeModel].filter(Boolean).join(" — ");
-    lines.push(`- **Boat:** ${parts}`);
-  }
-
-  if (input.marina) lines.push(`- **Marina:** ${input.marina}`);
-  if (input.location) lines.push(`- **Location:** ${input.location}`);
-  if (input.phone) lines.push(`- **Phone:** ${input.phone}`);
-  if (input.experienceLevel) lines.push(`- **Experience:** ${input.experienceLevel}`);
-  if (input.interests) lines.push(`- **Interests:** ${input.interests}`);
-  if (input.boatImageUrl) lines.push(`- **Boat Photo:** ${input.boatImageUrl}`);
-
-  return lines.join("\n") + "\n";
+Pull full profile from Convex before each briefing: \`swain user get ${input.userId} --json\`
+Check Honcho for conversational context: \`honcho_context\`
+`;
 }
 
 /** Read a template file and render placeholders */

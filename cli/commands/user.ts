@@ -23,7 +23,7 @@ async function listUsers(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
   const limit = params['limit'] || '200';
 
-  const result = await workerRequest(`/dashboard/users?limit=${limit}`);
+  const result = await workerRequest(`/users?limit=${limit}`);
   const users = result.users || [];
 
   if (jsonOutput) {
@@ -60,7 +60,7 @@ async function getUser(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const result = await workerRequest(`/dashboard/users/${userId}`);
+  const result = await workerRequest(`/users/${userId}`);
 
   if (jsonOutput) {
     console.log(JSON.stringify(result, null, 2));

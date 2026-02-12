@@ -61,7 +61,7 @@ async function readMemories(args: string[]): Promise<void> {
   }
 
   // Use dashboard endpoint which includes memories
-  const result = await workerRequest(`/dashboard/users/${userId}`);
+  const result = await workerRequest(`/users/${userId}`);
 
   if (!result.success || !result.user) {
     printError(`User not found: ${userId}`);

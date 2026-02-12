@@ -264,6 +264,19 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     console.error(`Honcho seeding failed (non-fatal): ${err}`);
   }
 
+  // 11. Wake the advisor to generate its first briefing
+  try {
+    await openclaw([
+      "agent",
+      "--agent", agentId,
+      "-m", `You've just been provisioned as ${input.name}'s advisor. Create their first daily briefing now using the swain-advisor skill. Pull their profile from Convex, check available cards, and assemble a personalized briefing.`,
+      "--json",
+    ]);
+    console.log(`Sent first-briefing task to ${agentId}`);
+  } catch (err) {
+    console.error(`Failed to wake advisor (non-fatal): ${err}`);
+  }
+
   return { agentId, status: "provisioned", workspace };
 }
 

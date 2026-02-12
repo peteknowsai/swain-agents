@@ -264,31 +264,11 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     console.error(`Honcho seeding failed (non-fatal): ${err}`);
   }
 
-  // 11. Wake the advisor to generate its first briefing (fire-and-forget).
-  // We DON'T await this — the openclaw agent command can hang due to session
-  // locks or gateway restarts. The provisioning response must return promptly.
-  try {
-    const wakeMsg = `You've just been provisioned as ${input.name}'s advisor. Create their first daily briefing now using the swain-advisor skill. Pull their profile from Convex, check available cards, and assemble a personalized briefing.`;
-    const proc = Bun.spawn(
-      ["openclaw", "agent", "--agent", agentId, "-m", wakeMsg, "--json"],
-      { stdout: "ignore", stderr: "pipe" }
-    );
-    // Don't await — let it run in the background
-    proc.exited.then((code) => {
-      if (code !== 0) {
-        new Response(proc.stderr).text().then((stderr) => {
-          console.error(`Advisor wake-up for ${agentId} exited ${code}: ${stderr.slice(0, 200)}`);
-        });
-      } else {
-        console.log(`Advisor ${agentId} wake-up completed successfully`);
-      }
-    }).catch((err) => {
-      console.error(`Advisor wake-up error for ${agentId}: ${err}`);
-    });
-    console.log(`Sent first-briefing task to ${agentId} (background)`);
-  } catch (err) {
-    console.error(`Failed to start advisor wake-up (non-fatal): ${err}`);
-  }
+  // 11. Don't wake the advisor here.
+  // The daily briefing cron (sessions_send) or Mr. Content's heartbeat safety
+  // net will trigger the first briefing on the next pass. The openclaw agent
+  // CLI is unreliable for this — fights with the gateway over session locks.
+  console.log(`Advisor ${agentId} provisioned. First briefing will be triggered by daily cron or Mr. Content safety net.`);
 
   return { agentId, status: "provisioned", workspace };
 }

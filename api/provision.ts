@@ -164,10 +164,33 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
     });
   }
 
-  if (input.boatMake || input.boatModel) {
-    const boatDesc = [input.boatMake, input.boatModel].filter(Boolean).join(" ");
+  if (input.boatMakeModel) {
     conclusions.push({
-      content: `Captain's boat is a ${boatDesc}.`,
+      content: `Captain's boat is a ${input.boatMakeModel}.`,
+      observer_id: advisorPeerId,
+      observed_id: captainPeerId,
+    });
+  }
+
+  if (input.marina) {
+    conclusions.push({
+      content: `Captain keeps their boat at ${input.marina}.`,
+      observer_id: advisorPeerId,
+      observed_id: captainPeerId,
+    });
+  }
+
+  if (input.experienceLevel) {
+    conclusions.push({
+      content: `Captain is a ${input.experienceLevel} boater.`,
+      observer_id: advisorPeerId,
+      observed_id: captainPeerId,
+    });
+  }
+
+  if (input.interests) {
+    conclusions.push({
+      content: `Captain's main interests: ${input.interests}.`,
       observer_id: advisorPeerId,
       observed_id: captainPeerId,
     });
@@ -252,7 +275,7 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   }
 
   // Remove from openclaw
-  await openclaw(["agents", "delete", agentId]);
+  await openclaw(["agents", "delete", agentId, "--force"]);
 
   // Remove workspace
   const workspace = join(WORKSPACES_ROOT, agentId);

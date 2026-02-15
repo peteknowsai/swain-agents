@@ -92,28 +92,32 @@ async function openclaw(args: string[]): Promise<string> {
   return stdout.trim();
 }
 
-/** Add a phone number to the WhatsApp allowFrom list and restart the gateway */
-async function allowWhatsApp(phone: string): Promise<void> {
+/** Add a captain's phone to the WhatsApp allowlist and route it to their advisor agent */
+async function setupWhatsAppRouting(phone: string, agentId: string): Promise<void> {
   const config = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
+
+  // Add to allowFrom so the gateway accepts their messages
   const allowFrom: string[] = config.channels?.whatsapp?.allowFrom ?? [];
-  if (allowFrom.includes(phone)) return;
-  allowFrom.push(phone);
-  config.channels.whatsapp.allowFrom = allowFrom;
+  if (!allowFrom.includes(phone)) {
+    allowFrom.push(phone);
+    config.channels.whatsapp.allowFrom = allowFrom;
+  }
+
+  // Add a binding to route this phone number to the advisor agent
+  if (!config.bindings) config.bindings = [];
+  const existing = config.bindings.find(
+    (b: any) => b.match?.peer?.id === phone && b.match?.channel === "whatsapp"
+  );
+  if (!existing) {
+    config.bindings.push({
+      agentId,
+      match: { channel: "whatsapp", peer: { kind: "direct", id: phone } },
+    });
+  }
+
   await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
   await openclaw(["gateway", "restart"]);
-  console.log(`WhatsApp allowFrom: added ${phone}, gateway restarted`);
-}
-
-/** Remove a phone number from the WhatsApp allowFrom list */
-async function disallowWhatsApp(phone: string): Promise<void> {
-  const config = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
-  const allowFrom: string[] = config.channels?.whatsapp?.allowFrom ?? [];
-  const idx = allowFrom.indexOf(phone);
-  if (idx === -1) return;
-  allowFrom.splice(idx, 1);
-  config.channels.whatsapp.allowFrom = allowFrom;
-  await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
-  console.log(`WhatsApp allowFrom: removed ${phone}`);
+  console.log(`WhatsApp routing: ${phone} → ${agentId}, gateway restarted`);
 }
 
 /** Seed Honcho with captain and advisor peers + initial conclusions */
@@ -282,12 +286,12 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     selfPeerId: `advisor-${input.userId}`,
   }, null, 2));
 
-  // 10. Add captain's phone to WhatsApp allowlist
+  // 10. Route captain's WhatsApp messages to this advisor
   if (input.phone) {
     try {
-      await allowWhatsApp(input.phone);
+      await setupWhatsAppRouting(input.phone, agentId);
     } catch (err) {
-      console.error(`WhatsApp allowlist update failed (non-fatal): ${err}`);
+      console.error(`WhatsApp routing setup failed (non-fatal): ${err}`);
     }
   }
 

@@ -1,31 +1,22 @@
 # swain-agents
 
-OpenClaw agent definitions, skills, and templates for the Swain platform.
+Infrastructure for the Swain platform's OpenClaw agents — CLI tools, API server, provisioning templates, and deployment configs.
+
+Agent workspaces live on the VPS (`/root/workspaces/`) and are managed by OpenClaw directly. They self-modify and are backed up, not version-controlled.
 
 ## Structure
 
 ```
-agents/          # Agent definitions (CLAUDE.md, skills, commands)
-  _shared/       # Commands and skills available to all agents
-  advisor-*/     # Per-captain advisor agents
-  beat-*/        # Beat reporter agents
-  editor-*/      # Content editor agents
-  stylist/       # Style assignment agent
-
-skills/          # Shared skills (canonical source)
-  swain-advisor/  # Daily briefing creation
-  swain-library/  # Card library browsing
-  swain-onboarding/ # Welcome briefing for new captains
-  swain-card-create/ # Card creation for beat reporters
-  swain-cli/      # Full CLI command reference
-
-templates/       # Workspace templates for new advisor provisioning
-  AGENTS.md
-  TOOLS.md
-  HEARTBEAT.md
-  skills/
-
-deploy/          # Deployment configs
-  nodes.json     # Agent → runtime mapping (Sprites, cron-triggered)
-  crons.json     # Cron schedules for agent triggers
+cli/             # Swain CLI (TypeScript/Bun) — tools agents use to talk to the backend
+api/             # Swain Agent API — provisioning and management endpoints
+skills/          # Canonical skill definitions (seeds for agent workspaces)
+templates/       # Workspace templates for provisioning new advisors
+deploy/          # Deployment configs, systemd services, cron schedules
+scripts/         # Utility scripts (health checks, etc.)
 ```
+
+## VPS
+
+Agents run on an OpenClaw gateway at `76.13.106.143`. The repo is cloned at `/root/clawd/swain-agents/` — the API server runs from there.
+
+Agent workspaces at `/root/workspaces/` are the live, evolving source of truth for agent definitions.

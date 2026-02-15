@@ -21,7 +21,7 @@ import { run as runStyle } from './commands/style';
 import { run as runOnboarding } from './commands/onboarding';
 import { run as runUser } from './commands/user';
 import { run as runAdvisor } from './commands/advisor';
-import { run as runMessage } from './commands/message';
+
 import { print, colors } from './lib/worker-client';
 
 const VERSION = '0.5.0';
@@ -44,7 +44,7 @@ ${colors.bold}COMMANDS${colors.reset}
   briefing                User briefings (list, get, assemble, validate)
   user                    User management (list, get, update, onboard-status, upload-boat-image)
   advisor                 Advisor agents (list, memories, pool)
-  message                 Send iMessage/SMS (send)
+
   style                   Browse image styles (list, get)
   onboarding              Onboarding templates (list, seed)
   image                   Image generation (generate, queue, status, wait)
@@ -120,9 +120,6 @@ async function main(): Promise<void> {
       break;
     case 'advisor':
       await runAdvisor(subArgs);
-      break;
-    case 'message':
-      await runMessage(subArgs);
       break;
     default:
       print(`${colors.red}Unknown command: ${command}${colors.reset}`);

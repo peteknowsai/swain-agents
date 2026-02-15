@@ -1,6 +1,6 @@
 # Onboarding Showcase Cards
 
-Sample cards to send via iMessage during onboarding conversations. Send as image + caption text.
+Sample cards to send via WhatsApp during onboarding conversations. Send as image + caption text.
 
 ## Card 1: Dock-and-Dine (lifestyle/dining)
 - **Image**: https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA/bc272180-b116-46b1-5c24-9c4e2ef4ab00/public
@@ -24,7 +24,7 @@ Sample cards to send via iMessage during onboarding conversations. Send as image
 
 - Lead with dock-and-dine (strongest visual) unless you know they're into something specific
 - Pick 1-2 to send, don't dump all three
-- Send as image attachment + caption text in iMessage
+- Send as image with caption via WhatsApp using `media=<url>` on the message tool
 - Weave into conversation naturally, e.g. "Here's a taste of what I send every day 👇"
 
 ## Note

@@ -1,4 +1,4 @@
-name: Deploy Skip Agent API
+name: Deploy Swain Agent API
 
 on:
   push:
@@ -10,25 +10,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Deploy API
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 76.13.106.143
-          username: root
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "api/*"
-          target: /root/skip-agent-api/
-          overwrite: true
-
-      - name: Restart service
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.106.143
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            systemctl restart skip-agent-api
+            cd /root/clawd/swain-agents && git pull
+            systemctl restart swain-agent-api
             sleep 2
-            systemctl is-active skip-agent-api
+            systemctl is-active swain-agent-api

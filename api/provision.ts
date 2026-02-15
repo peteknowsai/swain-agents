@@ -13,6 +13,7 @@ const WORKSPACES_ROOT = "/root/workspaces";
 const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
+const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
 
 // Honcho configuration
 const HONCHO_API_KEY = process.env.HONCHO_API_KEY;
@@ -89,6 +90,30 @@ async function openclaw(args: string[]): Promise<string> {
     throw new Error(`openclaw ${args.join(" ")} failed (exit ${exitCode}): ${stderr}`);
   }
   return stdout.trim();
+}
+
+/** Add a phone number to the WhatsApp allowFrom list and restart the gateway */
+async function allowWhatsApp(phone: string): Promise<void> {
+  const config = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
+  const allowFrom: string[] = config.channels?.whatsapp?.allowFrom ?? [];
+  if (allowFrom.includes(phone)) return;
+  allowFrom.push(phone);
+  config.channels.whatsapp.allowFrom = allowFrom;
+  await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
+  await openclaw(["gateway", "restart"]);
+  console.log(`WhatsApp allowFrom: added ${phone}, gateway restarted`);
+}
+
+/** Remove a phone number from the WhatsApp allowFrom list */
+async function disallowWhatsApp(phone: string): Promise<void> {
+  const config = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
+  const allowFrom: string[] = config.channels?.whatsapp?.allowFrom ?? [];
+  const idx = allowFrom.indexOf(phone);
+  if (idx === -1) return;
+  allowFrom.splice(idx, 1);
+  config.channels.whatsapp.allowFrom = allowFrom;
+  await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
+  console.log(`WhatsApp allowFrom: removed ${phone}`);
 }
 
 /** Seed Honcho with captain and advisor peers + initial conclusions */
@@ -257,14 +282,23 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     selfPeerId: `advisor-${input.userId}`,
   }, null, 2));
 
-  // 10. Seed Honcho with captain/advisor peers and initial conclusions
+  // 10. Add captain's phone to WhatsApp allowlist
+  if (input.phone) {
+    try {
+      await allowWhatsApp(input.phone);
+    } catch (err) {
+      console.error(`WhatsApp allowlist update failed (non-fatal): ${err}`);
+    }
+  }
+
+  // 11. Seed Honcho with captain/advisor peers and initial conclusions
   try {
     await seedHoncho(input, agentId);
   } catch (err) {
     console.error(`Honcho seeding failed (non-fatal): ${err}`);
   }
 
-  // 11. Don't wake the advisor here.
+  // 12. Don't wake the advisor here.
   // The daily briefing cron (sessions_send) or Mr. Content's heartbeat safety
   // net will trigger the first briefing on the next pass. The openclaw agent
   // CLI is unreliable for this — fights with the gateway over session locks.

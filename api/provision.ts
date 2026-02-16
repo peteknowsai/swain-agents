@@ -401,26 +401,88 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   return { agentId, status: "provisioned", workspace };
 }
 
-/** Delete an advisor agent */
+/** Delete an advisor agent — full cascade cleanup */
 export async function deleteAdvisor(agentId: string): Promise<void> {
   // Validate agentId format
   if (!agentId.startsWith("advisor-")) {
     throw new Error("Can only delete advisor agents");
   }
 
-  // Remove from openclaw
-  await openclaw(["agents", "delete", agentId, "--force"]);
+  // 1. Remove from openclaw config (agent entry + binding)
+  try {
+    await openclaw(["agents", "delete", agentId, "--force"]);
+  } catch (err) {
+    // Agent may already be removed from config — continue cleanup
+    console.warn(`openclaw agents delete ${agentId}: ${err}`);
+  }
 
-  // Remove workspace
+  // 2. Remove workspace
   const workspace = join(WORKSPACES_ROOT, agentId);
   await rm(workspace, { recursive: true, force: true });
 
-  // Remove from registry
+  // 3. Remove agent sessions/state dir
+  const agentDir = join("/root/.openclaw/agents", agentId);
+  await rm(agentDir, { recursive: true, force: true });
+
+  // 4. Remove cron jobs for this agent
+  try {
+    const cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
+    const before = cronData.jobs.length;
+    cronData.jobs = cronData.jobs.filter((j: any) => j.agentId !== agentId);
+    if (cronData.jobs.length < before) {
+      await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
+      console.log(`Removed ${before - cronData.jobs.length} cron job(s) for ${agentId}`);
+    }
+  } catch (err) {
+    console.warn(`Cron cleanup for ${agentId}: ${err}`);
+  }
+
+  // 5. Remove WhatsApp binding + allowFrom phone from openclaw config
+  try {
+    const cfg = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
+    let changed = false;
+
+    // Find and remove bindings, extract phone numbers to remove from allowlist
+    const bindings: any[] = cfg.bindings || [];
+    const phonesToRemove: string[] = [];
+    const beforeBindings = bindings.length;
+    cfg.bindings = bindings.filter((b: any) => {
+      if (b.agentId === agentId) {
+        // Extract phone from binding peer ID (e.g. "+14156239773")
+        const peerId = b.match?.peer?.id;
+        if (peerId) phonesToRemove.push(peerId);
+        return false;
+      }
+      return true;
+    });
+    if (cfg.bindings.length < beforeBindings) changed = true;
+
+    // Remove phone(s) from WhatsApp allowFrom (skip owner numbers)
+    const ownerNumbers = ["+14156239773", "+5216692766911"];
+    if (phonesToRemove.length > 0 && cfg.channels?.whatsapp?.allowFrom) {
+      const allowFrom: string[] = cfg.channels.whatsapp.allowFrom;
+      cfg.channels.whatsapp.allowFrom = allowFrom.filter(
+        (p: string) => !phonesToRemove.includes(p) || ownerNumbers.includes(p)
+      );
+      if (cfg.channels.whatsapp.allowFrom.length < allowFrom.length) changed = true;
+    }
+
+    if (changed) {
+      await writeFile(OPENCLAW_CONFIG, JSON.stringify(cfg, null, 2));
+      console.log(`Removed WhatsApp binding + allowFrom for ${agentId} (phones: ${phonesToRemove.join(", ")})`);
+    }
+  } catch (err) {
+    console.warn(`Binding cleanup for ${agentId}: ${err}`);
+  }
+
+  // 6. Remove from registry
   const reg = await loadRegistry();
   for (const [uid, aid] of Object.entries(reg)) {
     if (aid === agentId) delete reg[uid];
   }
   await saveRegistry(reg);
+
+  console.log(`Advisor ${agentId} fully deleted (workspace, agent dir, crons, bindings, registry)`);
 }
 
 /** List all advisor agents */

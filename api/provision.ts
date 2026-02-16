@@ -295,7 +295,7 @@ async function createAdvisorCronJobs(
     wakeMode: "now",
     payload: {
       kind: "agentTurn",
-      message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. After sending, reply NO_REPLY.`,
+      message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water${input.marina ? ` around ${input.marina}` : ""}. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. Don't ask questions — you already know their boat, marina, and location from onboarding. After sending, reply NO_REPLY.`,
     },
   });
 

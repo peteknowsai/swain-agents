@@ -1,5 +1,6 @@
 import { mkdir, cp, readdir, readFile, writeFile, rm } from "fs/promises";
 import { join } from "path";
+import { randomUUID } from "crypto";
 import {
   type CaptainInput,
   makeSlug,
@@ -14,6 +15,7 @@ const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
+const CRON_JOBS_FILE = "/root/.openclaw/cron/jobs.json";
 
 // Honcho configuration
 const HONCHO_API_KEY = process.env.HONCHO_API_KEY;
@@ -21,6 +23,20 @@ const HONCHO_BASE_URL = process.env.HONCHO_BASE_URL || "https://api.honcho.dev";
 const HONCHO_WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID || "swain";
 
 type Registry = Record<string, string>; // userId → agentId
+
+/** Normalize a US phone number to E.164 (+1XXXXXXXXXX) */
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  // Already has country code or non-US — return with + prefix
+  return phone.startsWith("+") ? phone : `+${digits}`;
+}
+
+/** Strip + prefix from E.164 for WhatsApp JID format (digits only) */
+function phoneToWhatsAppJid(e164Phone: string): string {
+  return e164Phone.replace(/^\+/, "");
+}
 
 async function loadRegistry(): Promise<Registry> {
   try {
@@ -96,22 +112,23 @@ async function openclaw(args: string[]): Promise<string> {
 async function setupWhatsAppRouting(phone: string, agentId: string): Promise<void> {
   const config = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
 
-  // Add to allowFrom so the gateway accepts their messages
+  // allowFrom uses E.164 format (+14156239773)
   const allowFrom: string[] = config.channels?.whatsapp?.allowFrom ?? [];
   if (!allowFrom.includes(phone)) {
     allowFrom.push(phone);
     config.channels.whatsapp.allowFrom = allowFrom;
   }
 
-  // Add a binding to route this phone number to the advisor agent
+  // Binding peer ID uses WhatsApp JID format (digits only, no +)
+  const jid = phoneToWhatsAppJid(phone);
   if (!config.bindings) config.bindings = [];
   const existing = config.bindings.find(
-    (b: any) => b.match?.peer?.id === phone && b.match?.channel === "whatsapp"
+    (b: any) => b.match?.peer?.id === jid && b.match?.channel === "whatsapp"
   );
   if (!existing) {
     config.bindings.push({
       agentId,
-      match: { channel: "whatsapp", peer: { kind: "direct", id: phone } },
+      match: { channel: "whatsapp", peer: { kind: "direct", id: jid } },
     });
   }
 
@@ -247,6 +264,67 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
   console.log(`Honcho seeded: captain=${captainPeerId} advisor=${advisorPeerId} conclusions=${conclusions.length}`);
 }
 
+/** Create cron jobs for a new advisor: one-shot intro + daily briefing */
+async function createAdvisorCronJobs(
+  input: CaptainInput,
+  agentId: string,
+  phone: string
+): Promise<void> {
+  // Read existing cron jobs
+  let cronData: { version: number; jobs: any[] };
+  try {
+    cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
+  } catch {
+    cronData = { version: 1, jobs: [] };
+  }
+
+  const now = Date.now();
+
+  // 1. One-shot intro message — fires 30 seconds from now
+  const introAt = new Date(now + 30_000).toISOString();
+  cronData.jobs.push({
+    id: randomUUID(),
+    agentId,
+    name: `Advisor intro - ${input.name}`,
+    enabled: true,
+    deleteAfterRun: true,
+    createdAtMs: now,
+    updatedAtMs: now,
+    schedule: { kind: "at", at: introAt },
+    sessionTarget: "isolated",
+    wakeMode: "now",
+    payload: {
+      kind: "agentTurn",
+      message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. After sending, reply NO_REPLY.`,
+    },
+  });
+
+  // 2. Daily briefing — stagger by hashing agentId to spread across 11:00-11:20 UTC
+  const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const minuteOffset = hash % 20; // 0-19 minutes past 11:00 UTC
+  cronData.jobs.push({
+    id: randomUUID(),
+    agentId,
+    name: `Daily briefing - ${input.name}`,
+    enabled: true,
+    createdAtMs: now,
+    updatedAtMs: now,
+    schedule: { kind: "cron", expr: `${minuteOffset} 11 * * *`, tz: "UTC" },
+    sessionTarget: "isolated",
+    wakeMode: "now",
+    payload: {
+      kind: "agentTurn",
+      message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. Use --force if one already exists for today.`,
+    },
+    delivery: { mode: "announce" },
+  });
+
+  await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
+  console.log(
+    `Cron jobs created for ${agentId}: intro at ${introAt}, daily briefing at ${minuteOffset} 11 * * * UTC`
+  );
+}
+
 /** Provision a new advisor agent */
 export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionResult> {
   const agentId = makeSlug(input.name, input.userId);
@@ -300,7 +378,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   // 10. Route captain's WhatsApp messages to this advisor
   if (input.phone) {
     try {
-      await setupWhatsAppRouting(input.phone, agentId);
+      await setupWhatsAppRouting(normalizePhone(input.phone), agentId);
     } catch (err) {
       console.error(`WhatsApp routing setup failed (non-fatal): ${err}`);
     }
@@ -313,11 +391,16 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     console.error(`Honcho seeding failed (non-fatal): ${err}`);
   }
 
-  // 12. Don't wake the advisor here.
-  // The daily briefing cron (sessions_send) or Mr. Content's heartbeat safety
-  // net will trigger the first briefing on the next pass. The openclaw agent
-  // CLI is unreliable for this — fights with the gateway over session locks.
-  console.log(`Advisor ${agentId} provisioned. First briefing will be triggered by daily cron or Mr. Content safety net.`);
+  // 12. Create cron jobs: one-shot WhatsApp intro + daily briefing
+  if (input.phone) {
+    try {
+      await createAdvisorCronJobs(input, agentId, normalizePhone(input.phone));
+    } catch (err) {
+      console.error(`Cron job creation failed (non-fatal): ${err}`);
+    }
+  }
+
+  console.log(`Advisor ${agentId} provisioned with WhatsApp intro + daily briefing crons.`);
 
   return { agentId, status: "provisioned", workspace };
 }

@@ -2,7 +2,7 @@
 
 /**
  * Worker HTTP Client
- * Shared utility for Skip CLI to call API endpoints
+ * Shared utility for Swain CLI to call API endpoints
  *
  * Now points to Convex HTTP actions instead of the Bun server.
  * Set SWAIN_API_URL to your Convex site URL (e.g., https://your-app.convex.site)

@@ -263,6 +263,7 @@ async function updateUser(args: string[]): Promise<void> {
     'experienceLevel', 'primaryUse', 'fishingStyle', 'targetSpecies',
     'typicalCrew', 'typicalTripDuration', 'homeWaters',
     'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
+    'onboardingStep',
   ];
 
   // Build update body from provided flags
@@ -338,6 +339,7 @@ ${colors.bold}UPDATE FIELDS${colors.reset}
   --homeWaters=<waters>             Home waters description
   --interests=<topics>              Comma-separated interests
   --timezone=<tz>                   IANA timezone
+  --onboardingStep=<step>           contacting|done
 
 ${colors.bold}OPTIONS${colors.reset}
   --limit=<n>             Limit results (for list, default: 200)

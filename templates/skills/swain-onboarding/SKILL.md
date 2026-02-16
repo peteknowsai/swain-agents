@@ -12,17 +12,15 @@ Create a personalized welcome briefing for a new captain. This happens AFTER you
 
 ## Prerequisites
 
-Before you build this briefing, you must know their **marina/location** from the conversation. If you don't have it, go back and ask. You can't pick relevant local content without it.
-
-You should also have a sense of what they're into — fishing, cruising, weather, whatever came up naturally. Use that to shape what you put in front of them.
+Pull their profile from Convex (`swain user get {{userId}} --json`). The app already collected marina location, boat info, and possibly interests during signup. Combine that with whatever you learned in the conversation to shape the briefing.
 
 ## What to Do
 
 1. Pull their user profile and browse the card library for their location
-2. Pick cards that match what you learned about them — lead with their interests
+2. Pick cards that match what you know about them — lead with whatever they seemed most excited about in the conversation
 3. Write a personalized welcome briefing with your commentary on each card
 4. Include the Swain welcome card so they understand the platform
-5. Ask for a photo of their boat if you haven't already gotten one via text
+5. Include a `photo_upload` item asking for a boat photo
 
 Use the swain-advisor skill's briefing workflow for the mechanics. The onboarding briefing is just a first briefing that's tailored to someone you just met.
 

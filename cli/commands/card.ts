@@ -360,7 +360,7 @@ async function createCard(args: string[]): Promise<void> {
   const summary = params['summary'] || undefined;
 
   // Parse expires-at: convert ISO date string to unix timestamp
-  let expiresAt: number | null = null;
+  let expiresAt: number | undefined = undefined;
   if (params['expires-at']) {
     const raw = params['expires-at'];
     const parsed = Number(raw);

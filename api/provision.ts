@@ -116,7 +116,18 @@ async function setupWhatsAppRouting(phone: string, agentId: string): Promise<voi
   }
 
   await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
-  await openclaw(["gateway", "restart"]);
+
+  // Restart gateway via system-level systemd (not openclaw gateway restart,
+  // which tries systemctl --user and fails for root system services)
+  const restart = Bun.spawn(["systemctl", "restart", "openclaw"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const restartExit = await restart.exited;
+  if (restartExit !== 0) {
+    const stderr = await new Response(restart.stderr).text();
+    throw new Error(`systemctl restart openclaw failed (exit ${restartExit}): ${stderr}`);
+  }
   console.log(`WhatsApp routing: ${phone} → ${agentId}, gateway restarted`);
 }
 

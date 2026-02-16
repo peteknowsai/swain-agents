@@ -2,7 +2,7 @@
 
 /**
  * Card Commands
- * swain card list|get|create|check|update|audit|archive|unarchive|regen-image
+ * swain card list|get|create|check|update|audit|archive|unarchive|image
  */
 
 import {
@@ -123,14 +123,25 @@ async function pullCards(args: string[]): Promise<void> {
 async function listCards(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const jsonOutput = params['json'] === 'true';
+  const unstyledOnly = params['unstyled'] === 'true';
 
   const queryParams = new URLSearchParams();
   if (params['desk']) queryParams.append('desk', params['desk']);
   if (params['category']) queryParams.append('category', params['category']);
-  if (params['limit']) queryParams.append('limit', params['limit']);
+  if (params['limit'] && !unstyledOnly) queryParams.append('limit', params['limit']);
 
   const result = await workerRequest(`/cards?${queryParams}`);
-  const cards = result.cards || [];
+  let cards = result.cards || [];
+
+  // Filter to unstyled cards (no image or placeholder image)
+  if (unstyledOnly) {
+    cards = cards.filter((c: any) =>
+      !c.image || c.image.includes('placehold') || c.image.includes('placeholder')
+    );
+    if (params['limit']) {
+      cards = cards.slice(0, parseInt(params['limit'], 10));
+    }
+  }
 
   if (jsonOutput) {
     console.log(JSON.stringify({ success: true, cards, count: cards.length }, null, 2));
@@ -351,10 +362,10 @@ async function createCard(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Image handling: use provided URL or placeholder
-  const finalImage = imageUrl || 'https://placehold.co/600x400';
+  // Image handling: null if not provided (unstyled)
+  const finalImage = imageUrl || undefined;
   if (!imageUrl) {
-    console.error(`${colors.dim}No --image provided, using placeholder${colors.reset}`);
+    console.error(`${colors.dim}No --image provided, card will be unstyled${colors.reset}`);
   }
 
   const summary = params['summary'] || undefined;
@@ -599,17 +610,17 @@ async function unarchiveCard(args: string[]): Promise<void> {
 }
 
 /**
- * swain card regen-image <cardId>
- * Regenerate card image
+ * swain card image <cardId>
+ * Generate (or regenerate) card image
  */
-async function regenImage(args: string[]): Promise<void> {
+async function generateImage(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const cardId = args[0];
   const jsonOutput = params['json'] === 'true';
   const timeout = parseInt(params['timeout'] || '120', 10) * 1000;
 
   if (!cardId || cardId.startsWith('--')) {
-    printError('Usage: swain card regen-image <cardId> [--prompt="..."] [--style=X]');
+    printError('Usage: swain card image <cardId> [--prompt="..."] [--style=X]');
     process.exit(1);
   }
 
@@ -629,13 +640,12 @@ async function regenImage(args: string[]): Promise<void> {
     print(`${colors.dim}Prompt: ${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}${colors.reset}`);
   }
 
-  // 2. Queue image
+  // 2. Queue image (generate a jobId for the backend)
+  const jobId = `img_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const queueResult = await workerRequest('/images', {
     method: 'POST',
-    body: { prompt, styleId, cardId, agentId: card.agentId },
+    body: { jobId, prompt, styleId, cardId, agentId: card.agentId, cardTitle: card.title },
   });
-
-  const jobId = queueResult.jobId;
   if (!jsonOutput) {
     print(`${colors.dim}Job ${jobId} queued, polling...${colors.reset}`);
   }
@@ -646,7 +656,7 @@ async function regenImage(args: string[]): Promise<void> {
   while (Date.now() - start < timeout) {
     await new Promise(r => setTimeout(r, 2000));
     const pollResult = await workerRequest(`/images/${jobId}`);
-    job = pollResult;
+    job = pollResult.job || pollResult;
 
     if (job.status === 'complete' || job.status === 'completed') break;
     if (job.status === 'failed' || job.status === 'error') {
@@ -702,11 +712,12 @@ ${colors.bold}COMMANDS${colors.reset}
   coverage                Card coverage by category per desk
   archive <id>            Soft-archive a card
   unarchive <id>          Restore an archived card
-  regen-image <id>        Regenerate card image
+  image <id>              Generate (or regenerate) card image
 
 ${colors.bold}OPTIONS (list)${colors.reset}
   --desk=<name>           Filter by desk (e.g., tampa-bay)
   --category=<name>       Filter by category
+  --unstyled              Only show cards with no image (unstyled)
   --limit=<n>             Limit results
   --json                  Output as JSON
 
@@ -721,7 +732,7 @@ ${colors.bold}OPTIONS (create)${colors.reset}
   --title=<text>          Short headline, 3-6 words (required)
   --subtext=<text>        Preview text, 2-3 sentences (required)
   --content=<markdown>    Full markdown content (required)
-  --image=<url>           Image URL (uses placeholder if not provided)
+  --image=<url>           Image URL (null/unstyled if not provided)
   --date=<YYYY-MM-DD>     Card date (defaults to today in Eastern Time)
   --summary=<text>        Internal description
   --bg-color=<hex>        Background color (e.g., #4A5568)
@@ -754,7 +765,7 @@ ${colors.bold}OPTIONS (coverage)${colors.reset}
   --desk=<name>           Filter by desk
   --json                  Output as JSON
 
-${colors.bold}OPTIONS (regen-image)${colors.reset}
+${colors.bold}OPTIONS (image)${colors.reset}
   --prompt=<text>         Custom image prompt (default: title + subtext)
   --style=<id>            Style ID override
   --timeout=<seconds>     Polling timeout (default: 120)
@@ -823,8 +834,9 @@ export async function run(args: string[]): Promise<void> {
       case 'coverage':
         await coverageReport(commandArgs);
         break;
+      case 'image':
       case 'regen-image':
-        await regenImage(commandArgs);
+        await generateImage(commandArgs);
         break;
       case 'help':
       case '--help':

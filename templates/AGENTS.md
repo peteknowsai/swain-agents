@@ -97,7 +97,7 @@ Then create a one-shot cron job:
 ```
 cron action=add job={
   "name": "Build onboarding briefing - {{captainName}}",
-  "schedule": { "kind": "at", "at": "<15 seconds from now in ISO-8601>" },
+  "schedule": { "kind": "at", "at": "<30 seconds from now in ISO-8601>" },
   "sessionTarget": "isolated",
   "payload": {
     "kind": "agentTurn",

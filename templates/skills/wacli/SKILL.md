@@ -1,4 +1,4 @@
-# swain-whatsapp — WhatsApp Messaging via wacli
+# wacli — WhatsApp CLI
 
 Send WhatsApp messages using the `wacli` CLI.
 

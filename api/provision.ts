@@ -153,6 +153,15 @@ async function setupWhatsAppRouting(phone: string, agentId: string): Promise<voi
   console.log(`WhatsApp routing: ${phone} → ${agentId}, gateway restarted`);
 }
 
+/** Build a human-readable Honcho peer ID for a captain.
+ * Format: captain-{name}-{shortId} — matches advisor naming from makeSlug().
+ * e.g., captain-pete-4f58e4 */
+function captainPeerId(name: string, userId: string): string {
+  const namePart = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const idPart = userId.replace(/^usr_/, "").slice(0, 6).toLowerCase();
+  return `captain-${namePart}-${idPart}`;
+}
+
 /** Seed Honcho with captain and advisor peers + initial conclusions */
 async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
   if (!HONCHO_API_KEY) {
@@ -160,113 +169,95 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
     return;
   }
 
-  const captainPeerId = `captain-${input.userId}`;
-  const advisorPeerId = `advisor-${input.userId}`;
+  // Human-readable peer IDs: captain-pete-4f58e4 / advisor-pete-4f58e4
+  const captainPeer = captainPeerId(input.name, input.userId);
+  const advisorPeer = agentId; // Already named like advisor-pete-usr_4f
 
   const headers = {
     "Authorization": `Bearer ${HONCHO_API_KEY}`,
     "Content-Type": "application/json",
   };
-  const base = `${HONCHO_BASE_URL}/v2/workspaces/${HONCHO_WORKSPACE_ID}`;
+  const base = `${HONCHO_BASE_URL}/v3/workspaces/${HONCHO_WORKSPACE_ID}`;
 
-  // Ensure workspace exists
-  const wsRes = await fetch(`${HONCHO_BASE_URL}/v2/workspaces`, {
+  // Ensure workspace exists (v3 — get-or-create)
+  await fetch(`${base}`, {
     method: "POST",
     headers,
     body: JSON.stringify({ id: HONCHO_WORKSPACE_ID }),
   });
-  if (!wsRes.ok && wsRes.status !== 409) {
-    console.warn(`Honcho workspace create returned ${wsRes.status}`);
-  }
 
-  // Create captain peer (observe_me: true so Honcho reasons about them)
-  await fetch(`${base}/peers`, {
+  // Create captain peer with name in metadata
+  const captainRes = await fetch(`${base}/peers/${captainPeer}`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      id: captainPeerId,
       metadata: {
         userId: input.userId,
         name: input.name,
-        boatName: input.boatName || null,
-        phone: input.phone || null,
+        boatName: input.boatName || undefined,
+        phone: input.phone || undefined,
         role: "captain",
       },
     }),
   });
+  if (!captainRes.ok && captainRes.status !== 409) {
+    console.warn(`Honcho captain peer create returned ${captainRes.status}: ${await captainRes.text()}`);
+  }
 
-  // Create advisor peer (observe_me: true, will observe captain in sessions)
-  await fetch(`${base}/peers`, {
+  // Create advisor peer
+  const advisorRes = await fetch(`${base}/peers/${advisorPeer}`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      id: advisorPeerId,
       metadata: {
         agentId,
+        captainName: input.name,
         captainUserId: input.userId,
         role: "advisor",
       },
     }),
   });
+  if (!advisorRes.ok && advisorRes.status !== 409) {
+    console.warn(`Honcho advisor peer create returned ${advisorRes.status}: ${await advisorRes.text()}`);
+  }
 
-  // Seed initial conclusions about the captain from onboarding data
-  const conclusions: Array<{ content: string; observer_id: string; observed_id: string }> = [];
-
-  conclusions.push({
-    content: `Captain's name is ${input.name}.`,
-    observer_id: advisorPeerId,
-    observed_id: captainPeerId,
+  // Create a session for onboarding conclusions
+  const sessionId = `onboarding-${captainPeer}`;
+  await fetch(`${base}/sessions/${sessionId}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({}),
   });
 
-  if (input.boatName) {
-    conclusions.push({
-      content: `Captain's boat is named "${input.boatName}".`,
-      observer_id: advisorPeerId,
-      observed_id: captainPeerId,
-    });
-  }
+  // Seed initial conclusions about the captain from onboarding data (v3 API)
+  const facts: string[] = [];
 
-  if (input.boatMakeModel) {
-    conclusions.push({
-      content: `Captain's boat is a ${input.boatMakeModel}.`,
-      observer_id: advisorPeerId,
-      observed_id: captainPeerId,
-    });
-  }
+  facts.push(`Captain's name is ${input.name}.`);
+  if (input.boatName) facts.push(`Captain's boat is named "${input.boatName}".`);
+  if (input.boatMakeModel) facts.push(`Captain's boat is a ${input.boatMakeModel}.`);
+  if (input.marina) facts.push(`Captain keeps their boat at ${input.marina}.`);
+  if (input.experienceLevel) facts.push(`Captain is a ${input.experienceLevel} boater.`);
+  if (input.interests) facts.push(`Captain's main interests: ${input.interests}.`);
 
-  if (input.marina) {
-    conclusions.push({
-      content: `Captain keeps their boat at ${input.marina}.`,
-      observer_id: advisorPeerId,
-      observed_id: captainPeerId,
-    });
-  }
-
-  if (input.experienceLevel) {
-    conclusions.push({
-      content: `Captain is a ${input.experienceLevel} boater.`,
-      observer_id: advisorPeerId,
-      observed_id: captainPeerId,
-    });
-  }
-
-  if (input.interests) {
-    conclusions.push({
-      content: `Captain's main interests: ${input.interests}.`,
-      observer_id: advisorPeerId,
-      observed_id: captainPeerId,
-    });
-  }
-
-  if (conclusions.length > 0) {
-    await fetch(`${base}/conclusions`, {
+  if (facts.length > 0) {
+    // v3: conclusions are created on the observer peer, targeting the observed peer
+    const conclusionRes = await fetch(`${base}/peers/${advisorPeer}/conclusions`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ conclusions }),
+      body: JSON.stringify({
+        conclusions: facts.map(content => ({
+          content,
+          target: captainPeer,
+          session_id: sessionId,
+        })),
+      }),
     });
+    if (!conclusionRes.ok) {
+      console.warn(`Honcho conclusions create returned ${conclusionRes.status}: ${await conclusionRes.text()}`);
+    }
   }
 
-  console.log(`Honcho seeded: captain=${captainPeerId} advisor=${advisorPeerId} conclusions=${conclusions.length}`);
+  console.log(`Honcho seeded: captain=${captainPeer} advisor=${advisorPeer} facts=${facts.length}`);
 }
 
 /** Create cron jobs for a new advisor: one-shot intro + daily briefing */
@@ -376,8 +367,8 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
 
   // 9. Write .honcho.json for plugin peer resolution
   await writeFile(join(workspace, ".honcho.json"), JSON.stringify({
-    peerId: `captain-${input.userId}`,
-    selfPeerId: `advisor-${input.userId}`,
+    peerId: captainPeerId(input.name, input.userId),
+    selfPeerId: agentId,
   }, null, 2));
 
   // 10. Route captain's WhatsApp messages to this advisor

@@ -1,6 +1,6 @@
 # Tools Reference
 
-## Skip CLI
+## Swain CLI
 
 The `swain` CLI connects to the Swain API server for all data operations. Always use `--json` for programmatic output.
 

@@ -1,10 +1,10 @@
 ---
 name: swain-cli
-description: Skip CLI command reference for cards, briefings, users, and agents.
+description: Swain CLI command reference for cards, briefings, users, and agents.
 metadata: { "openclaw": { "emoji": "💻", "requires": { "bins": ["swain"] } } }
 ---
 
-# Skip CLI Reference
+# Swain CLI Reference
 
 The `swain` CLI connects to the Swain API server.
 

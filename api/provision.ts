@@ -33,9 +33,13 @@ function normalizePhone(phone: string): string {
   return phone.startsWith("+") ? phone : `+${digits}`;
 }
 
-/** Strip + prefix from E.164 for WhatsApp JID format (digits only) */
-function phoneToWhatsAppJid(e164Phone: string): string {
-  return e164Phone.replace(/^\+/, "");
+/** Format phone for WhatsApp binding peer ID.
+ * OpenClaw's routing normalizes inbound peers through normalizeE164() which
+ * always adds a + prefix. The binding peer ID must match that format exactly.
+ * E.164 format: +14156239773 */
+function phoneToBindingPeerId(e164Phone: string): string {
+  // Ensure + prefix (normalizeE164 always adds it)
+  return e164Phone.startsWith("+") ? e164Phone : `+${e164Phone}`;
 }
 
 async function loadRegistry(): Promise<Registry> {
@@ -119,16 +123,17 @@ async function setupWhatsAppRouting(phone: string, agentId: string): Promise<voi
     config.channels.whatsapp.allowFrom = allowFrom;
   }
 
-  // Binding peer ID uses WhatsApp JID format (digits only, no +)
-  const jid = phoneToWhatsAppJid(phone);
+  // Binding peer ID must use E.164 with + prefix to match OpenClaw's
+  // normalizeE164() which always adds + to inbound peer IDs.
+  const peerId = phoneToBindingPeerId(phone);
   if (!config.bindings) config.bindings = [];
   const existing = config.bindings.find(
-    (b: any) => b.match?.peer?.id === jid && b.match?.channel === "whatsapp"
+    (b: any) => b.match?.peer?.id === peerId && b.match?.channel === "whatsapp"
   );
   if (!existing) {
     config.bindings.push({
       agentId,
-      match: { channel: "whatsapp", peer: { kind: "direct", id: jid } },
+      match: { channel: "whatsapp", peer: { kind: "direct", id: peerId } },
     });
   }
 
@@ -295,7 +300,7 @@ async function createAdvisorCronJobs(
     wakeMode: "now",
     payload: {
       kind: "agentTurn",
-      message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water${input.marina ? ` around ${input.marina}` : ""}. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. Don't ask questions — you already know their boat, marina, and location from onboarding. After sending, reply NO_REPLY.`,
+      message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water${input.marina ? ` around ${input.marina}` : ""}. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. End with a question that gets them talking — not something the app already collected (you already know their boat and marina), but something about what they love doing on the water. When they reply, the conversation will come to you in your captain session. After sending the intro, update onboarding step to "contacting" and reply NO_REPLY.`,
     },
   });
 

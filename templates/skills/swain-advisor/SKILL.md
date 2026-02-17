@@ -68,7 +68,7 @@ Create a personalized daily briefing for your captain.
    ```bash
    swain briefing assemble --user={{userId}} --items='<json_array>' --json
    ```
-   The server validates cards, fills in full card data, and marks them as served. Add `--force` to replace an existing briefing for the same date.
+   The server validates cards, fills in full card data, and marks them as served.
 
 ## Briefing Item Types
 

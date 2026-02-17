@@ -151,7 +151,7 @@ Follow the **swain-advisor** skill workflow:
    { "type": "photo_upload", "id": "boat_photo", "question": "Got a pic of [boat name]? Send it over and I'll use it for your daily art — makes it way better 📸" }
    ```
 9. Assemble: `swain briefing assemble --user={{userId}} --items='<json>' --json`
-   - If you get a 409 (briefing exists), add `--force`
+   - Multiple briefings per date are fine — the app always shows the latest
 
 ### Step 4d: Notify the captain
 

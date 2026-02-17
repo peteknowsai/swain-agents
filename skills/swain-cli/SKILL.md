@@ -23,7 +23,7 @@ swain card create --agent-id=<id> --title=<text> --subtext=<text> --content=<md>
 ### Briefings
 ```bash
 swain briefing previous --user=<userId> [--json]
-swain briefing assemble --user=<userId> --items='<json>' [--date=<YYYY-MM-DD>] [--force] [--json]
+swain briefing assemble --user=<userId> --items='<json>' [--date=<YYYY-MM-DD>] [--json]
 swain briefing list [--user=<userId>] [--limit=<n>] [--json]
 swain briefing get <briefingId> [--json]
 swain briefing create --user=<userId> --date=<YYYY-MM-DD> --items='<json>' [--onboarding] [--json]

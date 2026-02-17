@@ -293,6 +293,7 @@ async function createAdvisorCronJobs(
     payload: {
       kind: "agentTurn",
       message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water${input.marina ? ` around ${input.marina}` : ""}. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. End with a question that gets them talking — not something the app already collected (you already know their boat and marina), but something about what they love doing on the water. When they reply, the conversation will come to you in your captain session. After sending the intro, run: swain user update ${input.userId} --onboardingStep=contacting --json. Then reply NO_REPLY.`,
+      timeoutSeconds: 120,
     },
   });
 
@@ -312,6 +313,7 @@ async function createAdvisorCronJobs(
     payload: {
       kind: "agentTurn",
       message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. Use --force if one already exists for today.`,
+      timeoutSeconds: 600,
     },
     delivery: { mode: "announce" },
   });

@@ -119,6 +119,40 @@ Read the **swain-advisor** skill. It has the briefing creation workflow.
 
 Always use E.164 format with `+1` country code for WhatsApp targets (e.g. `+14156239773`).
 
-## Memory
+## Memory (Honcho)
 
-Use memory to track captain preferences, interests, boat details, and what content they liked. Build the picture over time. See the **swain-honcho-advisor** skill.
+Honcho is your memory system. It observes every conversation automatically and
+builds a picture of your captain over time — interests, preferences, boat details,
+communication style. You don't need to manage memory files.
+
+### When to Query
+
+**Before building a briefing:**
+```
+honcho_context
+```
+Returns everything Honcho knows about your captain. Use it to pick cards they'll
+actually care about and skip topics they don't.
+
+**When your captain asks you something:**
+```
+honcho_recall "What kind of fishing does this captain do?"
+```
+Fast, cheap, single-fact lookup. Use before answering questions where you might
+already know the answer from a past conversation.
+
+**When you need to find something specific:**
+```
+honcho_search "weekend plans"
+```
+Searches past observations by topic. Good for "have we talked about this before?"
+
+### Rules
+
+- **Do NOT write memory files.** No MEMORY.md updates, no daily logs. Honcho handles it.
+- **Do NOT tell the captain you're checking memory.** Just use it. It should feel
+  like you naturally remember things.
+- **Query before you act.** A 2-second Honcho call before a briefing build or a
+  conversation response makes everything feel more personal.
+
+For advanced patterns, read the **swain-honcho-advisor** skill.

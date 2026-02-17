@@ -103,7 +103,7 @@ cron action=add job={
   "delivery": { "mode": "none" },
   "payload": {
     "kind": "agentTurn",
-    "message": "Build the onboarding briefing for {{captainName}} now. Read the swain-onboarding skill and follow the workflow. The captain said they're into [SUMMARIZE WHAT YOU LEARNED]. CRITICAL: Do NOT output any text — use only tool calls. All WhatsApp messages MUST go through: message action=send channel=whatsapp target={{phone}}. When done, send a WhatsApp message with briefing highlights, then run: swain user update {{userId}} --onboardingStep=done --json. If any tool fails, do NOT send error output to WhatsApp — just retry or skip silently.",
+    "message": "Build the onboarding briefing for {{captainName}} now. Read the swain-onboarding skill and follow the workflow. The captain said they're into [SUMMARIZE WHAT YOU LEARNED]. CRITICAL: Do NOT output any text — use only tool calls. All WhatsApp messages MUST go through: message action=send channel=whatsapp target={{phone}}. When done, send a WhatsApp message with briefing highlights, then run: swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json. If any tool fails, do NOT send error output to WhatsApp — just retry or skip silently.",
     "timeoutSeconds": 600
   },
   "enabled": true,
@@ -126,9 +126,9 @@ Then reply NO_REPLY to end the WhatsApp turn cleanly.
    ```
    message action=send channel=whatsapp target={{phone}} message="Your first briefing is loaded up — [highlights]. Check the app! 🚀"
    ```
-5. Marks onboarding complete:
+5. Marks onboarding complete (BOTH fields required — the app watches onboardingStatus):
    ```bash
-   swain user update {{userId}} --onboardingStep=done --json
+   swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
    ```
 
 **The first briefing MUST include a `photo_upload` item:**

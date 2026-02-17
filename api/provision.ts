@@ -186,9 +186,9 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
     body: JSON.stringify({ id: HONCHO_WORKSPACE_ID }),
   });
 
-  // Create captain peer with name in metadata
+  // Create captain peer (v3: PUT to /peers/{id}, idempotent)
   const captainRes = await fetch(`${base}/peers/${captainPeer}`, {
-    method: "POST",
+    method: "PUT",
     headers,
     body: JSON.stringify({
       metadata: {
@@ -204,9 +204,9 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
     console.warn(`Honcho captain peer create returned ${captainRes.status}: ${await captainRes.text()}`);
   }
 
-  // Create advisor peer
+  // Create advisor peer (v3: PUT to /peers/{id}, idempotent)
   const advisorRes = await fetch(`${base}/peers/${advisorPeer}`, {
-    method: "POST",
+    method: "PUT",
     headers,
     body: JSON.stringify({
       metadata: {
@@ -221,15 +221,8 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
     console.warn(`Honcho advisor peer create returned ${advisorRes.status}: ${await advisorRes.text()}`);
   }
 
-  // Create a session for onboarding conclusions
-  const sessionId = `onboarding-${captainPeer}`;
-  await fetch(`${base}/sessions/${sessionId}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({}),
-  });
-
-  // Seed initial conclusions about the captain from onboarding data (v3 API)
+  // Seed initial conclusions about the captain from onboarding data
+  // v3: POST to /conclusions at workspace level with observer_id + observed_id
   const facts: string[] = [];
 
   facts.push(`Captain's name is ${input.name}.`);
@@ -240,15 +233,14 @@ async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
   if (input.interests) facts.push(`Captain's main interests: ${input.interests}.`);
 
   if (facts.length > 0) {
-    // v3: conclusions are created on the observer peer, targeting the observed peer
-    const conclusionRes = await fetch(`${base}/peers/${advisorPeer}/conclusions`, {
+    const conclusionRes = await fetch(`${base}/conclusions`, {
       method: "POST",
       headers,
       body: JSON.stringify({
         conclusions: facts.map(content => ({
           content,
-          target: captainPeer,
-          session_id: sessionId,
+          observer_id: advisorPeer,
+          observed_id: captainPeer,
         })),
       }),
     });

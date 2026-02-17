@@ -34,7 +34,8 @@ Every onboarding briefing MUST include the boat art sampler. This introduces the
 swain card boat-art --user={{userId}} --sampler --json
 ```
 
-This generates 6 cards showing their boat in different art styles (watercolor, oil painting, pop art, Japanese woodblock, impressionist, comic book). Include all 6 in the briefing with a text item like:
+This generates 2 cards showing their boat in different art styles (watercolor and pop art).
+Include both in the briefing with a text item like:
 
 "One of my favorite things — every day, I create a new piece of art featuring [boat name]. Here's a taste of what's coming. Eventually you'll be able to print these too 🎨"
 

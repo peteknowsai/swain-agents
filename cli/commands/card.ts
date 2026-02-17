@@ -722,6 +722,8 @@ async function boatArt(args: string[]): Promise<void> {
     generateBoatArt,
     pickRandomStyle,
     getSamplerStyles,
+    getStyleDefaultBgColor,
+    buildBoatArtContent,
   } = await import('../lib/boat-art');
 
   // 1. Fetch user profile
@@ -750,7 +752,7 @@ async function boatArt(args: string[]): Promise<void> {
   let styles: typeof ART_STYLES[number][];
   if (isSampler) {
     styles = getSamplerStyles();
-    if (!jsonOutput) print(`${colors.dim}Generating 6-style sampler...${colors.reset}`);
+    if (!jsonOutput) print(`${colors.dim}Generating ${styles.length}-style sampler...${colors.reset}`);
   } else if (styleParam) {
     const found = ART_STYLES.find((s: any) => s.id === styleParam);
     if (!found) {
@@ -783,17 +785,14 @@ async function boatArt(args: string[]): Promise<void> {
 
       const result = await generateBoatArt(prompt, hasPhoto ? boatImageUrl : undefined);
 
-      // 4. Create card
+      // 4. Create card with background color and rich content
       const cardId = `card_${crypto.randomUUID().slice(0, 8)}`;
-      const title = isSampler
-        ? `${boatName} — ${style.name}`
-        : `${boatName} — Daily Art`;
+      const title = `${boatName} — ${style.name}`;
       const subtext = isSampler
-        ? `Your boat reimagined in ${style.name} style`
-        : `Today's ${style.name} art of ${boatName}`;
-      const content = isSampler
-        ? `# ${style.name}\n\n${boatName} reimagined as a ${style.name.toLowerCase()} piece. This is one of the many art styles Swain creates for you every day.`
-        : `# Today's Boat Art\n\n${boatName} in ${style.name.toLowerCase()} style. A new piece of art for your collection, every single day.`;
+        ? `Your boat reimagined in ${style.name.toLowerCase()} style`
+        : `Today's ${style.name.toLowerCase()} art of ${boatName}`;
+      const content = buildBoatArtContent({ boatName, style, isSampler });
+      const backgroundColor = getStyleDefaultBgColor(style.id);
 
       await workerRequest('/cards', {
         method: 'POST',
@@ -808,6 +807,7 @@ async function boatArt(args: string[]): Promise<void> {
           subtext,
           contentMarkdown: content,
           image: result.url,
+          backgroundColor,
           cardDate: getTodayDate(),
         },
       });

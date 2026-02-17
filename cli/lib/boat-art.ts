@@ -15,7 +15,7 @@
  */
 
 const REPLICATE_MODEL_URL =
-  "https://api.replicate.com/v1/models/google/nano-banana/predictions";
+  "https://api.replicate.com/v1/models/google/nano-banana-pro/predictions";
 
 const CF_DELIVERY_BASE =
   "https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA";
@@ -281,17 +281,52 @@ export function pickRandomStyle(exclude: ArtStyleId[] = []): (typeof ART_STYLES)
 }
 
 /**
- * The 6 styles used for the onboarding sampler card.
+ * The 2 styles used for the onboarding sampler card.
+ * Show variety without overwhelming the first briefing.
  */
 export const SAMPLER_STYLE_IDS: ArtStyleId[] = [
   "watercolor",
-  "oil-painting",
   "pop-art",
-  "japanese-woodblock",
-  "impressionist",
-  "comic-book",
 ];
 
 export function getSamplerStyles(): (typeof ART_STYLES)[number][] {
   return SAMPLER_STYLE_IDS.map((id) => ART_STYLES.find((s) => s.id === id)!);
+}
+
+/**
+ * Extract a dominant color from an image URL for card background.
+ * Uses Cloudflare's image transformation to get a 1x1 pixel and read its color.
+ * Falls back to a style-based default if extraction fails.
+ */
+export function getStyleDefaultBgColor(styleId: string): string {
+  const styleColors: Record<string, string> = {
+    "watercolor": "#4a6fa5",
+    "oil-painting": "#5c4033",
+    "pop-art": "#e63946",
+    "japanese-woodblock": "#264653",
+    "impressionist": "#6b8f71",
+    "comic-book": "#fca311",
+    "art-deco": "#1d3557",
+    "minimalist": "#e9ecef",
+    "sunset-silhouette": "#e76f51",
+    "neon": "#0b0c10",
+  };
+  return styleColors[styleId] || "#2d3748";
+}
+
+/**
+ * Build card content for boat art (richer than just a one-liner).
+ */
+export function buildBoatArtContent(opts: {
+  boatName: string;
+  style: (typeof ART_STYLES)[number];
+  isSampler: boolean;
+}): string {
+  const { boatName, style, isSampler } = opts;
+
+  if (isSampler) {
+    return `# ${boatName} — ${style.name}\n\nYour boat reimagined as ${style.name.toLowerCase()} art. ${style.prompt.split(",").slice(0, 2).join(",").trim()}.\n\nEvery day, Swain creates a new piece of art featuring your boat in a different style. Over time, you'll build a full collection — and soon you'll be able to print your favorites.`;
+  }
+
+  return `# Today's Art: ${style.name}\n\n${boatName} in ${style.name.toLowerCase()} style — ${style.prompt.split(",").slice(0, 2).join(",").trim()}.\n\nA new piece for your growing collection. Check back tomorrow for a different style.`;
 }

@@ -41,19 +41,19 @@ swain card boat-art --user={{userId}} --json
 swain card boat-art --user={{userId}} --style=watercolor --json
 ```
 
-### Generate the 6-style sampler (onboarding only)
+### Generate the 2-style sampler (onboarding only)
 ```bash
 swain card boat-art --user={{userId}} --sampler --json
 ```
-This creates 6 separate cards — one in each sampler style (watercolor, oil-painting, pop-art, japanese-woodblock, impressionist, comic-book).
+This creates 2 cards — watercolor and pop art — to showcase the range of styles.
 
 ## Onboarding — The Art Sampler
 
 During the **first briefing**, include a boat art sampler to introduce the feature:
 
 1. Run `swain card boat-art --user={{userId}} --sampler --json`
-2. This creates 6 cards showing their boat in different styles
-3. Include all 6 cards in the briefing with a text item explaining the feature:
+2. This creates 2 cards (watercolor + pop art) — enough to show the range without overwhelming the first briefing
+3. Include both cards in the briefing with a text item explaining the feature:
    - "One of my favorite things I do for you — every day, I create a new piece of art featuring [boat name]. Here's a taste of what's coming. Eventually you'll be able to print these too."
 4. Let them see the variety. They'll look forward to it daily.
 

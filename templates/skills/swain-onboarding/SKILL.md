@@ -122,14 +122,14 @@ swain user update {{userId}} --primaryUse=<uses> --experienceLevel=<level> --jso
 
 ### Step 4b: Generate boat art sampler
 
-Generate the 6-style art sampler — this is REQUIRED for every onboarding briefing:
+Generate the 2-style art sampler — this is REQUIRED for every onboarding briefing:
 
 ```bash
 swain card boat-art --user={{userId}} --sampler --json
 ```
 
-This creates 6 cards showing the captain's boat in different art styles. Include ALL 6
-in the briefing with a text intro like:
+This creates 2 cards showing the captain's boat in different art styles (watercolor and pop art).
+Include both in the briefing with a text intro like:
 "One of my favorite things — every day, I create a new piece of art featuring [boat name].
 Here's a taste of what's coming. Eventually you'll be able to print these too 🎨"
 
@@ -145,9 +145,11 @@ Follow the **swain-advisor** skill workflow:
 4. Select 5-8 cards — lead with what they seemed excited about
 5. Read each card: `swain card get <cardId> --json`
 6. Build the items array (see **swain-advisor** skill for format)
-7. **Include the 6 boat art sampler cards** from step 4b
-8. **Ask for a boat photo** with a text item:
-   "Got a pic of [boat name]? Send it over and I'll use it for your daily art — makes it way better."
+7. **Include the 2 boat art sampler cards** from step 4b
+8. **Ask for a boat photo** using the photo_upload item type:
+   ```json
+   { "type": "photo_upload", "id": "boat_photo", "question": "Got a pic of [boat name]? Send it over and I'll use it for your daily art — makes it way better 📸" }
+   ```
 9. Assemble: `swain briefing assemble --user={{userId}} --items='<json>' --json`
    - If you get a 409 (briefing exists), add `--force`
 

@@ -39,18 +39,26 @@ Create a personalized daily briefing for your captain.
    - **Match the captain's interests** from Honcho context
    - **Avoid repeating** cards from yesterday's briefing
 
-6. **Read full card content** for each selected card:
+6. **Flag content gaps** — If your captain cares about something and the library
+   doesn't have it, tell Mr. Content. Just message him directly:
+   ```
+   sessions_send(sessionKey="agent:mr-content:main", message="My captain [name] is into [topic] around [location] but I can't find anything in the library on it. Would be great to get some content on this.")
+   ```
+   Mr. Content coordinates the content desks — he'll route it to the right one.
+   Don't overthink it. If something's missing, just say so.
+
+7. **Read full card content** for each selected card:
    ```bash
    swain card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
-7. **Build briefing items** as a JSON array:
+8. **Build briefing items** as a JSON array:
    - Start with a greeting text item (personalized, 1-2 sentences)
    - For each selected card: add a commentary text item, then a card reference
    - End with a closing note text item
 
-8. **Assemble the briefing**
+9. **Assemble the briefing**
    ```bash
    swain briefing assemble --user={{userId}} --items='<json_array>' --json
    ```

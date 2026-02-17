@@ -313,7 +313,7 @@ async function createAdvisorCronJobs(
 3. If NOT done, build the onboarding briefing. Read the swain-onboarding skill, then read the swain-boat-art skill.
    Captain context: Check Honcho memory (honcho_context) for what the captain said during intro.
    If no memory available, build a general first briefing based on their profile data.
-   IMPORTANT: Include the 6-style boat art sampler (swain card boat-art --user=${input.userId} --sampler --json).
+   IMPORTANT: Include the 2-style boat art sampler (swain card boat-art --user=${input.userId} --sampler --json).
    userId=${input.userId}, phone=${phone}.`,
       timeoutSeconds: 600,
     },

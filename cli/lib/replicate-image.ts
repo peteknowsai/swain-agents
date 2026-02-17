@@ -11,7 +11,7 @@
  */
 
 const REPLICATE_MODEL_URL =
-  "https://api.replicate.com/v1/models/google/nano-banana/predictions";
+  "https://api.replicate.com/v1/models/google/nano-banana-pro/predictions";
 
 const CF_DELIVERY_BASE =
   "https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA";

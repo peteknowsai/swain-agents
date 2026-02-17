@@ -325,9 +325,9 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   await mkdir(workspace, { recursive: true });
 
   // 2. Copy template files (AGENTS.md, TOOLS.md, HEARTBEAT.md)
+  const phone = input.phone ? normalizePhone(input.phone) : "";
+  const jid = phone ? phone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
   for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
-    const phone = input.phone ? normalizePhone(input.phone) : "";
-    const jid = phone ? phone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
     const rendered = await renderTemplate(file, {
       userId: input.userId,
       phone,
@@ -340,8 +340,12 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   // 3. Copy skills
   await copySkills(workspace);
 
-  // 4. Render placeholders in all copied files
-  await renderDir(workspace, { userId: input.userId });
+  // 4. Render placeholders in all copied files (skills, etc.)
+  await renderDir(workspace, {
+    userId: input.userId,
+    phone,
+    captainName: input.name,
+  });
 
   // 5. Generate dynamic files
   await writeFile(join(workspace, "SOUL.md"), generateSoul(input));

@@ -334,7 +334,7 @@ async function createAdvisorCronJobs(
     wakeMode: "now",
     payload: {
       kind: "agentTurn",
-      message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. Use --force if one already exists for today. IMPORTANT: Include today's boat art card (swain card boat-art --user=${input.userId} --json) — one art card per briefing, different style each day.`,
+      message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. IMPORTANT: Include today's boat art card (swain card boat-art --user=${input.userId} --json) — one art card per briefing, different style each day.`,
       timeoutSeconds: 600,
     },
     delivery: { mode: "announce" },

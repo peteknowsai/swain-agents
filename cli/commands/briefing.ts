@@ -226,7 +226,7 @@ async function assembleBriefing(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
 
   if (!userId || !itemsJson) {
-    printError('Usage: swain briefing assemble --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--force] [--json]');
+    printError('Usage: swain briefing assemble --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--json]');
     process.exit(1);
   }
 
@@ -473,7 +473,7 @@ ${colors.bold}OPTIONS${colors.reset}
   --date=<YYYY-MM-DD>     Date (for create/assemble/previous/validate, default: today)
   --days=<n>              Number of days for history (default: 7)
   --items=<json>          JSON array of items (for assemble/validate)
-  --force                 Force-replace existing briefing (for assemble)
+  --force                 (deprecated, ignored) Briefings are append-only
   --confirm               Required for delete (safety net)
   --limit=<n>             Limit results (for list, default: 20)
   --json                  Output as JSON

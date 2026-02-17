@@ -289,7 +289,36 @@ async function createAdvisorCronJobs(
     },
   });
 
-  // 2. Daily briefing — stagger by hashing agentId to spread across 11:00-11:20 UTC
+  // 2. Safety-net briefing build — fires 15 minutes after intro
+  // If the advisor follows the onboarding workflow, it creates its own briefing
+  // cron during the WhatsApp conversation. This is a fallback in case it doesn't.
+  const safetyNetAt = new Date(now + 15 * 60_000).toISOString();
+  cronData.jobs.push({
+    id: randomUUID(),
+    agentId,
+    name: `Onboarding safety net - ${input.name}`,
+    enabled: true,
+    deleteAfterRun: true,
+    createdAtMs: now,
+    updatedAtMs: now,
+    schedule: { kind: "at", at: safetyNetAt },
+    sessionTarget: "isolated",
+    delivery: { mode: "none" },
+    payload: {
+      kind: "agentTurn",
+      message: `Safety net: check if ${input.name}'s onboarding briefing was built.
+
+1. Run: swain user get ${input.userId} --json
+2. If onboardingStep is already "done", reply NO_REPLY (nothing to do).
+3. If NOT done, build the onboarding briefing. Read the swain-onboarding skill, Phase 4.
+   Captain context: Check Honcho memory (honcho_context) for what the captain said during intro.
+   If no memory available, build a general first briefing based on their profile data.
+   userId=${input.userId}, phone=${phone}.`,
+      timeoutSeconds: 600,
+    },
+  });
+
+  // 3. Daily briefing — stagger by hashing agentId to spread across 11:00-11:20 UTC
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const minuteOffset = hash % 20; // 0-19 minutes past 11:00 UTC
   cronData.jobs.push({

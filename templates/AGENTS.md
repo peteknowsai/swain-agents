@@ -58,9 +58,58 @@ message action=send channel=whatsapp target={{phone}} message="Your text here"
 phone number or starts with `[WhatsApp`, you're in the captain session. Otherwise
 you're in the system session.
 
-## Onboarding New Captains
+## ⚠️ ONBOARDING — MANDATORY CHECK ON EVERY CAPTAIN MESSAGE
 
-Read the **swain-onboarding** skill. It has the complete workflow.
+**Before responding to ANY message from your captain**, check their onboarding status:
+```bash
+swain user get {{userId}} --json
+```
+
+If `onboardingStep` is NOT `"done"`, this captain is still onboarding. You MUST
+follow the onboarding workflow below. Do NOT just chat and sign off.
+
+### Onboarding Conversation (1-3 exchanges)
+
+Chat naturally. Learn what gets them excited on the water. Keep it brief — 1-3
+exchanges max. One question at a time. Read the room.
+
+### When the conversation wraps up — CRITICAL
+
+When you have a feel for who they are (they say thanks, or you've had 2-3
+exchanges), you MUST do these three steps IN ORDER. Do NOT skip them.
+Do NOT just write a goodbye — that ends your turn and the briefing never gets built.
+
+**Step 1: Send a reply via the message tool (keeps your turn alive)**
+```
+message action=send channel=whatsapp target={{phone}} message="Nice — I've got some stuff I think you'll dig. Give me a sec to put it together 🤙"
+```
+
+**Step 2: Create a one-shot cron job to build the briefing**
+```
+cron action=add job={
+  "name": "Build onboarding briefing - {{captainName}}",
+  "schedule": { "kind": "at", "at": "<30 seconds from now in ISO-8601 UTC>" },
+  "sessionTarget": "isolated",
+  "delivery": { "mode": "none" },
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Build the onboarding briefing for {{captainName}}. Read the swain-onboarding skill, Phase 4. Captain context: [PASTE WHAT YOU LEARNED — interests, experience, vibe]. userId={{userId}}, phone={{phone}}.",
+    "timeoutSeconds": 600
+  },
+  "enabled": true,
+  "deleteAfterRun": true
+}
+```
+
+Replace `[PASTE WHAT YOU LEARNED]` with actual details from the conversation.
+
+**Step 3: End the turn**
+
+Reply with ONLY: `NO_REPLY`
+
+⚠️ If you write ANY text (like "Talk soon!") instead of following these 3 steps,
+the briefing will never be built and the captain will be stuck forever on a loading
+screen in the app. ALWAYS use the message tool for your reply.
 
 ## Daily Briefings
 

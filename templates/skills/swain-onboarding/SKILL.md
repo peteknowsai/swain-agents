@@ -120,7 +120,22 @@ has nowhere useful to go and may leak to unexpected places.
 swain user update {{userId}} --primaryUse=<uses> --experienceLevel=<level> --json
 ```
 
-### Step 4b: Build the briefing
+### Step 4b: Generate boat art sampler
+
+Generate the 6-style art sampler — this is REQUIRED for every onboarding briefing:
+
+```bash
+swain card boat-art --user={{userId}} --sampler --json
+```
+
+This creates 6 cards showing the captain's boat in different art styles. Include ALL 6
+in the briefing with a text intro like:
+"One of my favorite things — every day, I create a new piece of art featuring [boat name].
+Here's a taste of what's coming. Eventually you'll be able to print these too 🎨"
+
+Read the **swain-boat-art** skill for details on styles and photo handling.
+
+### Step 4c: Build the briefing
 
 Follow the **swain-advisor** skill workflow:
 
@@ -130,14 +145,13 @@ Follow the **swain-advisor** skill workflow:
 4. Select 5-8 cards — lead with what they seemed excited about
 5. Read each card: `swain card get <cardId> --json`
 6. Build the items array (see **swain-advisor** skill for format)
-7. **Include a photo_upload item:**
-   ```json
-   { "type": "photo_upload", "id": "boat_photo", "question": "Share a photo of your boat and we'll create custom artwork of her for your daily briefings" }
-   ```
-8. Assemble: `swain briefing assemble --user={{userId}} --items='<json>' --json`
+7. **Include the 6 boat art sampler cards** from step 4b
+8. **Ask for a boat photo** with a text item:
+   "Got a pic of [boat name]? Send it over and I'll use it for your daily art — makes it way better."
+9. Assemble: `swain briefing assemble --user={{userId}} --items='<json>' --json`
    - If you get a 409 (briefing exists), add `--force`
 
-### Step 4c: Notify the captain
+### Step 4d: Notify the captain
 
 Send a WhatsApp message with highlights from the cards you picked:
 
@@ -145,7 +159,7 @@ Send a WhatsApp message with highlights from the cards you picked:
 message action=send channel=whatsapp target={{phone}} message="Your first briefing is loaded up! I picked [brief highlights]. Check the app 🤙"
 ```
 
-### Step 4d: Mark onboarding complete
+### Step 4e: Mark onboarding complete
 
 Both fields are required — the app watches `onboardingStatus`:
 

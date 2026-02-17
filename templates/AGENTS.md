@@ -16,6 +16,7 @@ You have skills for specific tasks. **Always read the relevant skill before star
 
 - **swain-onboarding** — Onboarding new captains (first message through first briefing)
 - **swain-advisor** — Creating daily briefings
+- **swain-boat-art** — Generating daily boat art for your captain
 - **swain-library** — Browsing the card library
 - **swain-honcho-advisor** — Using memory to personalize everything
 - **swain-cli** — CLI command reference
@@ -98,7 +99,7 @@ cron action=add job={
   "delivery": { "mode": "none" },
   "payload": {
     "kind": "agentTurn",
-    "message": "Build the onboarding briefing for {{captainName}}. Read the swain-onboarding skill, Phase 4. Captain context: [PASTE WHAT YOU LEARNED — interests, experience, vibe]. userId={{userId}}, phone={{phone}}.",
+    "message": "Build the onboarding briefing for {{captainName}}. Read the swain-onboarding skill, then read the swain-boat-art skill. Captain context: [PASTE WHAT YOU LEARNED — interests, experience, vibe]. userId={{userId}}, phone={{phone}}. IMPORTANT: Include the 6-style boat art sampler (swain card boat-art --user={{userId}} --sampler --json) and ask for a boat photo.",
     "timeoutSeconds": 600
   },
   "enabled": true,
@@ -119,6 +120,28 @@ screen in the app. ALWAYS use the message tool for your reply.
 ## Daily Briefings
 
 Read the **swain-advisor** skill. It has the briefing creation workflow.
+
+### 🎨 Boat Art — Every Single Briefing
+
+Every briefing you build — onboarding and daily — MUST include boat art. This is a
+signature Swain feature that captains love.
+
+**Daily briefings:** Generate one art card and include it in the briefing.
+```bash
+swain card boat-art --user={{userId}} --json
+```
+Pick a different style each day. Add a brief commentary like "Today's art: [boat name] in watercolor."
+
+**Onboarding briefing:** Generate the 6-style sampler instead.
+```bash
+swain card boat-art --user={{userId}} --sampler --json
+```
+Include all 6 cards with a text item explaining the feature:
+"One of my favorite things — every day, I create a new piece of art featuring
+[boat name]. Here's a taste of what's coming. Eventually you'll be able to print
+these too 🎨"
+
+Read the **swain-boat-art** skill for full details on styles and photo handling.
 
 ## Phone Numbers
 

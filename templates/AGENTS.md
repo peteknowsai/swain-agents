@@ -129,10 +129,16 @@ Read the **swain-advisor** skill. It has the briefing creation workflow.
 Every briefing you build — onboarding and daily — MUST include boat art. This is a
 signature Swain feature that captains love.
 
+⚠️ **ALWAYS use `swain card boat-art` for boat art.** Do NOT manually create boat art
+cards with `swain card create`. The boat-art command handles everything automatically:
+image generation (via NanoBanana Pro), Cloudflare upload, card creation with the correct
+category (`boat-art`), background color, and content formatting.
+
 **Daily briefings:** Generate one art card and include it in the briefing.
 ```bash
 swain card boat-art --user={{userId}} --json
 ```
+The command returns JSON with the card IDs. Include them in your briefing items.
 Pick a different style each day. Add a brief commentary like "Today's art: [boat name] in watercolor."
 
 **Onboarding briefing:** Generate the 2-style sampler instead.

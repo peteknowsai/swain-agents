@@ -39,6 +39,14 @@ function parseArgs(args: string[]): Record<string, string> {
       }
     }
   }
+  // Unescape common escape sequences in text fields (content, title, subtext)
+  for (const key of ['content', 'title', 'subtext']) {
+    if (parsed[key]) {
+      parsed[key] = parsed[key]
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t');
+    }
+  }
   return parsed;
 }
 

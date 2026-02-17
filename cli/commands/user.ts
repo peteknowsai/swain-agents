@@ -263,7 +263,7 @@ async function updateUser(args: string[]): Promise<void> {
     'experienceLevel', 'primaryUse', 'fishingStyle', 'targetSpecies',
     'typicalCrew', 'typicalTripDuration', 'homeWaters',
     'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
-    'onboardingStep',
+    'onboardingStep', 'onboardingStatus',
   ];
 
   // Build update body from provided flags

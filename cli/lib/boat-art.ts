@@ -322,11 +322,6 @@ export function buildBoatArtContent(opts: {
   style: (typeof ART_STYLES)[number];
   isSampler: boolean;
 }): string {
-  const { boatName, style, isSampler } = opts;
-
-  if (isSampler) {
-    return `Your boat reimagined as ${style.name.toLowerCase()} art. ${style.prompt.split(",").slice(0, 2).join(",").trim()}.\n\nEvery day, Swain creates a new piece of art featuring your boat in a different style. Over time, you'll build a full collection — and soon you'll be able to print your favorites.`;
-  }
-
-  return `${boatName} in ${style.name.toLowerCase()} style — ${style.prompt.split(",").slice(0, 2).join(",").trim()}.\n\nA new piece for your growing collection. Check back tomorrow for a different style.`;
+  const { boatName, style } = opts;
+  return `${boatName} in ${style.name.toLowerCase()} style.`;
 }

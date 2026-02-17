@@ -2,7 +2,7 @@
 
 /**
  * Card Commands
- * swain card list|get|create|check|update|audit|archive|unarchive|image
+ * swain card list|get|create|check|update|audit|archive|unarchive|image|boat-art
  */
 
 import {
@@ -694,6 +694,147 @@ async function generateImage(args: string[]): Promise<void> {
 }
 
 /**
+ * swain card boat-art --user=<userId> [--style=<styleId>] [--sampler] [--json]
+ *
+ * Generate boat art card(s) for a user.
+ *   --sampler    Generate a 6-style sampler (onboarding)
+ *   --style=X    Generate one image in a specific style
+ *   (no flags)   Generate one image in a random style
+ *
+ * Uses the user's boat photo if available, otherwise text-to-image.
+ */
+async function boatArt(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['user'];
+  const jsonOutput = params['json'] === 'true';
+  const isSampler = params['sampler'] === 'true';
+  const styleParam = params['style'];
+
+  if (!userId) {
+    printError('Usage: swain card boat-art --user=<userId> [--style=<styleId>] [--sampler] [--json]');
+    process.exit(1);
+  }
+
+  // Dynamic import of boat-art lib
+  const {
+    ART_STYLES,
+    buildBoatArtPrompt,
+    generateBoatArt,
+    pickRandomStyle,
+    getSamplerStyles,
+  } = await import('../lib/boat-art');
+
+  // 1. Fetch user profile
+  const userResult = await workerRequest(`/users/${userId}`);
+  const user = userResult.user || userResult;
+  if (!user || !user.boatName) {
+    printError(`User ${userId} not found or has no boat name`);
+    process.exit(1);
+  }
+
+  const boatName = user.boatName;
+  const boatType = user.boatType || undefined;
+  const boatMakeModel = user.boatMakeModel || undefined;
+  const boatColor = undefined; // Not in schema yet — future enhancement
+  const marina = user.marinaLocation || user.location || undefined;
+  const boatImageUrl = user.boatImageUrl || undefined;
+  const hasPhoto = !!boatImageUrl;
+  const agentId = getAgentId(params) || process.env.AGENT_ID || 'advisor';
+
+  if (!jsonOutput) {
+    print(`${colors.dim}Boat: ${boatName} (${boatMakeModel || boatType || 'boat'})${colors.reset}`);
+    print(`${colors.dim}Photo: ${hasPhoto ? 'yes' : 'no (text-to-image)'}${colors.reset}`);
+  }
+
+  // 2. Determine styles to generate
+  let styles: typeof ART_STYLES[number][];
+  if (isSampler) {
+    styles = getSamplerStyles();
+    if (!jsonOutput) print(`${colors.dim}Generating 6-style sampler...${colors.reset}`);
+  } else if (styleParam) {
+    const found = ART_STYLES.find((s: any) => s.id === styleParam);
+    if (!found) {
+      printError(`Unknown style: ${styleParam}. Available: ${ART_STYLES.map((s: any) => s.id).join(', ')}`);
+      process.exit(1);
+    }
+    styles = [found];
+  } else {
+    styles = [pickRandomStyle()];
+  }
+
+  // 3. Generate images
+  const results: { style: string; url: string; imageId: string; cardId?: string }[] = [];
+
+  for (const style of styles) {
+    if (!jsonOutput) {
+      process.stderr.write(`  ${style.name}...`);
+    }
+
+    try {
+      const prompt = buildBoatArtPrompt({
+        boatName,
+        boatType,
+        boatMakeModel,
+        boatColor,
+        marina,
+        style,
+        hasPhoto,
+      });
+
+      const result = await generateBoatArt(prompt, hasPhoto ? boatImageUrl : undefined);
+
+      // 4. Create card
+      const cardId = `card_${crypto.randomUUID().slice(0, 8)}`;
+      const title = isSampler
+        ? `${boatName} — ${style.name}`
+        : `${boatName} — Daily Art`;
+      const subtext = isSampler
+        ? `Your boat reimagined in ${style.name} style`
+        : `Today's ${style.name} art of ${boatName}`;
+      const content = isSampler
+        ? `# ${style.name}\n\n${boatName} reimagined as a ${style.name.toLowerCase()} piece. This is one of the many art styles Swain creates for you every day.`
+        : `# Today's Boat Art\n\n${boatName} in ${style.name.toLowerCase()} style. A new piece of art for your collection, every single day.`;
+
+      await workerRequest('/cards', {
+        method: 'POST',
+        body: {
+          cardId,
+          agentId,
+          userId,
+          type: 'card',
+          category: 'boat-art',
+          freshness: 'evergreen',
+          title,
+          subtext,
+          contentMarkdown: content,
+          image: result.url,
+          cardDate: getTodayDate(),
+        },
+      });
+
+      results.push({ style: style.id, url: result.url, imageId: result.imageId, cardId });
+
+      if (!jsonOutput) {
+        print(` ✓ ${cardId}`);
+      }
+    } catch (err: any) {
+      if (!jsonOutput) {
+        print(` ✗ ${err.message}`);
+      } else {
+        results.push({ style: style.id, url: '', imageId: '' });
+      }
+    }
+  }
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({ success: true, userId, boatName, hasPhoto, results }, null, 2));
+  } else {
+    const successCount = results.filter((r) => r.cardId).length;
+    printSuccess(`Generated ${successCount}/${styles.length} boat art card(s)`);
+  }
+}
+
+/**
  * Show help
  */
 function showHelp(): void {
@@ -713,6 +854,7 @@ ${colors.bold}COMMANDS${colors.reset}
   archive <id>            Soft-archive a card
   unarchive <id>          Restore an archived card
   image <id>              Generate (or regenerate) card image
+  boat-art                Generate boat art card(s) for a user
 
 ${colors.bold}OPTIONS (list)${colors.reset}
   --desk=<name>           Filter by desk (e.g., tampa-bay)
@@ -763,6 +905,15 @@ ${colors.bold}OPTIONS (audit)${colors.reset}
 
 ${colors.bold}OPTIONS (coverage)${colors.reset}
   --desk=<name>           Filter by desk
+  --json                  Output as JSON
+
+${colors.bold}OPTIONS (boat-art)${colors.reset}
+  --user=<userId>         User ID (required)
+  --sampler               Generate 6-style sampler (for onboarding)
+  --style=<id>            Specific style (watercolor, oil-painting, pop-art,
+                          japanese-woodblock, impressionist, comic-book,
+                          art-deco, minimalist, sunset-silhouette, neon)
+  --agent-id=<id>         Agent ID (defaults to AGENT_ID env var)
   --json                  Output as JSON
 
 ${colors.bold}OPTIONS (image)${colors.reset}
@@ -837,6 +988,9 @@ export async function run(args: string[]): Promise<void> {
       case 'image':
       case 'regen-image':
         await generateImage(commandArgs);
+        break;
+      case 'boat-art':
+        await boatArt(commandArgs);
         break;
       case 'help':
       case '--help':

@@ -33,24 +33,30 @@ Create a personalized daily briefing for your captain.
    ```
    This returns Honcho's representation of your captain — their interests, boat, preferences, everything you've learned. Use this to guide card selection.
 
-5. **Select 5-8 cards** based on:
+5. **Generate today's boat art**
+   ```bash
+   swain card boat-art --user={{userId}} --json
+   ```
+   This creates a card with stylized art of the captain's boat. Include it in every briefing. Read the **swain-boat-art** skill for style options.
+
+6. **Select 5-8 cards** based on:
    - **Prioritize timely cards** that are still valid today (check `expires_at`)
    - **Mix in evergreen cards** the captain hasn't seen yet
    - **Match the captain's interests** from Honcho context
    - **Avoid repeating** cards from yesterday's briefing
 
-6. **Read full card content** for each selected card:
+7. **Read full card content** for each selected card:
    ```bash
    swain card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
-7. **Build briefing items** as a JSON array:
+8. **Build briefing items** as a JSON array:
    - Start with a greeting text item (personalized, 1-2 sentences)
    - For each selected card: add a commentary text item, then a card reference
    - End with a closing note text item
 
-8. **Assemble the briefing**
+9. **Assemble the briefing**
    ```bash
    swain briefing assemble --user={{userId}} --items='<json_array>' --json
    ```

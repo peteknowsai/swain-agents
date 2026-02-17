@@ -26,6 +26,23 @@ You should also have a sense of what they're into — fishing, cruising, weather
 
 Use the swain-advisor skill's briefing workflow for the mechanics. The onboarding briefing is just a first briefing that's tailored to someone you just met.
 
+## 🎨 Boat Art Sampler — REQUIRED
+
+Every onboarding briefing MUST include the boat art sampler. This introduces the daily art feature.
+
+```bash
+swain card boat-art --user={{userId}} --sampler --json
+```
+
+This generates 6 cards showing their boat in different art styles (watercolor, oil painting, pop art, Japanese woodblock, impressionist, comic book). Include all 6 in the briefing with a text item like:
+
+"One of my favorite things — every day, I create a new piece of art featuring [boat name]. Here's a taste of what's coming. Eventually you'll be able to print these too 🎨"
+
+Also ask for a boat photo if you don't have one — it makes the art way better:
+"Got a pic of [boat name]? Send it over and I'll use it for your daily art."
+
+Read the **swain-boat-art** skill for full details.
+
 ## Tone
 
 Warm, knowledgeable, not over the top. This is their first impression of you in the app. Show them the content is real and relevant to *them* specifically.

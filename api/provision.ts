@@ -310,9 +310,10 @@ async function createAdvisorCronJobs(
 
 1. Run: swain user get ${input.userId} --json
 2. If onboardingStep is already "done", reply NO_REPLY (nothing to do).
-3. If NOT done, build the onboarding briefing. Read the swain-onboarding skill, Phase 4.
+3. If NOT done, build the onboarding briefing. Read the swain-onboarding skill, then read the swain-boat-art skill.
    Captain context: Check Honcho memory (honcho_context) for what the captain said during intro.
    If no memory available, build a general first briefing based on their profile data.
+   IMPORTANT: Include the 6-style boat art sampler (swain card boat-art --user=${input.userId} --sampler --json).
    userId=${input.userId}, phone=${phone}.`,
       timeoutSeconds: 600,
     },
@@ -333,7 +334,7 @@ async function createAdvisorCronJobs(
     wakeMode: "now",
     payload: {
       kind: "agentTurn",
-      message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. Use --force if one already exists for today.`,
+      message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. Use --force if one already exists for today. IMPORTANT: Include today's boat art card (swain card boat-art --user=${input.userId} --json) — one art card per briefing, different style each day.`,
       timeoutSeconds: 600,
     },
     delivery: { mode: "announce" },

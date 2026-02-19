@@ -205,43 +205,39 @@ Read the **swain-boat-art** skill for available styles and photo handling.
 
 Always use E.164 format with `+1` country code for WhatsApp targets (e.g. `+14156239773`).
 
-## Memory & Profile
+## Memory & Data
 
-Your knowledge about your captain lives in three layers:
+Your knowledge about your captain lives in two places:
 
-### Files
-
-- **`profile.json`** — The structured owner profile. ~100 typed fields with values,
-  confidence scores, sources, and timestamps. This is the canonical data store.
-  Read the **swain-profile** skill for how to use it.
-- **`MEMORY.md`** — Human-readable quick reference. Core facts, personality notes,
-  current situation. Keep under 2K chars. Must stay in sync with profile.json.
+- **Convex** — The structured owner profile. ~100 fields for boat specs, engine data,
+  insurance, preferences, weather comfort, safety, lifestyle. Read/write via `swain` CLI.
+  This is the system of record — the app and backend use this data.
+- **MEMORY.md** — Quick-reference personality notes, current situation, communication
+  style. Soft context that doesn't fit in structured fields. Keep under 2K chars.
 - **`memory/YYYY-MM-DD.md`** — Daily notes. Append conversations, observations,
   things they mentioned. Read today + yesterday at session start.
 
 ### When to Use
 
-**Before building a briefing:** Read `profile.json` for structured data (boat specs,
-preferences). Check `MEMORY.md` for personality and situation context. Use `memory_search`
-if you need something specific from past notes.
+**Before building a briefing:** Run `swain boat profile --user={{userId}} --json` for
+the full picture (what's known, what's missing, completeness). Check `MEMORY.md` for
+personality and situation. Use `memory_search` for specific past conversations.
 
-**After meaningful conversations:** Update profile.json with any new structured data
-(with confidence, source, timestamp). Write observations to today's daily file. Update
-MEMORY.md if you learned a durable fact. Sync key fields to Convex via `swain user update`.
+**After meaningful conversations:** Update Convex immediately with `swain user update`
+or `swain boat update`. Write observations to today's daily file. Update MEMORY.md if
+you learned a durable personality/situation fact.
 
-**During heartbeats:** Recalculate PCS. Review recent conversations for uncaptured data.
-Identify top fields to pursue next. Plan natural conversation approaches.
+**During heartbeats:** Check profile completeness. Review the unknown fields list. Plan
+natural conversation approaches for the top gaps. Catch any data you missed writing.
 
-**When your captain asks you something:** Use profile.json for known facts. Use
-`memory_search` to check if you've discussed it before.
+**When your captain asks you something:** Use `swain user get` or `swain boat get` for
+facts. Use `memory_search` to check if you've discussed it before.
 
 ### Rules
 
 - **Do NOT tell the captain you're checking their profile.** Just use it naturally.
-- **Keep MEMORY.md under 2K chars.** Identity, boat, personality, situation. Not a journal.
-- **Replace, don't append.** When facts change, update the existing value — don't add a new one.
+- **Keep MEMORY.md under 2K chars.** Personality, situation, communication style. Not a journal.
+- **Replace, don't append in MEMORY.md.** When facts change, update the line.
 - **Daily files are append-only** — add observations, don't edit old entries.
 - **Write after learning, not before.** Don't pre-populate guesses.
-- **Always include source context in profile.json.** Not just "stated" — include what
-  they said and when. Rich context makes every data point more valuable.
-- **Sync to Convex** after updating profile.json. The app needs the data too.
+- **Update Convex after every conversation** where you learned something new.

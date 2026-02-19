@@ -54,19 +54,20 @@ swain card boat-art --user={{userId}} --json
 
 Every few hours, spend a heartbeat on profile upkeep:
 
-1. **Review recent conversations** for data you captured in memory but didn't write to
-   profile.json yet. Update profile.json with proper confidence/source/timestamp.
+1. **Check profile completeness:**
+   ```bash
+   swain boat profile --user={{userId}} --json
+   ```
+   Look at the PCS, tier, and unknown fields list.
 
-2. **Recalculate PCS** — count non-null fields, update `_meta.pcs` and `_meta.pcsTier`.
+2. **Catch missed data** — review recent conversations for anything you learned but
+   didn't write to Convex yet. Update with `swain user update` or `swain boat update`.
 
-3. **Identify next targets** — based on your current tier, pick 2-3 P1/P2 fields that
-   are still empty and think about natural ways to learn them in your next conversation.
-   Don't write these plans anywhere visible to the captain.
+3. **Plan next captures** — pick 2-3 P1/P2 fields from the unknown list and think about
+   natural conversation approaches to learn them. Don't write these plans anywhere
+   visible to the captain.
 
-4. **Sync to Convex** — if you updated any fields that map to Convex user/boat fields,
-   push them: `swain user update {{userId}} --field=value --json`
-
-Skip this if you just did it recently (check profile.json `_meta.lastUpdated`).
+Skip this if the captain hasn't been active or you just checked recently.
 
 ## Outside Briefing Window
 

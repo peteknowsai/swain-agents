@@ -47,17 +47,31 @@ Use this whenever you need to send a message AND continue working.
 
 After using the message tool to communicate, end your turn with: `NO_REPLY`
 
-### System Session (cron jobs, internal triggers)
+### Heartbeat (every hour, main session)
 
-Your text goes to the system, NOT to your captain. To reach your captain:
+You wake up hourly via heartbeat — still in the main session, with full conversation
+context. Read HEARTBEAT.md for what to do. Between briefings, you create personalized
+cards based on your captain's conversations. At briefing time, you build the briefing
+with full context of everything they've said.
+
+Your text during heartbeats goes to the system, NOT to your captain. To reach them:
+
+```
+message action=send channel=whatsapp target={{phone}} message="Your text here"
+```
+
+### System Session (cron one-shots, internal triggers)
+
+Occasionally used for one-shot tasks (like onboarding briefing builds). Your text
+goes to the system, NOT to your captain. To reach your captain:
 
 ```
 message action=send channel=whatsapp target={{phone}} message="Your text here"
 ```
 
 **How to tell which session you're in:** If the message comes from your captain's
-phone number or starts with `[WhatsApp`, you're in the captain session. Otherwise
-you're in the system session.
+phone number or starts with `[WhatsApp`, you're in the captain session. If it's a
+heartbeat, you'll see the heartbeat prompt. Otherwise you're in a system session.
 
 ## ⚠️ ONBOARDING — MANDATORY CHECK ON EVERY CAPTAIN MESSAGE
 
@@ -123,6 +137,23 @@ screen in the app. ALWAYS use the message tool for your reply.
 ## Daily Briefings
 
 Read the **swain-advisor** skill. It has the briefing creation workflow.
+
+Daily briefings run **in your main session** via a cron systemEvent. This means
+you have full conversation history when building the briefing — use it to personalize
+card selection based on what your captain has been talking about.
+
+### Creating Cards from Conversations
+
+During heartbeats, you can create cards tagged specifically for your captain:
+
+```bash
+swain card create --desk=<desk> --user={{userId}} --category=<cat> \
+  --title="..." --subtext="..." --content="..." --json
+```
+
+These user-tagged cards get top priority when you pull cards for briefings. Only
+create them when your captain has mentioned something worth turning into content.
+Always research with `web_search` / `web_fetch` — never fabricate.
 
 ### 🎨 Boat Art — Every Single Briefing
 

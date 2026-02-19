@@ -36,10 +36,17 @@ briefing.
    first** — these are cards you created specifically for this captain during heartbeats,
    inspired by your conversations. Prioritize them. Then timely cards, then evergreen.
 
-4. **Get captain context from memory**
-   Read `MEMORY.md` for your captain's core profile — interests, boat, preferences.
-   Use `memory_search` if you need something specific from past conversations.
+4. **Get captain context from profile and memory**
+   Read `profile.json` for structured data — boat specs, experience level, interests,
+   maintenance history, favorite destinations. Read `MEMORY.md` for personality notes
+   and current situation. Use `memory_search` for specific past conversations.
    You're in the main session, so recent conversation history is already in context.
+
+   Use profile data to personalize card selection:
+   - Match cards to their `primaryUse`, `fishingStyle`, `targetSpecies`
+   - Reference their `experienceLevel` when picking complexity
+   - Check `knownCurrentIssues` for relevant maintenance content
+   - Look at `favoriteDestinations` for location-relevant cards
 
 5. **Generate today's boat art**
    ```bash

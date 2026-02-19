@@ -1,0 +1,134 @@
+{
+  "_meta": {
+    "version": 1,
+    "description": "Owner profile — structured data fields with confidence tracking. The advisor reads/writes this as the local working copy. Push updates to Convex via swain CLI.",
+    "lastUpdated": null,
+    "pcs": 0,
+    "pcsTier": 1
+  },
+  "identity": {
+    "captainName": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "email": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "phone": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "homeAddress": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "homeZip": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "homeCity": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "homeState": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "dateOfBirth": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "householdSize": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "occupation": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "vessel": {
+    "boatName": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "makeModel": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "year": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "type": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "hullType": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "hullId": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "length": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "beam": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "draft": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "airDraft": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "engineMake": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "engineModel": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "engineType": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "engineHp": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "engineCount": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "fuelType": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "fuelCapacity": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "engineHours": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "purchaseDate": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "purchasePrice": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "hasTrailer": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "priorBoatsOwned": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "marina": {
+    "marinaLocation": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "slipNumber": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "storageType": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "slipCostMonthly": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "dockPower": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "liveaboard": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "winterStoragePlan": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "distanceHomeToMarina": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "secondaryMarinas": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "usage": {
+    "tripsPerMonth": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "avgTripDuration": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "primaryUse": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "typicalCrew": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "typicalCrewSize": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "seasonalPattern": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "typicalDepartureTime": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "weekendVsWeekday": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "nightBoating": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "overnightAnchoring": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "longestTrip": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "navigation": {
+    "favoriteDestinations": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "cruisingRange": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "navigationSkillLevel": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "preferredWaterways": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "navigationApps": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "bucketListDestinations": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "maintenance": {
+    "diyPreference": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "annualMaintBudget": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "preferredMechanic": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "lastHaulOut": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "bottomPaintType": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "bottomPaintSchedule": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "lastOilChangeHours": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "lastOilChangeDate": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "knownCurrentIssues": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "winterizationNeeds": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "mechanicalSkillLevel": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "serviceProvider": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "safety": {
+    "insuranceProvider": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "insuranceExpiry": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "towingMembership": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "safetyEquipmentStatus": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "boatingCertifications": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "registrationExpiry": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "emergencyContact": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "epirbPlb": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "floatPlanHabits": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "medicalConditions": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "financial": {
+    "annualBoatingSpend": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "fuelSpendMonthly": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "preferredPartsRetailer": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "priceSensitivity": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "upgradeTimeline": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "nextBoatIntent": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "hasLoan": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "electronics": {
+    "electronicsInventory": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "communicationEquipment": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "connectedDevices": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "lifestyle": {
+    "communicationPreference": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "clubMemberships": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "entertainingFrequency": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "dietaryPreferences": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "favoriteWatersideDining": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "petOnBoard": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "fishingStyle": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "targetSpecies": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  },
+  "experience": {
+    "experienceLevel": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "maxWindKnots": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "maxWaveFeet": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "minTempF": { "value": null, "confidence": null, "source": null, "updatedAt": null },
+    "preferredDeparture": { "value": null, "confidence": null, "source": null, "updatedAt": null }
+  }
+}

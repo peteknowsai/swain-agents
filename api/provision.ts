@@ -151,6 +151,56 @@ async function setupWhatsAppRouting(phone: string, agentId: string): Promise<voi
 /** Build a human-readable Honcho peer ID for a captain.
  * Format: captain-{name}-{shortId} — matches advisor naming from makeSlug().
  * e.g., captain-pete-4f58e4 */
+/** Seed profile.json with captain data from onboarding */
+async function generateProfileSeed(input: CaptainInput): Promise<string> {
+  const now = new Date().toISOString();
+  const templatePath = join(TEMPLATES_DIR, "profile.json");
+  const profile = JSON.parse(await readFile(templatePath, "utf-8"));
+
+  // Helper to set a field
+  const set = (domain: string, field: string, value: any, confidence: string, source: string) => {
+    if (value && profile[domain]?.[field]) {
+      profile[domain][field] = { value, confidence, source, updatedAt: now };
+    }
+  };
+
+  // Identity
+  set("identity", "captainName", input.name, "stated", "Registration/onboarding");
+  set("identity", "phone", input.phone ? normalizePhone(input.phone) : null, "stated", "Registration");
+  set("identity", "email", input.email, "stated", "Registration");
+
+  // Vessel
+  set("vessel", "boatName", input.boatName, "stated", "Registration/onboarding");
+  set("vessel", "makeModel", input.boatMakeModel, "stated", "Registration/onboarding");
+
+  // Marina
+  set("marina", "marinaLocation", input.marina, "stated", "Registration/onboarding");
+
+  // Experience
+  set("experience", "experienceLevel", input.experienceLevel, "stated", "Onboarding questionnaire");
+
+  // Usage
+  if (input.interests) {
+    set("usage", "primaryUse", input.interests, "stated", "Onboarding questionnaire");
+  }
+
+  // Calculate initial PCS
+  let total = 0;
+  let filled = 0;
+  for (const domain of Object.keys(profile)) {
+    if (domain === "_meta") continue;
+    for (const field of Object.keys(profile[domain])) {
+      total++;
+      if (profile[domain][field].value !== null) filled++;
+    }
+  }
+  profile._meta.pcs = Math.round((filled / total) * 100);
+  profile._meta.pcsTier = profile._meta.pcs < 25 ? 1 : profile._meta.pcs < 50 ? 2 : profile._meta.pcs < 75 ? 3 : 4;
+  profile._meta.lastUpdated = now;
+
+  return JSON.stringify(profile, null, 2);
+}
+
 /** Seed MEMORY.md with captain facts from onboarding data */
 function generateMemorySeed(input: CaptainInput): string {
   const lines: string[] = [`# MEMORY.md — Captain ${input.name}`, "", "## Captain"];
@@ -294,6 +344,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   await writeFile(join(workspace, "IDENTITY.md"), generateIdentity(input, agentId));
   await writeFile(join(workspace, "USER.md"), generateUser(input));
   await writeFile(join(workspace, "MEMORY.md"), generateMemorySeed(input));
+  await writeFile(join(workspace, "profile.json"), await generateProfileSeed(input));
   await mkdir(join(workspace, "memory"), { recursive: true });
 
   // 6. Register with openclaw (with heartbeat for main-session continuity)

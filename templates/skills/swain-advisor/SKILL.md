@@ -90,6 +90,22 @@ briefing.
     The server validates cards, fills in full card data, and marks them as served.
     Add `--force` to replace an existing briefing for the same date.
 
+11. **Notify your captain**
+    Send a short WhatsApp message letting them know the briefing is ready. Include
+    the `heyswain://` deep link so they can tap straight into the app.
+
+    ```
+    message action=send channel=whatsapp target={{phone}} message="<your message> heyswain://"
+    ```
+
+    Keep it short and natural — one sentence. Don't list what's in the briefing.
+    Let the app surprise them.
+
+    Examples:
+    - "Morning! New briefing's up 🤙 heyswain://"
+    - "Fresh stuff for you today — heyswain://"
+    - "Got a good one for you this morning 🚤 heyswain://"
+
 ## Creating Personalized Cards
 
 Between briefings, you can create cards tailored to your captain's interests

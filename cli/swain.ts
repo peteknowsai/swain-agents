@@ -14,7 +14,6 @@
 
 import { run as runAgent } from './commands/agent';
 import { run as runCard } from './commands/card';
-import { run as runEdition } from './commands/edition';
 import { run as runBriefing } from './commands/briefing';
 import { run as runImage } from './commands/image';
 import { run as runStyle } from './commands/style';
@@ -40,10 +39,9 @@ ${colors.bold}USAGE${colors.reset}
 ${colors.bold}COMMANDS${colors.reset}
   agent                   Manage agents (list, get, create, update, delete)
   card                    Content cards (list, get, create, coverage, audit)
-  edition                 Daily editions (list, get)
   briefing                User briefings (list, get, assemble, validate)
   user                    User management (list, get, update, onboard-status, upload-boat-image)
-  advisor                 Advisor agents (list, memories, pool)
+  advisor                 Advisor agents (list, delete)
 
   style                   Browse image styles (list, get)
   onboarding              Onboarding templates (list, seed)
@@ -99,9 +97,6 @@ async function main(): Promise<void> {
       break;
     case 'card':
       await runCard(subArgs);
-      break;
-    case 'edition':
-      await runEdition(subArgs);
       break;
     case 'briefing':
       await runBriefing(subArgs);

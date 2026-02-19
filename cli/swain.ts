@@ -13,6 +13,7 @@
  */
 
 import { run as runAgent } from './commands/agent';
+import { run as runBoat } from './commands/boat';
 import { run as runCard } from './commands/card';
 import { run as runBriefing } from './commands/briefing';
 import { run as runImage } from './commands/image';
@@ -38,6 +39,7 @@ ${colors.bold}USAGE${colors.reset}
 
 ${colors.bold}COMMANDS${colors.reset}
   agent                   Manage agents (list, get, create, update, delete)
+  boat                    Boat management (list, get, create, update, delete, profile)
   card                    Content cards (list, get, create, coverage, audit)
   briefing                User briefings (list, get, assemble, validate)
   user                    User management (list, get, update, onboard-status, upload-boat-image)
@@ -94,6 +96,9 @@ async function main(): Promise<void> {
   switch (command) {
     case 'agent':
       await runAgent(subArgs);
+      break;
+    case 'boat':
+      await runBoat(subArgs);
       break;
     case 'card':
       await runCard(subArgs);

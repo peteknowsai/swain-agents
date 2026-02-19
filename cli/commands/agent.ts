@@ -7,7 +7,6 @@
 
 import {
   workerRequest,
-  getBaseUrl,
   print,
   printSuccess,
   printError,
@@ -216,150 +215,6 @@ async function deleteAgent(args: string[]): Promise<void> {
 }
 
 /**
- * swain agent run <agentId> <prompt>
- * Run an agent via /agent/stream and stream output to terminal
- */
-async function runAgent(args: string[]): Promise<void> {
-  const params = parseArgs(args);
-  const jsonOutput = params['json'] === 'true';
-  const sessionId = params['session'] || params['resume'];
-  const model = params['model'];
-
-  // Get agent ID - first positional arg or --agent
-  let agentId = params['agent'];
-  let prompt = '';
-  let positionalIndex = 0;
-
-  for (const arg of args) {
-    if (!arg.startsWith('--')) {
-      if (positionalIndex === 0 && !agentId) {
-        agentId = arg;
-      } else {
-        // Everything after agent ID is the prompt
-        prompt = args.slice(args.indexOf(arg)).filter(a => !a.startsWith('--')).join(' ');
-        break;
-      }
-      positionalIndex++;
-    }
-  }
-
-  // Allow prompt from --prompt flag
-  if (!prompt && params['prompt']) {
-    prompt = params['prompt'];
-  }
-
-  if (!agentId) {
-    printError('Usage: swain agent run <agentId> <prompt>');
-    printError('       swain agent run --agent=<id> --prompt="..."');
-    process.exit(1);
-  }
-
-  if (!prompt) {
-    printError('Prompt is required');
-    process.exit(1);
-  }
-
-  const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}/agent/stream`;
-
-  print(`${colors.dim}Running agent ${agentId}...${colors.reset}`);
-  if (sessionId) {
-    print(`${colors.dim}Resuming session: ${sessionId}${colors.reset}`);
-  }
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agentId,
-        prompt,
-        sessionId: sessionId || undefined,
-        model: model || undefined,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      printError(`Server error: ${response.status} - ${errorBody}`);
-      process.exit(1);
-    }
-
-    // Stream NDJSON response
-    const reader = response.body?.getReader();
-    if (!reader) {
-      printError('No response body');
-      process.exit(1);
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let currentSessionId = '';
-    let textContent = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-
-        try {
-          const message = JSON.parse(line);
-
-          if (jsonOutput) {
-            console.log(line);
-            continue;
-          }
-
-          // Handle different message types
-          if (message.type === 'system' && message.session_id) {
-            currentSessionId = message.session_id;
-            print(`${colors.dim}Session: ${currentSessionId}${colors.reset}`);
-          }
-
-          if (message.type === 'assistant' && message.message?.content) {
-            for (const block of message.message.content) {
-              if (block.type === 'text') {
-                process.stdout.write(block.text);
-                textContent += block.text;
-              }
-              if (block.type === 'tool_use') {
-                print(`\n${colors.yellow}[Tool: ${block.name}]${colors.reset}`);
-              }
-            }
-          }
-
-          if (message.type === 'result') {
-            if (textContent && !textContent.endsWith('\n')) {
-              print('');
-            }
-            if (message.is_error) {
-              print(`\n${colors.red}Error: ${message.error || 'Unknown error'}${colors.reset}`);
-            } else {
-              print(`\n${colors.green}Done${colors.reset}`);
-            }
-          }
-        } catch (e) {
-          // Skip malformed JSON lines
-        }
-      }
-    }
-
-    if (currentSessionId && !jsonOutput) {
-      print(`${colors.dim}Session ID: ${currentSessionId}${colors.reset}`);
-    }
-  } catch (err: any) {
-    printError(`Failed to run agent: ${err.message}`);
-    process.exit(1);
-  }
-}
-
-/**
  * Show help
  */
 function showHelp(): void {
@@ -372,7 +227,6 @@ ${colors.bold}COMMANDS${colors.reset}
   create                  Create a new agent
   update                  Update agent metadata
   delete                  Delete an agent
-  run <id> <prompt>       Run agent via SDK streaming
 
 ${colors.bold}OPTIONS${colors.reset}
   --agent=<id>            Agent ID
@@ -384,19 +238,15 @@ ${colors.bold}OPTIONS${colors.reset}
   --region=<region>       Agent region (for create/update)
   --beat=<beat>           Agent beat (for create/update)
   --force                 Force delete without confirmation
-  --session=<id>          Resume a session (for run)
-  --prompt=<text>         Prompt text (for run)
 
 ${colors.bold}EXAMPLES${colors.reset}
   swain agent list
-  swain agent list --type=beat
-  swain agent list --type=beat --json
-  swain agent get beat-fishing-fl
-  swain agent create --agent=my-agent --type=beat-reporter --name="My Agent"
-  swain agent update --agent=beat-fishing-fl --name="New Name"
+  swain agent list --type=advisor
+  swain agent list --type=advisor --json
+  swain agent get advisor-pete-usr_34
+  swain agent create --agent=my-agent --type=desk --name="My Agent"
+  swain agent update --agent=my-agent --name="New Name"
   swain agent delete --agent=my-agent --force
-  swain agent run beat-fishing-fl "Write today's fishing report"
-  swain agent run --agent=beat-fishing-fl --prompt="Write report" --session=sess_xxx
 `);
 }
 
@@ -423,9 +273,6 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'delete':
         await deleteAgent(commandArgs);
-        break;
-      case 'run':
-        await runAgent(commandArgs);
         break;
       case 'help':
       case '--help':

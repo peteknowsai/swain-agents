@@ -39,13 +39,23 @@ Each card has:
 - **timely** - Content that expires. Weather forecasts, tide charts, event announcements, fishing reports. Check `expires_at` before including.
 - **evergreen** - Always relevant. Maintenance tips, how-to guides, safety info. Good filler content.
 
+## User-Tagged Cards
+
+Cards can be tagged for a specific captain using `--user=<userId>` during creation.
+These are cards the advisor created based on conversations with that captain. When
+you pull cards, user-tagged cards appear first with a `forUser: true` flag.
+
+**Always prioritize user-tagged cards** — they were created specifically for this
+captain and are the most personalized content available.
+
 ## Selection Strategy
 
-1. **Lead with timely cards** - Check expiration dates, prioritize what's urgent
-2. **Fill with fresh evergreen** - Cards they haven't seen yet
-3. **Sparingly resurface** - Only if an old card is especially relevant to today
-4. **Match interests** - Check the captain's profile for preferred topics
-5. **Variety** - Don't stack 5 fishing cards; mix categories
+1. **User-tagged cards first** - Cards you created for this captain (`forUser: true`)
+2. **Lead with timely cards** - Check expiration dates, prioritize what's urgent
+3. **Fill with fresh evergreen** - Cards they haven't seen yet
+4. **Sparingly resurface** - Only if an old card is especially relevant to today
+5. **Match interests** - Check the captain's profile for preferred topics
+6. **Variety** - Don't stack 5 fishing cards; mix categories
 
 ## Categories
 

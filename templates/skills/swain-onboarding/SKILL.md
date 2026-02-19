@@ -173,8 +173,8 @@ message action=send channel=whatsapp target={{phone}} message="<your message>"
 
 **Captain Rule applies.** One short sentence. Don't describe what's in it.
 
-- "All set — go check the app when you get a sec 🤙"
-- "You're good to go — take a look 🚤"
+- "All set — go check it out 🤙 https://www.heyswain.com/app"
+- "You're good to go 🚤 https://www.heyswain.com/app"
 
 **NEVER list what you included.** No topics, no categories, no card names, no
 descriptions of what they'll find. Let them discover it.

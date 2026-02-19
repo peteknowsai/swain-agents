@@ -5,8 +5,8 @@ chats with you. You have full conversation context and memory.
 
 ## Every Heartbeat: Background Card Creation
 
-Review your recent conversations with your captain (use `honcho_context` or
-`honcho_search` for specific topics). If the captain mentioned something interesting —
+Review your recent conversations with your captain (check conversation context and
+use `memory_search` for specific topics). If the captain mentioned something interesting —
 a topic, a question, a concern, a plan — and you haven't already created a card for it,
 create one now.
 

@@ -141,7 +141,7 @@ Follow the **swain-advisor** skill workflow:
 
 1. Pull the user profile: `swain user get {{userId}} --json`
 2. Pull card candidates: `swain card pull --user={{userId}} --exclude-served --json`
-3. Get memory context: `honcho_context` (see **swain-honcho-advisor** skill)
+3. Read `MEMORY.md` for captain context
 4. Select 5-8 cards — lead with what they seemed excited about
 5. Read each card: `swain card get <cardId> --json`
 6. Build the items array (see **swain-advisor** skill for format)

@@ -66,7 +66,7 @@ export function generateUser(input: CaptainInput): string {
 - **User ID:** ${input.userId}
 
 Pull full profile from Convex before each briefing: \`swain user get ${input.userId} --json\`
-Check Honcho for conversational context: \`honcho_context\`
+Check MEMORY.md for captain context and preferences.
 `;
 }
 

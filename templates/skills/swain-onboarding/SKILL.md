@@ -42,6 +42,11 @@ a person.
 **What you're trying to learn (that the app didn't capture):**
 - What actually gets them excited about being on the water
 - Where they are in their journey — confident or still figuring things out?
+- Anything they volunteer: crew, fishing targets, favorite spots, boat specs
+
+**Every detail they share is data for the profile.** After this conversation you'll
+write it all to Convex. Don't ask about things the app already collected (boat name,
+marina, location) — but DO note anything new they reveal.
 
 **Guardrails:**
 - One question at a time. Never stack multiple questions.
@@ -114,11 +119,30 @@ NO WhatsApp history. Everything you need was passed in the cron message.
 ⚠️ **Do NOT output any text in this session.** Use only tool calls. Text output
 has nowhere useful to go and may leak to unexpected places.
 
-### Step 4a: Update the user profile
+### Step 4a: Update the owner profile
+
+Write EVERYTHING you learned from the conversation to Convex. This is the first big
+data capture opportunity. Use all the fields that apply:
 
 ```bash
-swain user update {{userId}} --primaryUse=<uses> --experienceLevel=<level> --json
+# Captain-level fields
+swain user update {{userId}} \
+  --primaryUse=<uses> \
+  --experienceLevel=<level> \
+  --fishingStyle=<style> \
+  --targetSpecies=<species> \
+  --typicalCrew=<crew> \
+  --typicalTripDuration=<duration> \
+  --json
+
+# Boat-level fields (get boatId first)
+swain boat list --user={{userId}} --json
+swain boat update <boatId> --engineMake=<make> --engineHours=<hrs> --json
 ```
+
+Don't ask follow-up questions just to fill fields — write what they actually told you.
+If they said "I'm mostly fishing with my wife on weekends" that's primaryUse=fishing,
+typicalCrew=family, typicalTripDuration=half-day. Infer what's reasonable, write it.
 
 ### Step 4b: Generate boat art sampler
 

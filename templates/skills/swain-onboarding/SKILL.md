@@ -6,12 +6,14 @@ metadata: { "openclaw": { "emoji": "👋", "requires": { "bins": ["swain"] } } }
 
 # Onboarding a New Captain
 
-This is your complete workflow for onboarding. Follow it step by step.
+This is your complete workflow for onboarding. Everything happens in two phases:
+the intro (from a cron job) and the conversation + briefing build (inline, in the
+captain's WhatsApp session). No handoffs, no isolated sessions.
 
-## Phase 1: Intro Message (System Session)
+## Phase 1: Intro Message (Cron Session)
 
-Your intro is sent from a cron job in the system session. Text you write here goes
-to the system, NOT to WhatsApp. To reach your captain, use the message tool:
+Your intro is sent from a cron job. Text you write here goes to the system, NOT to
+WhatsApp. To reach your captain, use the message tool:
 
 ```
 message action=send channel=whatsapp target={{phone}} message="Your message here"
@@ -42,13 +44,20 @@ announcing itself — you're a knowledgeable person reaching out for the first t
 swain user update {{userId}} --onboardingStep=contacting --json
 ```
 
-## Phase 2: The Conversation (WhatsApp Captain Session)
+Then update MEMORY.md with what you know so far (boat, marina, location) and reply
+`NO_REPLY`.
 
-When they reply, you're in the captain session. Your text auto-delivers via WhatsApp.
+## Phase 2: The Conversation + Briefing Build (WhatsApp Captain Session)
+
+When the captain replies, you're in their WhatsApp session. **Everything from here
+happens in this one session — conversation, briefing build, notification, all of it.**
 
 ⚠️ **CRITICAL: In this session, ANY text you write gets sent as a WhatsApp message
 AND ends your turn. You will NOT get another chance to act until the captain sends
-a new message.**
+a new message. Use the `message` tool to send WhatsApp messages while keeping your
+turn alive for more work.**
+
+### Step 1: Have a real conversation
 
 This is a real conversation — not a survey. You're getting to know someone.
 
@@ -59,200 +68,129 @@ This is a real conversation — not a survey. You're getting to know someone.
 - How far they typically go — stay local or do longer trips?
 - Anything they volunteer: fishing targets, favorite spots, boat details, stories
 
-**Every detail they share is data for the profile.** After this conversation you'll
-write it all to Convex. Don't ask about things the app already collected (boat name,
-marina, location) — but DO note anything new they reveal.
+**Every detail they share is data for the profile.** Don't ask about things the app
+already collected (boat name, marina, location) — but DO note anything new.
 
-### Conversation flow:
+**Conversation flow:**
 
-**Exchange 1:** React to what they said. Show genuine interest. Then ask a natural
-follow-up. If they said "cruising" — don't just say "nice" and move on. Engage with
-it: where do they like to go? Have they done any bigger trips?
+**Exchange 1:** React to what they said. Show genuine interest. Ask a natural
+follow-up. If they said "cruising" — don't just say "nice" and move on. Where do
+they like to go? Have they done any bigger trips?
 
 **Exchange 2:** Build on what they shared. Drop a relevant local tidbit that shows
-you know the area (a good anchorage, a spot they'd like, something seasonal). Ask
-one more thing naturally — crew, experience, how often they get out, whatever fits.
+you know the area. Ask one more thing naturally — crew, experience, how often they
+get out.
 
-**Exchange 3 (if natural):** If the conversation is flowing, keep going. If they're
-giving short answers, wrap it up here. You're reading the room.
+**Exchange 3 (if natural):** If flowing, keep going. If they're giving short
+answers, wrap it up here.
 
-### Hard rules:
-- **Minimum 2 exchanges before transitioning to briefing build.** Even if the first
-  reply tells you a lot, respond and ask at least one follow-up. One-question-and-done
-  feels like a survey, not a conversation.
+**Hard rules:**
+- **Minimum 2 exchanges before moving to the briefing build.** Even if the first
+  reply tells you a lot, respond and ask at least one follow-up.
 - One question at a time. Never stack multiple questions.
 - Keep your replies short and natural. You're texting, not writing an essay.
 - If they're terse after 2 exchanges, that's fine — wrap up warmly.
-- If they're chatty, lean in — but cap it at 4-5 exchanges. You'll learn more over time.
-- **Never mention briefings, profiles, cards, or any system internals.** You're a
-  person getting to know them, not a product being configured.
+- If they're chatty, lean in — but cap at 4-5 exchanges total.
+- **Never mention briefings, profiles, cards, or any system internals.**
 
-## Phase 3: Transition to Briefing Build
+### Step 2: Transition + build (all in one turn)
 
-After at least 2 exchanges, when you have a feel for who they are, transition.
+When you're ready to build the briefing, do everything in a single turn using tool
+calls. **Do not write any text** — use the `message` tool for all WhatsApp messages.
 
-**This is the tricky part. Follow these steps exactly.**
+Here's the exact sequence:
 
-### Step 3a: Send a transition message WITHOUT ending your turn
-
-Use the `message` tool — this sends to WhatsApp but keeps your turn alive:
+#### 2a. Send a natural "hang tight" message
 
 ```
 message action=send channel=whatsapp target={{phone}} message="<your message>"
 ```
 
-**The transition should feel natural, not robotic.** Don't say "I'm putting together
-your briefing" or "let me build your content." Say something like a friend would:
-
-Good examples:
+This should feel like a friend, not a system:
 - "I've got some stuff I think you'll love — give me a few minutes 🤙"
-- "Hang tight — I'm pulling some things together for you"
+- "Hang tight — pulling some things together for you"
 - "Cool, give me a bit — I've got something for you"
 
-Bad examples (don't do these):
-- "I'm going to build your first briefing now" ← reveals the machinery
-- "Let me assemble your personalized content" ← corporate product-speak
-- "I'll put together a briefing based on what you told me" ← too explicit
+**Never say:** "building your briefing," "assembling your content," "putting together
+your personalized cards" — anything that reveals the machinery.
 
-⚠️ Do NOT write this as text. Use the message tool. If you write text, your turn
-ends and the briefing never gets built.
+#### 2b. Update the owner profile
 
-### Step 3b: Create a one-shot cron job for the briefing build
-
-```
-cron action=add job={
-  "name": "Build onboarding briefing - {{captainName}}",
-  "schedule": { "kind": "at", "at": "<30 seconds from now in ISO-8601>" },
-  "sessionTarget": "isolated",
-  "delivery": { "mode": "none" },
-  "payload": {
-    "kind": "agentTurn",
-    "message": "<see below>",
-    "timeoutSeconds": 600
-  },
-  "enabled": true,
-  "deleteAfterRun": true
-}
-```
-
-**The cron message must include everything the isolated session needs** — it won't
-have the WhatsApp conversation history. Include:
-- Everything the captain told you across ALL exchanges (interests, vibe, experience,
-  crew, spots mentioned, stories, details — everything)
-- Their userId and phone number
-- Instructions to read the swain-onboarding skill for Phase 4
-
-Example cron message:
-```
-Build the onboarding briefing for {{captainName}}. Read the swain-onboarding skill, Phase 4.
-Captain context: [EVERYTHING YOU LEARNED across the full conversation — interests,
-experience level, vibe, crew, typical trips, any specific places/fish/gear mentioned].
-userId={{userId}}, phone={{phone}}.
-```
-
-### Step 3c: End the turn
-
-Reply with only: `NO_REPLY`
-
-This ends the WhatsApp turn without sending another message.
-
-## Phase 4: Build the Briefing (Isolated Cron Session)
-
-This runs in an isolated session ~30 seconds later. You have full tool access but
-NO WhatsApp history. Everything you need was passed in the cron message.
-
-⚠️ **Do NOT output any text in this session.** Use only tool calls. Text output
-has nowhere useful to go and may leak to unexpected places.
-
-### Step 4a: Update the owner profile
-
-Write EVERYTHING you learned from the conversation to Convex. This is the first big
-data capture opportunity. Use all the fields that apply:
+Write EVERYTHING you learned to Convex. This is the first big data capture.
 
 ```bash
 # Captain-level fields
 swain user update {{userId}} \
   --primaryUse=<uses> \
   --experienceLevel=<level> \
-  --fishingStyle=<style> \
-  --targetSpecies=<species> \
   --typicalCrew=<crew> \
   --typicalTripDuration=<duration> \
   --json
 
 # Boat-level fields (get boatId first)
 swain boat list --user={{userId}} --json
-swain boat update <boatId> --engineMake=<make> --engineHours=<hrs> --json
+swain boat update <boatId> --field=value --json
 ```
 
-Don't ask follow-up questions just to fill fields — write what they actually told you.
-If they said "I'm mostly fishing with my wife on weekends" that's primaryUse=fishing,
-typicalCrew=family, typicalTripDuration=half-day. Infer what's reasonable, write it.
+Infer what's reasonable from context. "I fish with my wife on weekends" →
+primaryUse=fishing, typicalCrew=family, typicalTripDuration=half-day.
 
-### Step 4b: Generate boat art sampler
-
-Generate the 2-style art sampler — this is REQUIRED for every onboarding briefing:
+#### 2c. Generate boat art sampler
 
 ```bash
 swain card boat-art --user={{userId}} --sampler --json
 ```
 
-This creates 2 cards showing the captain's boat in different art styles (watercolor and pop art).
-Include both in the briefing with a text intro like:
-"One of my favorite things — every day, I create a new piece of art featuring [boat name].
-Here's a taste of what's coming. Eventually you'll be able to print these too 🎨"
+Creates 2 cards (watercolor + pop art). If one style fails, that's fine — include
+whatever succeeds. Read the **swain-boat-art** skill for details.
 
-Read the **swain-boat-art** skill for details on styles and photo handling.
+#### 2d. Build the briefing
 
-### Step 4c: Build the briefing
-
-Follow the **swain-advisor** skill workflow:
-
-1. Pull the user profile: `swain user get {{userId}} --json`
+1. Pull user profile: `swain user get {{userId}} --json`
 2. Pull card candidates: `swain card pull --user={{userId}} --exclude-served --json`
-3. Read `MEMORY.md` for captain context
-4. Select 5-8 cards — lead with what they seemed excited about
-5. Read each card: `swain card get <cardId> --json`
-6. Build the items array (see **swain-advisor** skill for format)
-7. **Include the 2 boat art sampler cards** from step 4b
-8. **Ask for a boat photo** using the photo_upload item type:
+3. Select 5-8 cards — lead with what they seemed excited about
+4. Read each card: `swain card get <cardId> --json`
+5. Build items array with text intros (see **swain-advisor** skill for format)
+6. Include boat art cards from step 2c with an intro like:
+   "One of my favorite things — every day, I create a new piece of art featuring
+   [boat name]. Here's a taste of what's coming 🎨"
+7. Include a photo upload request:
    ```json
    { "type": "photo_upload", "id": "boat_photo", "question": "Got a pic of [boat name]? Send it over and I'll use it for your daily art — makes it way better 📸" }
    ```
-9. Assemble: `swain briefing assemble --user={{userId}} --items='<json>' --json`
-   - Multiple briefings per date are fine — the app always shows the latest
+8. Assemble: `swain briefing assemble --user={{userId}} --items='<json>' --json`
 
-### Step 4d: Notify the captain
-
-Send a WhatsApp message that's short, warm, and doesn't spoil the briefing content.
+#### 2e. Send the notification
 
 ```
 message action=send channel=whatsapp target={{phone}} message="<your message>"
 ```
 
-**The notification should make them want to open the app — not tell them what's in it.**
-Let the briefing be a surprise. They'll see the cards, the art, the photo request
-when they open it.
+**Short, warm, no spoilers.** Let the briefing be a surprise.
 
-Good examples:
+Good:
 - "Your first one's ready — check the app when you get a sec 🤙"
-- "Go check the app — I think you're gonna like this one"
-- "All set — take a look in the app when you have a minute 🚤"
+- "Go check the app — I think you're gonna like this"
+- "All set — take a look when you have a minute 🚤"
 
-Bad examples (NEVER do these):
-- "I loaded it up with cruising spots — Caladesi, the ICW, the Keys..." ← spoils content
-- "I picked 5 cards about navigation and destinations plus boat art" ← reveals internals
-- "Your briefing has a navigation guide, wildlife card, and..." ← content manifest
+**NEVER list specific cards, topics, or categories.** One sentence. Let the app talk.
 
-**Rule: Never list specific cards, topics, or categories in the notification.**
-One short sentence. Let the app do the talking.
-
-### Step 4e: Mark onboarding complete
-
-Both fields are required — the app watches `onboardingStatus`:
+#### 2f. Mark onboarding complete
 
 ```bash
 swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
 ```
 
-If any step fails, retry or skip silently. Do NOT send error output to WhatsApp.
+#### 2g. Update memory
+
+Write captain notes to MEMORY.md — personality, interests, vibe, what you learned.
+
+#### 2h. End the turn
+
+Reply with only: `NO_REPLY`
+
+This ends the turn without sending another WhatsApp message.
+
+**If anything fails during the build, recover silently. Do NOT send errors to
+WhatsApp.** If the whole build fails, send something like "Hey, give me a bit longer
+— working on something for you" and retry. The captain should never see system errors.

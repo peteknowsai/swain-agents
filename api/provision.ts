@@ -183,6 +183,7 @@ async function createAdvisorCronJobs(
   const now = Date.now();
 
   // 1. One-shot intro message — fires 30 seconds from now
+  // Runs in isolated session. Reads the swain-onboarding skill Phase 1 for guidance.
   const introAt = new Date(now + 30_000).toISOString();
   cronData.jobs.push({
     id: randomUUID(),
@@ -197,15 +198,16 @@ async function createAdvisorCronJobs(
     wakeMode: "now",
     payload: {
       kind: "agentTurn",
-      message: `You just got provisioned as ${input.name}'s personal boat advisor. Introduce yourself on WhatsApp right now. Use the message tool: action="send", channel="whatsapp", target="${phone}". Keep it warm and brief — mention their boat "${input.boatName || "boat"}" by name, say you're their Swain, and you'll keep them posted on conditions and what's happening on the water${input.marina ? ` around ${input.marina}` : ""}. Like a sharp dock neighbor saying hey for the first time. Don't be corporate. End with a question that gets them talking — not something the app already collected (you already know their boat and marina), but something about what they love doing on the water. When they reply, the conversation will come to you in your captain session. After sending the intro, run: swain user update ${input.userId} --onboardingStep=contacting --json. Then reply NO_REPLY.`,
+      message: `You just got provisioned as ${input.name}'s personal boat advisor. Send your intro message on WhatsApp now. Read the swain-onboarding skill for Phase 1 instructions — follow them exactly. Captain info: name="${input.name}", boat="${input.boatName || "boat"}", marina="${input.marina || "unknown"}", phone="${phone}", userId="${input.userId}". After sending and updating onboarding step, reply NO_REPLY.`,
       timeoutSeconds: 120,
     },
   });
 
-  // 2. Safety-net briefing build — fires 15 minutes after intro
-  // If the advisor follows the onboarding workflow, it creates its own briefing
-  // cron during the WhatsApp conversation. This is a fallback in case it doesn't.
-  const safetyNetAt = new Date(now + 15 * 60_000).toISOString();
+  // 2. Safety-net — fires 30 minutes after intro
+  // If the captain replied and the inline briefing build succeeded, onboardingStep
+  // will be "done" and this no-ops. If something went wrong (turn crashed, captain
+  // didn't reply, briefing build failed), this picks up the pieces.
+  const safetyNetAt = new Date(now + 30 * 60_000).toISOString();
   cronData.jobs.push({
     id: randomUUID(),
     agentId,
@@ -219,15 +221,21 @@ async function createAdvisorCronJobs(
     delivery: { mode: "none" },
     payload: {
       kind: "agentTurn",
-      message: `Safety net: check if ${input.name}'s onboarding briefing was built.
+      message: `Safety net: check if ${input.name}'s onboarding was completed.
 
 1. Run: swain user get ${input.userId} --json
 2. If onboardingStep is already "done", reply NO_REPLY (nothing to do).
-3. If NOT done, build the onboarding briefing. Read the swain-onboarding skill, then read the swain-boat-art skill.
-   Captain context: Check MEMORY.md and memory/ files for what the captain said during intro.
-   If no memory available, build a general first briefing based on their profile data.
-   IMPORTANT: Include the 2-style boat art sampler (swain card boat-art --user=${input.userId} --sampler --json).
-   userId=${input.userId}, phone=${phone}.`,
+3. If onboardingStep is "contacting" — the captain may not have replied yet, or
+   the inline briefing build may have failed. Check MEMORY.md for any conversation
+   notes. If there's context from a conversation, build the briefing now:
+   - Read the swain-onboarding skill (Phase 2, steps 2b-2h) for the build workflow
+   - Read the swain-boat-art skill for art generation
+   - userId=${input.userId}, phone=${phone}
+   - Send notification via: message action=send channel=whatsapp target="${phone}"
+   - Mark complete: swain user update ${input.userId} --onboardingStep=done --onboardingStatus=completed --json
+4. If no conversation happened yet (MEMORY.md only has initial seed data), build a
+   general first briefing based on their profile data anyway. Better to deliver
+   something than nothing.`,
       timeoutSeconds: 600,
     },
   });

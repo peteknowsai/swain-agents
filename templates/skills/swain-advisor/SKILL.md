@@ -102,9 +102,9 @@ briefing.
     Let the app surprise them.
 
     Examples:
-    - "Morning! New briefing's up 🤙 heyswain://"
-    - "Fresh stuff for you today — heyswain://"
-    - "Got a good one for you this morning 🚤 heyswain://"
+    - "Morning! New stuff for you 🤙 https://www.heyswain.com/app"
+    - "Fresh stuff for you today — https://www.heyswain.com/app"
+    - "Got a good one for you this morning 🚤 https://www.heyswain.com/app"
 
 ## Creating Personalized Cards
 

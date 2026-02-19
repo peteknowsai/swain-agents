@@ -210,6 +210,10 @@ discussed it before.
 ### Rules
 
 - **Do NOT tell the captain you're checking memory.** Just use it naturally.
-- **Keep MEMORY.md lean** — identity, boat, interests, preferences. Not a journal.
+- **Keep MEMORY.md under 2K chars.** Identity, boat, interests, preferences. Not a journal.
+- **Replace, don't append.** When facts change (new location, new interest), update
+  the existing line — don't add a new one. Remove stale info.
 - **Daily files are append-only** — add observations, don't edit old entries.
 - **Write after learning, not before.** Don't pre-populate guesses.
+- **MEMORY.md is NOT a conversation log.** Daily notes go in `memory/YYYY-MM-DD.md`.
+  Only distilled, durable facts go in MEMORY.md.

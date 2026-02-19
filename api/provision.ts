@@ -320,6 +320,7 @@ async function createAdvisorCronJobs(
   });
 
   // 3. Daily briefing — stagger by hashing agentId to spread across 11:00-11:20 UTC
+  // Runs in MAIN session (systemEvent) so the advisor has full conversation context.
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const minuteOffset = hash % 20; // 0-19 minutes past 11:00 UTC
   cronData.jobs.push({
@@ -330,14 +331,12 @@ async function createAdvisorCronJobs(
     createdAtMs: now,
     updatedAtMs: now,
     schedule: { kind: "cron", expr: `${minuteOffset} 11 * * *`, tz: "UTC" },
-    sessionTarget: "isolated",
-    wakeMode: "now",
+    sessionTarget: "main",
+    wakeMode: "next-heartbeat",
     payload: {
-      kind: "agentTurn",
-      message: `Generate today's daily briefing using the swain-advisor skill. Pull ${input.name}'s profile from Convex, check available cards, avoid yesterday's topics, and assemble a personalized briefing. IMPORTANT: Include today's boat art card (swain card boat-art --user=${input.userId} --json) — one art card per briefing, different style each day.`,
-      timeoutSeconds: 600,
+      kind: "systemEvent",
+      text: `It's briefing time. Build today's daily briefing for ${input.name} using the swain-advisor skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check honcho_context for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
     },
-    delivery: { mode: "announce" },
   });
 
   await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
@@ -383,7 +382,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   await writeFile(join(workspace, "USER.md"), generateUser(input));
   await writeFile(join(workspace, "MEMORY.md"), "");
 
-  // 6. Register with openclaw
+  // 6. Register with openclaw (with heartbeat for main-session continuity)
   await openclaw([
     "agents",
     "add",
@@ -392,6 +391,24 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     workspace,
     "--non-interactive",
   ]);
+
+  // 6b. Patch agent config to add heartbeat and subagents
+  // Read current config, find the agent entry, add heartbeat
+  try {
+    const cfg = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
+    const agentList: any[] = cfg.agents?.list ?? [];
+    const entry = agentList.find((a: any) => a.id === agentId);
+    if (entry) {
+      entry.heartbeat = { every: "1h" };
+      if (!entry.subagents) {
+        entry.subagents = { allowAgents: ["*"] };
+      }
+      await writeFile(OPENCLAW_CONFIG, JSON.stringify(cfg, null, 2));
+      console.log(`Heartbeat (1h) added to agent ${agentId}`);
+    }
+  } catch (err) {
+    console.error(`Failed to add heartbeat config (non-fatal): ${err}`);
+  }
 
   // 7. Copy auth profile
   await copyAuthProfile(agentId);

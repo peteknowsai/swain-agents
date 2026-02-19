@@ -349,6 +349,7 @@ async function createCard(args: string[]): Promise<void> {
   const jsonOutput = params['json'] === 'true';
   const desk = getDesk(params);
   const marina = params['marina'] || undefined;
+  const userId = params['user'] || params['user-id'] || undefined;
   const agentId = getAgentId(params) || `${desk}-desk`;
 
   const title = params['title'];
@@ -401,6 +402,7 @@ async function createCard(args: string[]): Promise<void> {
     agentId,
     desk,
     marina: marina || undefined,
+    userId: userId || undefined,
     type: 'card',
     summary,
     image: finalImage,
@@ -891,6 +893,7 @@ ${colors.bold}OPTIONS (create)${colors.reset}
   --freshness=<type>      Content freshness: timely or evergreen
   --expires-at=<value>    Expiration (ISO 8601 date or Unix timestamp)
   --data=<json>           Structured JSON data
+  --user=<userId>         Tag card for a specific user (advisor-created cards)
   --agent-id=<id>         Agent ID override (defaults to {desk}-desk)
   --json                  Output as JSON
 

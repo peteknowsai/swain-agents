@@ -6,9 +6,9 @@ const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 export interface CaptainInput {
   userId: string;
   name: string;
-  // Additional fields passed through for Honcho seeding but NOT baked into workspace files.
-  // The advisor pulls fresh data from Convex at runtime.
+  // Additional fields for profile seeding. The advisor pulls fresh data from Convex at runtime.
   phone?: string;
+  email?: string;
   boatName?: string;
   boatMakeModel?: string;
   marina?: string;

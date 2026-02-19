@@ -168,12 +168,15 @@ message action=send channel=whatsapp target={{phone}} message="<your message>"
 
 **Short, warm, no spoilers.** Let the briefing be a surprise.
 
-Good:
-- "Your first one's ready — check the app when you get a sec 🤙"
-- "Go check the app — I think you're gonna like this"
-- "All set — take a look when you have a minute 🚤"
+Include the deep link `heyswain://` so they can tap straight into the app.
 
-**NEVER list specific cards, topics, or categories.** One sentence. Let the app talk.
+Good:
+- "Your first one's ready 🤙 heyswain://"
+- "Go take a look — I think you're gonna like this one heyswain://"
+- "All set — check it out when you have a sec 🚤 heyswain://"
+
+**NEVER list specific cards, topics, or categories.** One short sentence + the deep
+link. Let the app do the talking.
 
 #### 2f. Mark onboarding complete
 

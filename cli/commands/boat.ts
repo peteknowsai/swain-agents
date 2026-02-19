@@ -374,8 +374,13 @@ async function showProfile(args: string[]): Promise<void> {
       ['priorBoatsOwned', 'user', user?.priorBoatsOwned],
     ];
 
+    // Helper: treat null, undefined, empty string, and 0 as "unknown"
+    // (0 is never a meaningful value for profile fields — lengths, hours, etc. are always > 0)
+    const hasValue = (v: any): boolean =>
+      v !== null && v !== undefined && v !== '' && v !== 0;
+
     for (const [name, source, value] of userFields) {
-      if (value !== null && value !== undefined) {
+      if (hasValue(value)) {
         fields[name] = { value, source };
       } else {
         unknown.push(name);
@@ -401,7 +406,7 @@ async function showProfile(args: string[]): Promise<void> {
       ];
 
       for (const [name, value] of boatFields) {
-        if (value !== null && value !== undefined) {
+        if (hasValue(value)) {
           fields[name] = { value, source: 'boat' };
         } else {
           unknown.push(name);
@@ -441,7 +446,7 @@ async function showProfile(args: string[]): Promise<void> {
 
   const check = (label: string, value: any) => {
     total++;
-    if (value !== null && value !== undefined && value !== '') {
+    if (value !== null && value !== undefined && value !== '' && value !== 0) {
       known++;
       return true;
     }

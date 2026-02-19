@@ -1,0 +1,31 @@
+[Unit]
+Description=OpenClaw Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=root
+
+ExecStartPre=/bin/bash -c '\
+  echo "Pre-start: cleaning stale state..."; \
+  rm -f /root/.openclaw/.lock /root/.openclaw/.pid; \
+  if ss -tlnp | grep -q ":18789 "; then \
+    PID=$(ss -tlnp | grep ":18789 " | sed -n "s/.*pid=\\([0-9]*\\).*/\\1/p" | head -1); \
+    if [ -n "$PID" ]; then \
+      echo "Killing stale process $PID on port 18789"; \
+      kill -9 "$PID" 2>/dev/null || true; \
+      sleep 2; \
+    fi; \
+  fi'
+
+ExecStart=/usr/bin/env openclaw gateway run --bind loopback --port 18789 --force
+Restart=on-failure
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS=--max-old-space-size=1536
+
+[Install]
+WantedBy=multi-user.target

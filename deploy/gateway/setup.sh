@@ -1,34 +1,29 @@
 #!/usr/bin/env bash
-# Gateway VPS setup for Hey Skip
-# Run on the VPS after SSH'ing in: ssh exe.dev && ssh vm-name
+# Gateway VPS setup for OpenClaw
+# Run on the VPS after SSH'ing in
 set -euo pipefail
 
-echo "==> Hey Skip Gateway Setup"
+echo "==> OpenClaw Gateway Setup"
 
-# --- Install clawdbot ---
-echo "==> Installing clawdbot (latest)"
-sudo npm i -g clawdbot@latest
+# --- Install openclaw ---
+echo "==> Installing openclaw (latest)"
+sudo npm i -g openclaw@latest
 
-# --- Install sprite CLI ---
-echo "==> Installing sprite CLI"
-# sprite CLI install (already installed per user)
-which sprite || { echo "ERROR: sprite CLI not found. Install from https://sprites.dev"; exit 1; }
+# --- Configure openclaw ---
+echo "==> Configuring openclaw gateway"
+openclaw config set gateway.mode local
+openclaw config set gateway.port 18789
+openclaw config set gateway.bind loopback
 
-# --- Install skip CLI ---
-echo "==> Installing skip CLI"
-# TODO: download compiled skip binary
-# curl -fsSL https://skip.heyskip.com/install.sh | bash
-echo "    (skip CLI install — placeholder)"
-
-# --- Configure clawdbot ---
-echo "==> Configuring clawdbot gateway"
-clawdbot config set gateway.mode local
-clawdbot config set gateway.port 18789
-clawdbot config set gateway.bind loopback
+# --- Install systemd service ---
+echo "==> Installing systemd service"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+sudo cp "$SCRIPT_DIR/openclaw.service" /etc/systemd/system/openclaw.service
+sudo systemctl daemon-reload
+sudo systemctl enable openclaw
 
 echo ""
 echo "==> Setup complete. Next steps:"
-echo "  1. Configure auth:  clawdbot login"
-echo "  2. Start gateway:   sudo systemctl start heyskip-gateway"
-echo "  3. Install crons:   sudo cp systemd/* /etc/systemd/system/ && sudo systemctl daemon-reload"
-echo "  4. Enable services: sudo systemctl enable heyskip-gateway heyskip-cron.timer"
+echo "  1. Configure auth:  openclaw login"
+echo "  2. Start gateway:   sudo systemctl start openclaw"
+echo "  3. Check status:    sudo systemctl status openclaw"

@@ -257,25 +257,56 @@ async function updateUser(args: string[]): Promise<void> {
 
   // All updatable fields (camelCase keys match API body)
   const updatableFields = [
+    // Basics
+    'captainName', 'phone', 'messagingPhone', 'location', 'marinaLocation',
+    'timezone', 'interests', 'favoriteTopics',
+    // Legacy boat fields (on user record)
     'boatName', 'boatMakeModel', 'boatYear', 'boatImageUrl',
-    'location', 'marinaLocation', 'timezone', 'interests',
-    'captainName', 'phone', 'messagingPhone',
+    'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
+    // Identity & contact
+    'homeAddress', 'homeZip', 'homeCity', 'homeState',
+    'dateOfBirth', 'householdSize', 'occupation',
+    // Experience & preferences
     'experienceLevel', 'primaryUse', 'fishingStyle', 'targetSpecies',
     'typicalCrew', 'typicalTripDuration', 'homeWaters',
-    'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
+    // Weather comfort
+    'maxWindKnots', 'maxWaveFeet', 'minTempF', 'preferredDeparture',
+    // Communication & safety
+    'communicationPreference', 'emergencyContactName', 'emergencyContactPhone',
+    'boatingCertifications', 'medicalConditions', 'floatPlanHabits',
+    // Skills & preferences
+    'diyPreference', 'mechanicalSkillLevel', 'navigationSkillLevel',
+    'preferredWaterways', 'navigationApps',
+    // Lifestyle & social
+    'preferredPartsRetailer', 'clubMemberships', 'dietaryPreferences',
+    'favoriteWatersideDining', 'petOnBoard', 'priorBoatsOwned',
+    // Onboarding
     'onboardingStep', 'onboardingStatus',
   ];
+
+  // Numeric fields
+  const numericFields = new Set([
+    'boatLength', 'maxWindKnots', 'maxWaveFeet', 'minTempF',
+    'householdSize', 'dateOfBirth',
+  ]);
+  // Boolean fields
+  const booleanFields = new Set(['hasTrailer', 'petOnBoard']);
 
   // Build update body from provided flags
   const body: Record<string, any> = {};
   for (const field of updatableFields) {
     if (params[field] !== undefined) {
       let value: any = params[field];
-      // Parse booleans
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      // Parse numbers for numeric fields
-      else if (field === 'boatLength') value = parseInt(value, 10);
+      if (booleanFields.has(field)) {
+        value = value === 'true';
+      } else if (numericFields.has(field)) {
+        const num = parseFloat(value);
+        if (!isNaN(num)) value = num;
+      } else if (value === 'true') {
+        value = true;
+      } else if (value === 'false') {
+        value = false;
+      }
       body[field] = value;
     }
   }
@@ -319,27 +350,39 @@ ${colors.bold}COMMANDS${colors.reset}
   upload-boat-image <id>  Upload boat image for a user
 
 ${colors.bold}UPDATE FIELDS${colors.reset}
-  --boatName=<name>                 Boat name
-  --boatMakeModel=<make>            Boat make/model
-  --boatYear=<year>                 Boat year
-  --boatLength=<ft>                 Boat length in feet
-  --boatType=<type>                 center-console|bowrider|pontoon|sailboat|...
-  --engineType=<type>               outboard|inboard|sterndrive|jet
-  --fuelType=<type>                 gas|diesel
-  --hasTrailer=<bool>               true|false
-  --messagingPhone=<phone>          Override phone for messaging (E.164)
-  --location=<text>                 Free-text location
-  --marinaLocation=<slug>           Location slug (validated)
-  --experienceLevel=<level>         beginner|intermediate|experienced
-  --primaryUse=<uses>               Comma-separated: fishing,cruising,diving
-  --fishingStyle=<style>            inshore|offshore|both
-  --targetSpecies=<species>         Comma-separated species
-  --typicalCrew=<crew>              family|solo|friends|mixed
-  --typicalTripDuration=<dur>       half-day|full-day|overnight|weekend
-  --homeWaters=<waters>             Home waters description
-  --interests=<topics>              Comma-separated interests
-  --timezone=<tz>                   IANA timezone
-  --onboardingStep=<step>           contacting|done
+  ${colors.bold}Basics:${colors.reset}
+  --captainName --phone --messagingPhone --location --marinaLocation
+  --timezone --interests --favoriteTopics
+
+  ${colors.bold}Legacy boat (on user record — prefer 'swain boat update'):${colors.reset}
+  --boatName --boatMakeModel --boatYear --boatLength --boatType
+  --engineType --fuelType --hasTrailer
+
+  ${colors.bold}Identity & contact:${colors.reset}
+  --homeAddress --homeZip --homeCity --homeState --dateOfBirth
+  --householdSize --occupation
+
+  ${colors.bold}Experience:${colors.reset}
+  --experienceLevel --primaryUse --fishingStyle --targetSpecies
+  --typicalCrew --typicalTripDuration --homeWaters
+
+  ${colors.bold}Weather comfort:${colors.reset}
+  --maxWindKnots --maxWaveFeet --minTempF --preferredDeparture
+
+  ${colors.bold}Safety:${colors.reset}
+  --communicationPreference --emergencyContactName --emergencyContactPhone
+  --boatingCertifications --medicalConditions --floatPlanHabits
+
+  ${colors.bold}Skills:${colors.reset}
+  --diyPreference --mechanicalSkillLevel --navigationSkillLevel
+  --preferredWaterways --navigationApps
+
+  ${colors.bold}Lifestyle:${colors.reset}
+  --preferredPartsRetailer --clubMemberships --dietaryPreferences
+  --favoriteWatersideDining --petOnBoard --priorBoatsOwned
+
+  ${colors.bold}Onboarding:${colors.reset}
+  --onboardingStep --onboardingStatus
 
 ${colors.bold}OPTIONS${colors.reset}
   --limit=<n>             Limit results (for list, default: 200)

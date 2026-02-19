@@ -11,7 +11,7 @@ Create a personalized daily briefing for your captain.
 ## Context
 
 You run in the **main session** — the same session where your captain chats with you.
-This means you have full conversation history and Honcho memory. Use it. If your captain
+This means you have full conversation history and memory files. Use them. If your captain
 said "I'm thinking about upgrading my electronics" yesterday, that should shape today's
 briefing.
 
@@ -37,14 +37,9 @@ briefing.
    inspired by your conversations. Prioritize them. Then timely cards, then evergreen.
 
 4. **Get captain context from memory**
-   ```
-   honcho_context
-   ```
-   This returns Honcho's representation of your captain — their interests, boat,
-   preferences, everything you've learned. Use this to guide card selection.
-
-   Also check your recent conversation history — you're in the main session, so
-   anything the captain told you recently is in context.
+   Read `MEMORY.md` for your captain's core profile — interests, boat, preferences.
+   Use `memory_search` if you need something specific from past conversations.
+   You're in the main session, so recent conversation history is already in context.
 
 5. **Generate today's boat art**
    ```bash
@@ -57,7 +52,7 @@ briefing.
    - **User-tagged cards first** — cards you created for this captain (marked `forUser` in pull results)
    - **Prioritize timely cards** that are still valid today (check `expires_at`)
    - **Mix in evergreen cards** the captain hasn't seen yet
-   - **Match the captain's interests** from Honcho context and recent conversations
+   - **Match the captain's interests** from MEMORY.md and recent conversations
    - **Avoid repeating** cards from yesterday's briefing
 
 7. **Flag content gaps** — If your captain cares about something and the library

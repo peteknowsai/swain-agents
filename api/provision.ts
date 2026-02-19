@@ -17,11 +17,6 @@ const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
 const CRON_JOBS_FILE = "/root/.openclaw/cron/jobs.json";
 
-// Honcho configuration
-const HONCHO_API_KEY = process.env.HONCHO_API_KEY;
-const HONCHO_BASE_URL = process.env.HONCHO_BASE_URL || "https://api.honcho.dev";
-const HONCHO_WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID || "swain";
-
 type Registry = Record<string, string>; // userId → agentId
 
 /** Normalize a US phone number to E.164 (+1XXXXXXXXXX) */
@@ -156,100 +151,18 @@ async function setupWhatsAppRouting(phone: string, agentId: string): Promise<voi
 /** Build a human-readable Honcho peer ID for a captain.
  * Format: captain-{name}-{shortId} — matches advisor naming from makeSlug().
  * e.g., captain-pete-4f58e4 */
-function captainPeerId(name: string, userId: string): string {
-  const namePart = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const idPart = userId.replace(/^usr_/, "").slice(0, 6).toLowerCase();
-  return `captain-${namePart}-${idPart}`;
-}
-
-/** Seed Honcho with captain and advisor peers + initial conclusions */
-async function seedHoncho(input: CaptainInput, agentId: string): Promise<void> {
-  if (!HONCHO_API_KEY) {
-    console.warn("HONCHO_API_KEY not set — skipping Honcho seeding");
-    return;
-  }
-
-  // Human-readable peer IDs: captain-pete-4f58e4 / advisor-pete-4f58e4
-  const captainPeer = captainPeerId(input.name, input.userId);
-  const advisorPeer = agentId; // Already named like advisor-pete-usr_4f
-
-  const headers = {
-    "Authorization": `Bearer ${HONCHO_API_KEY}`,
-    "Content-Type": "application/json",
-  };
-  const base = `${HONCHO_BASE_URL}/v3/workspaces/${HONCHO_WORKSPACE_ID}`;
-
-  // Ensure workspace exists (v3 — get-or-create)
-  await fetch(`${base}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ id: HONCHO_WORKSPACE_ID }),
-  });
-
-  // Create captain peer (v3: PUT to /peers/{id}, idempotent)
-  const captainRes = await fetch(`${base}/peers/${captainPeer}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({
-      metadata: {
-        userId: input.userId,
-        name: input.name,
-        boatName: input.boatName || undefined,
-        phone: input.phone || undefined,
-        role: "captain",
-      },
-    }),
-  });
-  if (!captainRes.ok && captainRes.status !== 409) {
-    console.warn(`Honcho captain peer create returned ${captainRes.status}: ${await captainRes.text()}`);
-  }
-
-  // Create advisor peer (v3: PUT to /peers/{id}, idempotent)
-  const advisorRes = await fetch(`${base}/peers/${advisorPeer}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({
-      metadata: {
-        agentId,
-        captainName: input.name,
-        captainUserId: input.userId,
-        role: "advisor",
-      },
-    }),
-  });
-  if (!advisorRes.ok && advisorRes.status !== 409) {
-    console.warn(`Honcho advisor peer create returned ${advisorRes.status}: ${await advisorRes.text()}`);
-  }
-
-  // Seed initial conclusions about the captain from onboarding data
-  // v3: POST to /conclusions at workspace level with observer_id + observed_id
-  const facts: string[] = [];
-
-  facts.push(`Captain's name is ${input.name}.`);
-  if (input.boatName) facts.push(`Captain's boat is named "${input.boatName}".`);
-  if (input.boatMakeModel) facts.push(`Captain's boat is a ${input.boatMakeModel}.`);
-  if (input.marina) facts.push(`Captain keeps their boat at ${input.marina}.`);
-  if (input.experienceLevel) facts.push(`Captain is a ${input.experienceLevel} boater.`);
-  if (input.interests) facts.push(`Captain's main interests: ${input.interests}.`);
-
-  if (facts.length > 0) {
-    const conclusionRes = await fetch(`${base}/conclusions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        conclusions: facts.map(content => ({
-          content,
-          observer_id: advisorPeer,
-          observed_id: captainPeer,
-        })),
-      }),
-    });
-    if (!conclusionRes.ok) {
-      console.warn(`Honcho conclusions create returned ${conclusionRes.status}: ${await conclusionRes.text()}`);
-    }
-  }
-
-  console.log(`Honcho seeded: captain=${captainPeer} advisor=${advisorPeer} facts=${facts.length}`);
+/** Seed MEMORY.md with captain facts from onboarding data */
+function generateMemorySeed(input: CaptainInput): string {
+  const lines: string[] = [`# MEMORY.md — Captain ${input.name}`, "", "## Captain"];
+  lines.push(`- **Name:** ${input.name}`);
+  lines.push(`- **User ID:** ${input.userId}`);
+  if (input.phone) lines.push(`- **Phone:** ${normalizePhone(input.phone)}`);
+  if (input.boatName) lines.push(`- **Boat:** ${input.boatName}${input.boatMakeModel ? ` (${input.boatMakeModel})` : ""}`);
+  if (input.marina) lines.push(`- **Marina:** ${input.marina}`);
+  if (input.experienceLevel) lines.push(`- **Experience:** ${input.experienceLevel}`);
+  if (input.interests) lines.push(`- **Interests:** ${input.interests}`);
+  lines.push("", "## Notes", "- Onboarding in progress");
+  return lines.join("\n") + "\n";
 }
 
 /** Create cron jobs for a new advisor: one-shot intro + daily briefing */
@@ -311,7 +224,7 @@ async function createAdvisorCronJobs(
 1. Run: swain user get ${input.userId} --json
 2. If onboardingStep is already "done", reply NO_REPLY (nothing to do).
 3. If NOT done, build the onboarding briefing. Read the swain-onboarding skill, then read the swain-boat-art skill.
-   Captain context: Check Honcho memory (honcho_context) for what the captain said during intro.
+   Captain context: Check MEMORY.md and memory/ files for what the captain said during intro.
    If no memory available, build a general first briefing based on their profile data.
    IMPORTANT: Include the 2-style boat art sampler (swain card boat-art --user=${input.userId} --sampler --json).
    userId=${input.userId}, phone=${phone}.`,
@@ -335,7 +248,7 @@ async function createAdvisorCronJobs(
     wakeMode: "next-heartbeat",
     payload: {
       kind: "systemEvent",
-      text: `It's briefing time. Build today's daily briefing for ${input.name} using the swain-advisor skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check honcho_context for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
+      text: `It's briefing time. Build today's daily briefing for ${input.name} using the swain-advisor skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
     },
   });
 
@@ -380,7 +293,8 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   await writeFile(join(workspace, "SOUL.md"), generateSoul(input));
   await writeFile(join(workspace, "IDENTITY.md"), generateIdentity(input, agentId));
   await writeFile(join(workspace, "USER.md"), generateUser(input));
-  await writeFile(join(workspace, "MEMORY.md"), "");
+  await writeFile(join(workspace, "MEMORY.md"), generateMemorySeed(input));
+  await mkdir(join(workspace, "memory"), { recursive: true });
 
   // 6. Register with openclaw (with heartbeat for main-session continuity)
   await openclaw([
@@ -418,13 +332,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
   reg[input.userId] = agentId;
   await saveRegistry(reg);
 
-  // 9. Write .honcho.json for plugin peer resolution
-  await writeFile(join(workspace, ".honcho.json"), JSON.stringify({
-    peerId: captainPeerId(input.name, input.userId),
-    selfPeerId: agentId,
-  }, null, 2));
-
-  // 10. Route captain's WhatsApp messages to this advisor
+  // 9. Route captain's WhatsApp messages to this advisor
   if (input.phone) {
     try {
       await setupWhatsAppRouting(normalizePhone(input.phone), agentId);
@@ -433,14 +341,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionRe
     }
   }
 
-  // 11. Seed Honcho with captain/advisor peers and initial conclusions
-  try {
-    await seedHoncho(input, agentId);
-  } catch (err) {
-    console.error(`Honcho seeding failed (non-fatal): ${err}`);
-  }
-
-  // 12. Create cron jobs: one-shot WhatsApp intro + daily briefing
+  // 10. Create cron jobs: one-shot WhatsApp intro + daily briefing
   if (input.phone) {
     try {
       await createAdvisorCronJobs(input, agentId, normalizePhone(input.phone));

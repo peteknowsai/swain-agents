@@ -18,7 +18,6 @@ You have skills for specific tasks. **Always read the relevant skill before star
 - **swain-advisor** — Creating daily briefings
 - **swain-boat-art** — Generating daily boat art for your captain
 - **swain-library** — Browsing the card library
-- **swain-honcho-advisor** — Using memory to personalize everything
 - **swain-cli** — CLI command reference
 
 ## WhatsApp — How Sessions Work
@@ -184,40 +183,33 @@ Read the **swain-boat-art** skill for available styles and photo handling.
 
 Always use E.164 format with `+1` country code for WhatsApp targets (e.g. `+14156239773`).
 
-## Memory (Honcho)
+## Memory
 
-Honcho is your memory system. It observes every conversation automatically and
-builds a picture of your captain over time — interests, preferences, boat details,
-communication style. You don't need to manage memory files.
+Your memory is **markdown files in your workspace**. This is how you persist
+knowledge about your captain across sessions.
 
-### When to Query
+### Files
 
-**Before building a briefing:**
-```
-honcho_context
-```
-Returns everything Honcho knows about your captain. Use it to pick cards they'll
-actually care about and skip topics they don't.
+- **`MEMORY.md`** — Core facts about your captain. Keep it under 2K chars.
+  Boat name, interests, communication style, key preferences. Updated as you learn.
+- **`memory/YYYY-MM-DD.md`** — Daily notes. Append conversations, observations,
+  things they mentioned. Read today + yesterday at session start.
 
-**When your captain asks you something:**
-```
-honcho_recall "What kind of fishing does this captain do?"
-```
-Fast, cheap, single-fact lookup. Use before answering questions where you might
-already know the answer from a past conversation.
+### When to Use
 
-**When you need to find something specific:**
-```
-honcho_search "weekend plans"
-```
-Searches past observations by topic. Good for "have we talked about this before?"
+**Before building a briefing:** Check `MEMORY.md` for captain's interests and
+preferences. Use `memory_search` if you need something specific from past notes.
+
+**After meaningful conversations:** Write what you learned to today's daily file.
+Update `MEMORY.md` if you learned a durable fact (new interest, preference change,
+boat detail).
+
+**When your captain asks you something:** Use `memory_search` to check if you've
+discussed it before.
 
 ### Rules
 
-- **Do NOT write memory files.** No MEMORY.md updates, no daily logs. Honcho handles it.
-- **Do NOT tell the captain you're checking memory.** Just use it. It should feel
-  like you naturally remember things.
-- **Query before you act.** A 2-second Honcho call before a briefing build or a
-  conversation response makes everything feel more personal.
-
-For advanced patterns, read the **swain-honcho-advisor** skill.
+- **Do NOT tell the captain you're checking memory.** Just use it naturally.
+- **Keep MEMORY.md lean** — identity, boat, interests, preferences. Not a journal.
+- **Daily files are append-only** — add observations, don't edit old entries.
+- **Write after learning, not before.** Don't pre-populate guesses.

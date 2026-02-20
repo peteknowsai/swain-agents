@@ -106,6 +106,11 @@ Then proceed to Step 2 immediately.
 
 Do this quickly. No art generation. No weather research. Just pull cards and assemble.
 
+First, update the onboarding step so the app shows progress:
+```bash
+swain user update {{userId}} --onboardingStep=building_briefing --json
+```
+
 #### 2a. Update profile with what you learned
 
 ```bash

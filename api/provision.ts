@@ -18,6 +18,8 @@ const POOL_SIZE = 10;
 // Skills symlinked into each advisor workspace
 const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
 const ALL_SKILLS = ["swain-onboarding", "swain-advisor", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
+const STYLIST_SKILLS = ["swain-stylist", "swain-cli", "swain-library"];
+const STYLIST_TEMPLATES = "/root/clawd/swain-agents/templates/stylist";
 
 // --- Helpers ---
 
@@ -382,6 +384,58 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   await saveRegistry(reg);
 
   console.log(`Advisor ${agentId} deleted (removed from pool, gateway, workspace)`);
+}
+
+// --- Stylist provisioning (one-off system agent) ---
+
+export async function provisionStylist(): Promise<{ agentId: string; workspace: string }> {
+  const agentId = "stylist";
+  const workspace = join(WORKSPACES_ROOT, agentId);
+  const config = await readConfig();
+  if (!config.agents) config.agents = {};
+  if (!config.agents.list) config.agents.list = [];
+
+  // Check if already provisioned
+  if (config.agents.list.find((a: any) => a.id === agentId)) {
+    throw new Error("Stylist agent already provisioned");
+  }
+
+  // 1. Create workspace and copy template files
+  await mkdir(workspace, { recursive: true });
+  for (const file of ["AGENTS.md", "HEARTBEAT.md", "TOOLS.md", "SOUL.md"]) {
+    const content = await readFile(join(STYLIST_TEMPLATES, file), "utf-8");
+    await writeFile(join(workspace, file), content);
+  }
+
+  // 2. Symlink skills
+  const skillsDest = join(workspace, "skills");
+  await mkdir(skillsDest, { recursive: true });
+  for (const skill of STYLIST_SKILLS) {
+    const target = join(skillsDest, skill);
+    try { await rm(target, { recursive: true, force: true }); } catch {}
+    await symlink(join(SKILLS_ROOT, skill), target);
+  }
+
+  // 3. Register in gateway config with 30-min heartbeat
+  config.agents.list.push({
+    id: agentId,
+    name: "stylist",
+    workspace,
+    agentDir: `/root/.openclaw/agents/${agentId}/agent`,
+    model: { primary: "anthropic/claude-sonnet-4-6" },
+    heartbeat: { every: "30m" },
+    subagents: { allowAgents: [] },
+  });
+  await writeConfig(config);
+
+  // 4. Copy auth profile
+  await copyAuthProfile(agentId);
+
+  // 5. Fallback workspace symlink
+  try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
+
+  console.log(`Stylist agent provisioned at ${workspace}`);
+  return { agentId, workspace };
 }
 
 // --- Queries ---

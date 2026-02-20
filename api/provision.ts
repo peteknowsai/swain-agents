@@ -325,23 +325,25 @@ async function createDailyBriefingCron(input: CaptainInput, agentId: string): Pr
   console.log(`Daily briefing cron created for ${agentId}: ${minuteOffset} 11 * * * UTC`);
 }
 
-// --- Release advisor back to pool ---
+// --- Delete advisor (full removal from pool) ---
 
 export async function deleteAdvisor(agentId: string): Promise<void> {
   if (!agentId.startsWith("advisor-")) throw new Error("Can only delete advisor agents");
 
   const state = await loadPoolState();
-  const agent = state.agents.find((a: PoolAgent) => a.agentId === agentId);
-
-  if (!agent) throw new Error(`Agent ${agentId} not found in pool`);
-
-  const workspace = join(WORKSPACES_ROOT, agentId);
   const config = await readConfig();
+  const workspace = join(WORKSPACES_ROOT, agentId);
 
   // Remove bindings for this agent
   if (config.bindings) {
     config.bindings = config.bindings.filter((b: any) => b.agentId !== agentId);
   }
+
+  // Remove from gateway agent list
+  if (config.agents?.list) {
+    config.agents.list = config.agents.list.filter((a: any) => a.id !== agentId);
+  }
+
   await writeConfig(config);
 
   // Remove cron jobs via CLI
@@ -359,44 +361,27 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
     console.warn(`Cron cleanup for ${agentId}: ${err}`);
   }
 
-  // Reset workspace to blank
-  for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
-    const rendered = await renderTemplate(file, {
-      userId: "{{userId}}", phone: "{{phone}}", jid: "{{jid}}", captainName: "{{captainName}}",
-    });
-    await writeFile(join(workspace, file), rendered);
-  }
-  await writeFile(join(workspace, "SOUL.md"), "# Swain\n\nAwaiting captain assignment.\n");
-  await writeFile(join(workspace, "IDENTITY.md"), "# Identity\n\nAwaiting captain assignment.\n");
-  await writeFile(join(workspace, "USER.md"), "# Captain\n\nNo captain assigned yet.\n");
-  await writeFile(join(workspace, "MEMORY.md"), "# MEMORY.md\n\nNo captain assigned.\n");
-  await setupAdvisorSkills(workspace);
+  // Delete workspace
+  await rm(workspace, { recursive: true, force: true });
 
-  // Clear memory + sessions
-  await rm(join(workspace, "memory"), { recursive: true, force: true });
-  await mkdir(join(workspace, "memory"), { recursive: true });
-  const sessionsDir = `/root/.openclaw/agents/${agentId}/sessions`;
-  await rm(sessionsDir, { recursive: true, force: true });
-  await mkdir(sessionsDir, { recursive: true });
+  // Delete agent sessions/state dir
+  await rm(join("/root/.openclaw/agents", agentId), { recursive: true, force: true });
 
-  // Clear fallback symlink
+  // Delete fallback symlink
   await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
 
-  // Update pool state
-  agent.status = "available";
-  delete agent.userId;
-  delete agent.captainName;
-  delete agent.assignedAt;
+  // Remove from pool state
+  state.agents = state.agents.filter((a: PoolAgent) => a.agentId !== agentId);
   await savePoolState(state);
 
-  // Update registry
+  // Remove from registry
   const reg = await loadRegistry();
   for (const [uid, aid] of Object.entries(reg)) {
     if (aid === agentId) delete reg[uid];
   }
   await saveRegistry(reg);
 
-  console.log(`Advisor ${agentId} released back to pool`);
+  console.log(`Advisor ${agentId} deleted (removed from pool, gateway, workspace)`);
 }
 
 // --- Queries ---

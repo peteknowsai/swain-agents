@@ -13,7 +13,6 @@ const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 const POOL_STATE_FILE = "/root/swain-agent-api/pool-state.json";
 const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
-const CRON_JOBS_FILE = "/root/.openclaw/cron/jobs.json";
 const POOL_SIZE = 10;
 
 // Skills symlinked into each advisor workspace
@@ -180,6 +179,25 @@ export async function provisionPool(): Promise<{ created: number; existing: numb
     console.log(`Gateway config updated with ${created} new pool agents`);
   }
   await savePoolState(state);
+
+  // Prime new agents — boot their main session so it's warm for assignment
+  if (created > 0) {
+    await Bun.sleep(2000); // let gateway hot-reload the new agent configs
+    const newAgents = state.agents.filter((a: PoolAgent) => a.status === "available");
+    for (const agent of newAgents) {
+      try {
+        await openclaw([
+          "agent",
+          "--agent", agent.agentId,
+          "--message", "You are a Swain advisor agent. You'll be assigned a captain soon. Read your workspace files to understand your role, then stand by.",
+        ]);
+        console.log(`Primed ${agent.agentId}`);
+      } catch (err) {
+        console.error(`Failed to prime ${agent.agentId} (non-fatal): ${err}`);
+      }
+    }
+  }
+
   return { created, existing };
 }
 
@@ -315,11 +333,7 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   const state = await loadPoolState();
   const agent = state.agents.find((a: PoolAgent) => a.agentId === agentId);
 
-  if (!agent) {
-    // Legacy (non-pool) advisor — full delete
-    await deleteLegacyAdvisor(agentId);
-    return;
-  }
+  if (!agent) throw new Error(`Agent ${agentId} not found in pool`);
 
   const workspace = join(WORKSPACES_ROOT, agentId);
   const config = await readConfig();
@@ -330,15 +344,20 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   }
   await writeConfig(config);
 
-  // Remove cron jobs
+  // Remove cron jobs via CLI
   try {
-    const cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
-    const before = cronData.jobs.length;
-    cronData.jobs = cronData.jobs.filter((j: any) => j.agentId !== agentId);
-    if (cronData.jobs.length < before) {
-      await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
+    const cronOutput = await openclaw(["cron", "list", "--json"]);
+    const cronData = JSON.parse(cronOutput);
+    const jobs = cronData.jobs || cronData;
+    for (const job of (Array.isArray(jobs) ? jobs : [])) {
+      if (job.agentId === agentId) {
+        await openclaw(["cron", "rm", job.id, "--json"]);
+        console.log(`Removed cron job: ${job.name} (${job.id})`);
+      }
     }
-  } catch {}
+  } catch (err) {
+    console.warn(`Cron cleanup for ${agentId}: ${err}`);
+  }
 
   // Reset workspace to blank
   for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
@@ -378,31 +397,6 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   await saveRegistry(reg);
 
   console.log(`Advisor ${agentId} released back to pool`);
-}
-
-async function deleteLegacyAdvisor(agentId: string): Promise<void> {
-  const config = await readConfig();
-  if (config.agents?.list) {
-    config.agents.list = config.agents.list.filter((a: any) => a.id !== agentId);
-  }
-  if (config.bindings) {
-    config.bindings = config.bindings.filter((b: any) => b.agentId !== agentId);
-  }
-  await writeConfig(config);
-  await rm(join(WORKSPACES_ROOT, agentId), { recursive: true, force: true });
-  await rm(join("/root/.openclaw/agents", agentId), { recursive: true, force: true });
-  await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
-  try {
-    const cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
-    cronData.jobs = cronData.jobs.filter((j: any) => j.agentId !== agentId);
-    await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
-  } catch {}
-  const reg = await loadRegistry();
-  for (const [uid, aid] of Object.entries(reg)) {
-    if (aid === agentId) delete reg[uid];
-  }
-  await saveRegistry(reg);
-  console.log(`Legacy advisor ${agentId} deleted`);
 }
 
 // --- Queries ---

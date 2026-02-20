@@ -688,11 +688,15 @@ async function generateImage(args: string[]): Promise<void> {
     print(''); // newline after dots
   }
 
-  // 4. Update card with new image
+  // 4. Update card with new image (and optional bg-color/style)
   const imageUrl = job.url;
+  const patchBody: Record<string, any> = { image: imageUrl };
+  if (params['bg-color']) patchBody.backgroundColor = params['bg-color'];
+  if (styleId) patchBody.styleId = styleId;
+
   await workerRequest(`/cards/${cardId}`, {
     method: 'PATCH',
-    body: { image: imageUrl },
+    body: patchBody,
   });
 
   if (jsonOutput) {
@@ -930,6 +934,7 @@ ${colors.bold}OPTIONS (boat-art)${colors.reset}
 ${colors.bold}OPTIONS (image)${colors.reset}
   --prompt=<text>         Custom image prompt (default: title + subtext)
   --style=<id>            Style ID override
+  --bg-color=<hex>        Set background color along with image
   --timeout=<seconds>     Polling timeout (default: 120)
   --json                  Output as JSON
 

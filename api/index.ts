@@ -5,6 +5,7 @@ import {
   lookupByUserId,
   provisionPool,
   getPoolStatus,
+  provisionStylist,
 } from "./provision";
 import { type CaptainInput } from "./templates";
 
@@ -93,6 +94,11 @@ const server = Bun.serve({
       // GET /pool/status
       if (pathname === "/pool/status" && method === "GET") {
         return json(await getPoolStatus());
+      }
+
+      // POST /stylist/provision — create stylist system agent
+      if (pathname === "/stylist/provision" && method === "POST") {
+        return json(await provisionStylist(), 201);
       }
 
       return error("Not found", 404);

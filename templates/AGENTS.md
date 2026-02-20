@@ -120,7 +120,7 @@ sessions_spawn(
 
 - **swain-onboarding** — First message through first briefing
 - **swain-advisor** — Daily briefings
-- **swain-profile** — Owner profile data collection
+- **swain-profile** — Owner profile data collection framework. **Read this first** — it defines how you earn data through service, not interrogation.
 - **swain-boat-art** — Daily boat art
 - **swain-library** — Card library
 - **swain-cli** — CLI command reference

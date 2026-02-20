@@ -498,7 +498,7 @@ export async function provisionContentDesk({ name, region }: { name: string; reg
     name: agentId,
     workspace,
     agentDir: `/root/.openclaw/agents/${agentId}/agent`,
-    model: { primary: "anthropic/claude-haiku-4-5-20251001" },
+    model: { primary: "anthropic/claude-sonnet-4-6" },
     heartbeat: { every: "4h" },
     subagents: { allowAgents: [] },
   });

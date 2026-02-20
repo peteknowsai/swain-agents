@@ -1,9 +1,8 @@
-import { mkdir, cp, readdir, readFile, writeFile, rm } from "fs/promises";
+import { mkdir, cp, readFile, writeFile, rm, symlink } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import {
   type CaptainInput,
-  makeSlug,
   generateSoul,
   generateIdentity,
   generateUser,
@@ -11,147 +10,98 @@ import {
 } from "./templates";
 
 const WORKSPACES_ROOT = "/root/workspaces";
-const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
+const POOL_STATE_FILE = "/root/swain-agent-api/pool-state.json";
 const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
 const CRON_JOBS_FILE = "/root/.openclaw/cron/jobs.json";
+const POOL_SIZE = 10;
 
-type Registry = Record<string, string>; // userId → agentId
+// Skills symlinked into each advisor workspace
+const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
+const ADVISOR_SKILLS = ["swain-onboarding", "swain-advisor", "swain-boat-art", "swain-profile"];
+const SHARED_SKILLS = ["swain-cli", "swain-card-create", "swain-library"];
 
-/** Normalize a US phone number to E.164 (+1XXXXXXXXXX) */
+// --- Helpers ---
+
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  // Already has country code or non-US — return with + prefix
   return phone.startsWith("+") ? phone : `+${digits}`;
 }
 
-/** Format phone for WhatsApp binding peer ID.
- * OpenClaw's routing normalizes inbound peers through normalizeE164() which
- * always adds a + prefix. The binding peer ID must match that format exactly.
- * E.164 format: +14156239773 */
 function phoneToBindingPeerId(e164Phone: string): string {
-  // Ensure + prefix (normalizeE164 always adds it)
   return e164Phone.startsWith("+") ? e164Phone : `+${e164Phone}`;
 }
 
+function poolAgentId(index: number): string {
+  return `advisor-pool-${String(index).padStart(2, "0")}`;
+}
+
+type Registry = Record<string, string>;
+
 async function loadRegistry(): Promise<Registry> {
-  try {
-    return JSON.parse(await readFile(REGISTRY_FILE, "utf-8"));
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(await readFile(REGISTRY_FILE, "utf-8")); }
+  catch { return {}; }
 }
 
 async function saveRegistry(reg: Registry): Promise<void> {
   await writeFile(REGISTRY_FILE, JSON.stringify(reg, null, 2));
 }
 
-/** Look up an advisor agentId by userId */
-export async function lookupByUserId(userId: string): Promise<string | null> {
-  const reg = await loadRegistry();
-  return reg[userId] || null;
-}
-
-interface ProvisionResult {
+interface PoolAgent {
   agentId: string;
-  status: "provisioned";
-  workspace: string;
+  index: number;
+  status: "available" | "assigned";
+  userId?: string;
+  captainName?: string;
+  assignedAt?: string;
 }
 
-/** Copy template skills into workspace */
-async function copySkills(workspaceDir: string): Promise<void> {
-  const skillsSrc = join(TEMPLATES_DIR, "skills");
-  const skillsDest = join(workspaceDir, "skills");
-  await cp(skillsSrc, skillsDest, { recursive: true });
+interface PoolState {
+  version: number;
+  agents: PoolAgent[];
 }
 
-/** Copy the shared auth profile to a new agent */
+async function loadPoolState(): Promise<PoolState> {
+  try { return JSON.parse(await readFile(POOL_STATE_FILE, "utf-8")); }
+  catch { return { version: 1, agents: [] }; }
+}
+
+async function savePoolState(state: PoolState): Promise<void> {
+  await writeFile(POOL_STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+async function readConfig(): Promise<any> {
+  return JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
+}
+
+async function writeConfig(config: any): Promise<void> {
+  await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
+}
+
 async function copyAuthProfile(agentId: string): Promise<void> {
   const destDir = `/root/.openclaw/agents/${agentId}/agent`;
   await mkdir(destDir, { recursive: true });
   await cp(AUTH_SOURCE, join(destDir, "auth-profiles.json"));
 }
 
-/** Replace {{placeholders}} in all files in a directory (recursive) */
-async function renderDir(dir: string, vars: Record<string, string>): Promise<void> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await renderDir(full, vars);
-    } else if (entry.name.endsWith(".md")) {
-      let content = await readFile(full, "utf-8");
-      for (const [key, value] of Object.entries(vars)) {
-        content = content.replaceAll(`{{${key}}}`, value);
-      }
-      await writeFile(full, content);
-    }
+async function setupAdvisorSkills(workspaceDir: string): Promise<void> {
+  const skillsDest = join(workspaceDir, "skills");
+  await mkdir(skillsDest, { recursive: true });
+  for (const skill of ADVISOR_SKILLS) {
+    const target = join(skillsDest, skill);
+    try { await rm(target, { recursive: true, force: true }); } catch {}
+    await symlink(join(SKILLS_ROOT, "advisor", skill), target);
+  }
+  for (const skill of SHARED_SKILLS) {
+    const target = join(skillsDest, skill);
+    try { await rm(target, { recursive: true, force: true }); } catch {}
+    await symlink(join(SKILLS_ROOT, skill), target);
   }
 }
 
-/** Run an openclaw CLI command and return stdout */
-async function openclaw(args: string[]): Promise<string> {
-  const proc = Bun.spawn(["openclaw", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    throw new Error(`openclaw ${args.join(" ")} failed (exit ${exitCode}): ${stderr}`);
-  }
-  return stdout.trim();
-}
-
-/** Add a captain's phone to the WhatsApp allowlist and route it to their advisor agent */
-async function setupWhatsAppRouting(phone: string, agentId: string): Promise<void> {
-  const config = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
-
-  // allowFrom uses E.164 format (+14156239773)
-  const allowFrom: string[] = config.channels?.whatsapp?.allowFrom ?? [];
-  if (!allowFrom.includes(phone)) {
-    allowFrom.push(phone);
-    config.channels.whatsapp.allowFrom = allowFrom;
-  }
-
-  // Binding peer ID must use E.164 with + prefix to match OpenClaw's
-  // normalizeE164() which always adds + to inbound peer IDs.
-  const peerId = phoneToBindingPeerId(phone);
-  if (!config.bindings) config.bindings = [];
-  const existing = config.bindings.find(
-    (b: any) => b.match?.peer?.id === peerId && b.match?.channel === "whatsapp"
-  );
-  if (!existing) {
-    config.bindings.push({
-      agentId,
-      match: { channel: "whatsapp", peer: { kind: "direct", id: peerId } },
-    });
-  }
-
-  await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
-
-  // Restart gateway via system-level systemd (not openclaw gateway restart,
-  // which tries systemctl --user and fails for root system services)
-  const restart = Bun.spawn(["systemctl", "restart", "openclaw"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const restartExit = await restart.exited;
-  if (restartExit !== 0) {
-    const stderr = await new Response(restart.stderr).text();
-    throw new Error(`systemctl restart openclaw failed (exit ${restartExit}): ${stderr}`);
-  }
-  console.log(`WhatsApp routing: ${phone} → ${agentId}, gateway restarted`);
-}
-
-/** Build a human-readable Honcho peer ID for a captain.
- * Format: captain-{name}-{shortId} — matches advisor naming from makeSlug().
- * e.g., captain-pete-4f58e4 */
-/** Seed MEMORY.md with captain facts from onboarding data */
 function generateMemorySeed(input: CaptainInput): string {
   const lines: string[] = [`# MEMORY.md — Captain ${input.name}`, "", "## Captain"];
   lines.push(`- **Name:** ${input.name}`);
@@ -165,85 +115,187 @@ function generateMemorySeed(input: CaptainInput): string {
   return lines.join("\n") + "\n";
 }
 
-/** Create cron jobs for a new advisor: one-shot intro + daily briefing */
-async function createAdvisorCronJobs(
-  input: CaptainInput,
-  agentId: string,
-  phone: string
-): Promise<void> {
-  const jid = phone.replace(/^\+/, "") + "@s.whatsapp.net";
-  // Read existing cron jobs
-  let cronData: { version: number; jobs: any[] };
-  try {
-    cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
-  } catch {
-    cronData = { version: 1, jobs: [] };
+// --- Pool provisioning (create blank agents) ---
+
+export async function provisionPool(): Promise<{ created: number; existing: number }> {
+  const state = await loadPoolState();
+  const config = await readConfig();
+  if (!config.agents) config.agents = {};
+  if (!config.agents.list) config.agents.list = [];
+  let created = 0;
+  let existing = 0;
+
+  for (let i = 1; i <= POOL_SIZE; i++) {
+    const agentId = poolAgentId(i);
+    const workspace = join(WORKSPACES_ROOT, agentId);
+
+    if (state.agents.find((a: PoolAgent) => a.agentId === agentId)) {
+      existing++;
+      continue;
+    }
+
+    await mkdir(workspace, { recursive: true });
+
+    // Write placeholder templates (placeholders stay as-is until assignment)
+    for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
+      const rendered = await renderTemplate(file, {
+        userId: "{{userId}}", phone: "{{phone}}", jid: "{{jid}}", captainName: "{{captainName}}",
+      });
+      await writeFile(join(workspace, file), rendered);
+    }
+    await setupAdvisorSkills(workspace);
+    await writeFile(join(workspace, "SOUL.md"), "# Swain\n\nAwaiting captain assignment.\n");
+    await writeFile(join(workspace, "IDENTITY.md"), "# Identity\n\nAwaiting captain assignment.\n");
+    await writeFile(join(workspace, "USER.md"), "# Captain\n\nNo captain assigned yet.\n");
+    await writeFile(join(workspace, "MEMORY.md"), "# MEMORY.md\n\nNo captain assigned.\n");
+    await mkdir(join(workspace, "memory"), { recursive: true });
+
+    // Add to gateway config if missing
+    if (!config.agents.list.find((a: any) => a.id === agentId)) {
+      config.agents.list.push({
+        id: agentId, name: agentId, workspace,
+        agentDir: `/root/.openclaw/agents/${agentId}/agent`,
+        model: { primary: "anthropic/claude-sonnet-4-6" },
+        heartbeat: { every: "1h" },
+        subagents: { allowAgents: ["*"] },
+      });
+    }
+
+    await copyAuthProfile(agentId);
+
+    // Fallback workspace symlink
+    try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
+
+    state.agents.push({ agentId, index: i, status: "available" });
+    created++;
+    console.log(`Pool agent ${agentId} created`);
   }
 
+  if (created > 0) {
+    await writeConfig(config);
+    console.log(`Gateway config updated with ${created} new pool agents`);
+  }
+  await savePoolState(state);
+  return { created, existing };
+}
+
+// --- Assign advisor from pool ---
+
+export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: string; status: string; workspace: string }> {
+  const state = await loadPoolState();
+  const phone = input.phone ? normalizePhone(input.phone) : "";
+
+  const available = state.agents.find((a: PoolAgent) => a.status === "available");
+  if (!available) throw new Error("No available agents in pool. Run provisionPool() to add more.");
+
+  const agentId = available.agentId;
+  const workspace = join(WORKSPACES_ROOT, agentId);
+  const jid = phone ? phone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
+
+  // 1. Personalize workspace
+  for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
+    const rendered = await renderTemplate(file, { userId: input.userId, phone, jid, captainName: input.name });
+    await writeFile(join(workspace, file), rendered);
+  }
+  await setupAdvisorSkills(workspace);
+  await writeFile(join(workspace, "SOUL.md"), generateSoul(input));
+  await writeFile(join(workspace, "IDENTITY.md"), generateIdentity(input, agentId));
+  await writeFile(join(workspace, "USER.md"), generateUser(input));
+  await writeFile(join(workspace, "MEMORY.md"), generateMemorySeed(input));
+
+  // 2. Create boat in Convex
+  if (input.boatName) {
+    try {
+      const proc = Bun.spawn([
+        "swain", "boat", "create",
+        `--user=${input.userId}`, `--name=${input.boatName}`,
+        ...(input.boatMakeModel ? [`--makeModel=${input.boatMakeModel}`] : []),
+        ...(input.marina ? [`--homePort=${input.marina}`] : []),
+        "--isPrimary", "--json",
+      ], { stdout: "pipe", stderr: "pipe" });
+      const stdout = await new Response(proc.stdout).text();
+      await proc.exited;
+      console.log(`Boat created: ${JSON.parse(stdout).boatId} (${input.boatName})`);
+    } catch (err) {
+      console.error(`Boat creation failed (non-fatal): ${err}`);
+    }
+  }
+
+  // 3. WhatsApp routing (config write only — no gateway restart)
+  if (phone) {
+    const config = await readConfig();
+    if (!config.channels) config.channels = {};
+    if (!config.channels.whatsapp) config.channels.whatsapp = {};
+    const allowFrom: string[] = config.channels.whatsapp.allowFrom ?? [];
+    if (!allowFrom.includes(phone)) {
+      allowFrom.push(phone);
+      config.channels.whatsapp.allowFrom = allowFrom;
+    }
+    if (!config.bindings) config.bindings = [];
+    const peerId = phoneToBindingPeerId(phone);
+    if (!config.bindings.find((b: any) => b.match?.peer?.id === peerId && b.match?.channel === "whatsapp")) {
+      config.bindings.push({
+        agentId,
+        match: { channel: "whatsapp", peer: { kind: "direct", id: peerId } },
+      });
+    }
+    await writeConfig(config);
+  }
+
+  // 4. Update pool state + registry
+  available.status = "assigned";
+  available.userId = input.userId;
+  available.captainName = input.name;
+  available.assignedAt = new Date().toISOString();
+  await savePoolState(state);
+
+  const reg = await loadRegistry();
+  reg[input.userId] = agentId;
+  await saveRegistry(reg);
+
+  // 5. Create daily briefing cron
+  if (phone) {
+    try { await createDailyBriefingCron(input, agentId); }
+    catch (err) { console.error(`Daily briefing cron failed (non-fatal): ${err}`); }
+  }
+
+  // 6. Send intro — system event wakes the agent's main session immediately
+  if (phone) {
+    try { await sendIntroEvent(input, agentId, phone); }
+    catch (err) { console.error(`Intro event failed (non-fatal): ${err}`); }
+  }
+
+  console.log(`Advisor ${agentId} assigned to ${input.name} (${input.userId})`);
+  return { agentId, status: "assigned", workspace };
+}
+
+// --- Intro: direct system event (no cron) ---
+
+async function sendIntroEvent(input: CaptainInput, agentId: string, phone: string): Promise<void> {
+  const text = `New captain assigned! You are now ${input.name}'s personal boat advisor. Read the swain-onboarding skill and follow Phase 1 exactly. Send the intro message via the message tool, update onboarding step, then reply NO_REPLY. Captain info: name="${input.name}", boat="${input.boatName || "unknown"}", phone="${phone}", userId="${input.userId}".`;
+
+  const proc = Bun.spawn(
+    ["openclaw", "system", "event", "--mode", "now", "--agent", agentId, "--text", text],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const stdout = await new Response(proc.stdout).text();
+  const stderr = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) throw new Error(`system event failed (exit ${exitCode}): ${stderr}`);
+  console.log(`Intro event sent to ${agentId}: ${stdout.trim()}`);
+}
+
+// --- Daily briefing cron ---
+
+async function createDailyBriefingCron(input: CaptainInput, agentId: string): Promise<void> {
+  let cronData: { version: number; jobs: any[] };
+  try { cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8")); }
+  catch { cronData = { version: 1, jobs: [] }; }
+
   const now = Date.now();
-
-  // 1. One-shot intro message — fires 30 seconds from now
-  // Runs in isolated session. Reads the swain-onboarding skill Phase 1 for guidance.
-  const introAt = new Date(now + 30_000).toISOString();
-  cronData.jobs.push({
-    id: randomUUID(),
-    agentId,
-    name: `Advisor intro - ${input.name}`,
-    enabled: true,
-    deleteAfterRun: true,
-    createdAtMs: now,
-    updatedAtMs: now,
-    schedule: { kind: "at", at: introAt },
-    sessionTarget: "isolated",
-    wakeMode: "now",
-    payload: {
-      kind: "agentTurn",
-      message: `You just got provisioned as ${input.name}'s personal boat advisor. Send your intro message on WhatsApp now. Read the swain-onboarding skill for Phase 1 instructions — follow them exactly. Captain info: name="${input.name}", boat="${input.boatName || "boat"}", marina="${input.marina || "unknown"}", phone="${phone}", userId="${input.userId}". After sending and updating onboarding step, reply NO_REPLY.`,
-      timeoutSeconds: 120,
-    },
-  });
-
-  // 2. Safety-net — fires 30 minutes after intro
-  // If the captain replied and the inline briefing build succeeded, onboardingStep
-  // will be "done" and this no-ops. If something went wrong (turn crashed, captain
-  // didn't reply, briefing build failed), this picks up the pieces.
-  const safetyNetAt = new Date(now + 30 * 60_000).toISOString();
-  cronData.jobs.push({
-    id: randomUUID(),
-    agentId,
-    name: `Onboarding safety net - ${input.name}`,
-    enabled: true,
-    deleteAfterRun: true,
-    createdAtMs: now,
-    updatedAtMs: now,
-    schedule: { kind: "at", at: safetyNetAt },
-    sessionTarget: "isolated",
-    delivery: { mode: "none" },
-    payload: {
-      kind: "agentTurn",
-      message: `Safety net: check if ${input.name}'s onboarding was completed.
-
-1. Run: swain user get ${input.userId} --json
-2. If onboardingStep is already "done", reply NO_REPLY (nothing to do).
-3. If onboardingStep is "contacting" — the captain may not have replied yet, or
-   the inline briefing build may have failed. Check MEMORY.md for any conversation
-   notes. If there's context from a conversation, build the briefing now:
-   - Read the swain-onboarding skill (Phase 2, steps 2b-2h) for the build workflow
-   - Read the swain-boat-art skill for art generation
-   - userId=${input.userId}, phone=${phone}
-   - Send notification via: message action=send channel=whatsapp target="${phone}"
-   - Mark complete: swain user update ${input.userId} --onboardingStep=done --onboardingStatus=completed --json
-4. If no conversation happened yet (MEMORY.md only has initial seed data), build a
-   general first briefing based on their profile data anyway. Better to deliver
-   something than nothing.`,
-      timeoutSeconds: 600,
-    },
-  });
-
-  // 3. Daily briefing — stagger by hashing agentId to spread across 11:00-11:20 UTC
-  // Runs in MAIN session (systemEvent) so the advisor has full conversation context.
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const minuteOffset = hash % 20; // 0-19 minutes past 11:00 UTC
+  const minuteOffset = hash % 20; // spread 11:00–11:19 UTC
+
   cronData.jobs.push({
     id: randomUUID(),
     agentId,
@@ -261,202 +313,119 @@ async function createAdvisorCronJobs(
   });
 
   await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
-  console.log(
-    `Cron jobs created for ${agentId}: intro at ${introAt}, daily briefing at ${minuteOffset} 11 * * * UTC`
-  );
+  console.log(`Daily briefing cron created for ${agentId}: ${minuteOffset} 11 * * * UTC`);
 }
 
-/** Provision a new advisor agent */
-export async function provisionAdvisor(input: CaptainInput): Promise<ProvisionResult> {
-  const agentId = makeSlug(input.name, input.userId);
-  const workspace = join(WORKSPACES_ROOT, agentId);
+// --- Release advisor back to pool ---
 
-  // 1. Create workspace directory
-  await mkdir(workspace, { recursive: true });
-
-  // 2. Copy template files (AGENTS.md, TOOLS.md, HEARTBEAT.md)
-  const phone = input.phone ? normalizePhone(input.phone) : "";
-  const jid = phone ? phone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
-  for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
-    const rendered = await renderTemplate(file, {
-      userId: input.userId,
-      phone,
-      jid,
-      captainName: input.name,
-    });
-    await writeFile(join(workspace, file), rendered);
-  }
-
-  // 3. Copy skills
-  await copySkills(workspace);
-
-  // 4. Render placeholders in all copied files (skills, etc.)
-  await renderDir(workspace, {
-    userId: input.userId,
-    phone,
-    captainName: input.name,
-  });
-
-  // 5. Generate dynamic files
-  await writeFile(join(workspace, "SOUL.md"), generateSoul(input));
-  await writeFile(join(workspace, "IDENTITY.md"), generateIdentity(input, agentId));
-  await writeFile(join(workspace, "USER.md"), generateUser(input));
-  await writeFile(join(workspace, "MEMORY.md"), generateMemorySeed(input));
-  await mkdir(join(workspace, "memory"), { recursive: true });
-
-  // 6. Register with openclaw (with heartbeat for main-session continuity)
-  await openclaw([
-    "agents",
-    "add",
-    agentId,
-    "--workspace",
-    workspace,
-    "--non-interactive",
-  ]);
-
-  // 6b. Patch agent config to add heartbeat and subagents
-  // Read current config, find the agent entry, add heartbeat
-  try {
-    const cfg = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
-    const agentList: any[] = cfg.agents?.list ?? [];
-    const entry = agentList.find((a: any) => a.id === agentId);
-    if (entry) {
-      entry.heartbeat = { every: "1h" };
-      if (!entry.subagents) {
-        entry.subagents = { allowAgents: ["*"] };
-      }
-      await writeFile(OPENCLAW_CONFIG, JSON.stringify(cfg, null, 2));
-      console.log(`Heartbeat (1h) added to agent ${agentId}`);
-    }
-  } catch (err) {
-    console.error(`Failed to add heartbeat config (non-fatal): ${err}`);
-  }
-
-  // 7. Copy auth profile
-  await copyAuthProfile(agentId);
-
-  // 8. Register userId → agentId mapping
-  const reg = await loadRegistry();
-  reg[input.userId] = agentId;
-  await saveRegistry(reg);
-
-  // 9. Route captain's WhatsApp messages to this advisor
-  if (input.phone) {
-    try {
-      await setupWhatsAppRouting(normalizePhone(input.phone), agentId);
-    } catch (err) {
-      console.error(`WhatsApp routing setup failed (non-fatal): ${err}`);
-    }
-  }
-
-  // 10. Create cron jobs: one-shot WhatsApp intro + daily briefing
-  if (input.phone) {
-    try {
-      await createAdvisorCronJobs(input, agentId, normalizePhone(input.phone));
-    } catch (err) {
-      console.error(`Cron job creation failed (non-fatal): ${err}`);
-    }
-  }
-
-  console.log(`Advisor ${agentId} provisioned with WhatsApp intro + daily briefing crons.`);
-
-  return { agentId, status: "provisioned", workspace };
-}
-
-/** Delete an advisor agent — full cascade cleanup */
 export async function deleteAdvisor(agentId: string): Promise<void> {
-  // Validate agentId format
-  if (!agentId.startsWith("advisor-")) {
-    throw new Error("Can only delete advisor agents");
+  if (!agentId.startsWith("advisor-")) throw new Error("Can only delete advisor agents");
+
+  const state = await loadPoolState();
+  const agent = state.agents.find((a: PoolAgent) => a.agentId === agentId);
+
+  if (!agent) {
+    // Legacy (non-pool) advisor — full delete
+    await deleteLegacyAdvisor(agentId);
+    return;
   }
 
-  // 1. Remove from openclaw config (agent entry + binding)
-  try {
-    await openclaw(["agents", "delete", agentId, "--force"]);
-  } catch (err) {
-    // Agent may already be removed from config — continue cleanup
-    console.warn(`openclaw agents delete ${agentId}: ${err}`);
-  }
-
-  // 2. Remove workspace
   const workspace = join(WORKSPACES_ROOT, agentId);
-  await rm(workspace, { recursive: true, force: true });
+  const config = await readConfig();
 
-  // 3. Remove agent sessions/state dir
-  const agentDir = join("/root/.openclaw/agents", agentId);
-  await rm(agentDir, { recursive: true, force: true });
+  // Remove bindings for this agent
+  if (config.bindings) {
+    config.bindings = config.bindings.filter((b: any) => b.agentId !== agentId);
+  }
+  await writeConfig(config);
 
-  // 4. Remove cron jobs for this agent
+  // Remove cron jobs
   try {
     const cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
     const before = cronData.jobs.length;
     cronData.jobs = cronData.jobs.filter((j: any) => j.agentId !== agentId);
     if (cronData.jobs.length < before) {
       await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
-      console.log(`Removed ${before - cronData.jobs.length} cron job(s) for ${agentId}`);
     }
-  } catch (err) {
-    console.warn(`Cron cleanup for ${agentId}: ${err}`);
-  }
+  } catch {}
 
-  // 5. Remove WhatsApp binding + allowFrom phone from openclaw config
-  try {
-    const cfg = JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
-    let changed = false;
-
-    // Find and remove bindings, extract phone numbers to remove from allowlist
-    const bindings: any[] = cfg.bindings || [];
-    const phonesToRemove: string[] = [];
-    const beforeBindings = bindings.length;
-    cfg.bindings = bindings.filter((b: any) => {
-      if (b.agentId === agentId) {
-        // Extract phone from binding peer ID (e.g. "+14156239773")
-        const peerId = b.match?.peer?.id;
-        if (peerId) phonesToRemove.push(peerId);
-        return false;
-      }
-      return true;
+  // Reset workspace to blank
+  for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
+    const rendered = await renderTemplate(file, {
+      userId: "{{userId}}", phone: "{{phone}}", jid: "{{jid}}", captainName: "{{captainName}}",
     });
-    if (cfg.bindings.length < beforeBindings) changed = true;
-
-    // Remove phone(s) from WhatsApp allowFrom (skip owner numbers)
-    const ownerNumbers = ["+14156239773", "+5216692766911"];
-    if (phonesToRemove.length > 0 && cfg.channels?.whatsapp?.allowFrom) {
-      const allowFrom: string[] = cfg.channels.whatsapp.allowFrom;
-      cfg.channels.whatsapp.allowFrom = allowFrom.filter(
-        (p: string) => !phonesToRemove.includes(p) || ownerNumbers.includes(p)
-      );
-      if (cfg.channels.whatsapp.allowFrom.length < allowFrom.length) changed = true;
-    }
-
-    if (changed) {
-      await writeFile(OPENCLAW_CONFIG, JSON.stringify(cfg, null, 2));
-      console.log(`Removed WhatsApp binding + allowFrom for ${agentId} (phones: ${phonesToRemove.join(", ")})`);
-    }
-  } catch (err) {
-    console.warn(`Binding cleanup for ${agentId}: ${err}`);
+    await writeFile(join(workspace, file), rendered);
   }
+  await writeFile(join(workspace, "SOUL.md"), "# Swain\n\nAwaiting captain assignment.\n");
+  await writeFile(join(workspace, "IDENTITY.md"), "# Identity\n\nAwaiting captain assignment.\n");
+  await writeFile(join(workspace, "USER.md"), "# Captain\n\nNo captain assigned yet.\n");
+  await writeFile(join(workspace, "MEMORY.md"), "# MEMORY.md\n\nNo captain assigned.\n");
+  await setupAdvisorSkills(workspace);
 
-  // 6. Remove from registry
+  // Clear memory + sessions
+  await rm(join(workspace, "memory"), { recursive: true, force: true });
+  await mkdir(join(workspace, "memory"), { recursive: true });
+  const sessionsDir = `/root/.openclaw/agents/${agentId}/sessions`;
+  await rm(sessionsDir, { recursive: true, force: true });
+  await mkdir(sessionsDir, { recursive: true });
+
+  // Clear fallback symlink
+  await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
+
+  // Update pool state
+  agent.status = "available";
+  delete agent.userId;
+  delete agent.captainName;
+  delete agent.assignedAt;
+  await savePoolState(state);
+
+  // Update registry
   const reg = await loadRegistry();
   for (const [uid, aid] of Object.entries(reg)) {
     if (aid === agentId) delete reg[uid];
   }
   await saveRegistry(reg);
 
-  console.log(`Advisor ${agentId} fully deleted (workspace, agent dir, crons, bindings, registry)`);
+  console.log(`Advisor ${agentId} released back to pool`);
 }
 
-/** List all advisor agents */
-export async function listAdvisors(): Promise<unknown[]> {
-  const output = await openclaw(["agents", "list", "--json"]);
-  const agents = JSON.parse(output);
-  // Filter to advisor-* agents
-  if (Array.isArray(agents)) {
-    return agents.filter(
-      (a: { name?: string; id?: string }) =>
-        (a.name || a.id || "").startsWith("advisor-")
-    );
+async function deleteLegacyAdvisor(agentId: string): Promise<void> {
+  const config = await readConfig();
+  if (config.agents?.list) {
+    config.agents.list = config.agents.list.filter((a: any) => a.id !== agentId);
   }
-  return [];
+  if (config.bindings) {
+    config.bindings = config.bindings.filter((b: any) => b.agentId !== agentId);
+  }
+  await writeConfig(config);
+  await rm(join(WORKSPACES_ROOT, agentId), { recursive: true, force: true });
+  await rm(join("/root/.openclaw/agents", agentId), { recursive: true, force: true });
+  await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
+  try {
+    const cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8"));
+    cronData.jobs = cronData.jobs.filter((j: any) => j.agentId !== agentId);
+    await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
+  } catch {}
+  const reg = await loadRegistry();
+  for (const [uid, aid] of Object.entries(reg)) {
+    if (aid === agentId) delete reg[uid];
+  }
+  await saveRegistry(reg);
+  console.log(`Legacy advisor ${agentId} deleted`);
+}
+
+// --- Queries ---
+
+export async function lookupByUserId(userId: string): Promise<string | null> {
+  const reg = await loadRegistry();
+  return reg[userId] || null;
+}
+
+export async function listAdvisors(): Promise<unknown[]> {
+  const config = await readConfig();
+  return (config.agents?.list ?? []).filter((a: any) => (a.id || "").startsWith("advisor-"));
+}
+
+export async function getPoolStatus(): Promise<PoolState> {
+  return loadPoolState();
 }

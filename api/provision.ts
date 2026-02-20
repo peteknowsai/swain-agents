@@ -24,9 +24,9 @@ const STYLIST_TEMPLATES = "/root/clawd/swain-agents/templates/stylist";
 // --- Helpers ---
 
 function normalizePhone(phone: string): string {
+  // Expect E.164 from the frontend (e.g., +526692766911, +14156239773)
+  // Just ensure the + prefix is present
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
   return phone.startsWith("+") ? phone : `+${digits}`;
 }
 

@@ -6,6 +6,7 @@ import {
   generateIdentity,
   generateUser,
   renderTemplate,
+  render,
 } from "./templates";
 
 const WORKSPACES_ROOT = "/root/workspaces";
@@ -20,6 +21,8 @@ const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
 const ALL_SKILLS = ["swain-onboarding", "swain-advisor", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
 const STYLIST_SKILLS = ["swain-stylist", "swain-cli", "swain-library"];
 const STYLIST_TEMPLATES = "/root/clawd/swain-agents/templates/stylist";
+const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl"];
+const DESK_TEMPLATES = "/root/clawd/swain-agents/templates/content-desk";
 
 // --- Helpers ---
 
@@ -451,6 +454,147 @@ export async function provisionStylist(): Promise<{ agentId: string; workspace: 
 
   console.log(`Stylist agent provisioned at ${workspace}`);
   return { agentId, workspace };
+}
+
+// --- Content desk provisioning ---
+
+export async function provisionContentDesk({ name, region }: { name: string; region: string }): Promise<{ agentId: string; workspace: string }> {
+  // Validate name slug
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) {
+    throw new Error("Desk name must be a lowercase-hyphenated slug (e.g., tampa-bay)");
+  }
+
+  const agentId = `${name}-desk`;
+  const workspace = join(WORKSPACES_ROOT, agentId);
+  const config = await readConfig();
+  if (!config.agents) config.agents = {};
+  if (!config.agents.list) config.agents.list = [];
+
+  // Check for duplicates
+  if (config.agents.list.find((a: any) => a.id === agentId)) {
+    throw new Error(`Desk agent ${agentId} already exists`);
+  }
+
+  // 1. Create workspace and render templates
+  await mkdir(workspace, { recursive: true });
+  const vars = { deskName: name, region };
+  for (const file of ["AGENTS.md", "HEARTBEAT.md", "TOOLS.md", "SOUL.md"]) {
+    const content = await readFile(join(DESK_TEMPLATES, file), "utf-8");
+    await writeFile(join(workspace, file), render(content, vars));
+  }
+
+  // 2. Symlink skills
+  const skillsDest = join(workspace, "skills");
+  await mkdir(skillsDest, { recursive: true });
+  for (const skill of DESK_SKILLS) {
+    const target = join(skillsDest, skill);
+    try { await rm(target, { recursive: true, force: true }); } catch {}
+    await symlink(join(SKILLS_ROOT, skill), target);
+  }
+
+  // 3. Register in gateway config
+  config.agents.list.push({
+    id: agentId,
+    name: agentId,
+    workspace,
+    agentDir: `/root/.openclaw/agents/${agentId}/agent`,
+    model: { primary: "anthropic/claude-haiku-4-5-20251001" },
+    heartbeat: { every: "4h" },
+    subagents: { allowAgents: [] },
+  });
+  await writeConfig(config);
+
+  // 4. Copy auth profile
+  await copyAuthProfile(agentId);
+
+  // 5. Fallback workspace symlink
+  try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
+
+  // 6. Register in Convex
+  try {
+    const proc = Bun.spawn([
+      "swain", "agent", "create",
+      `--agent=${agentId}`, "--type=desk",
+      `--name=${name}`, `--region=${region}`,
+      "--json",
+    ], { stdout: "pipe", stderr: "pipe" });
+    const stdout = await new Response(proc.stdout).text();
+    await proc.exited;
+    console.log(`Desk registered in Convex: ${stdout.trim().slice(0, 200)}`);
+  } catch (err) {
+    console.error(`Convex registration failed (non-fatal): ${err}`);
+  }
+
+  // 7. Prime the agent
+  await Bun.sleep(2000);
+  try {
+    await openclaw([
+      "agent",
+      "--agent", agentId,
+      "--message", `You are a content desk for ${region}. Read your workspace files (AGENTS.md, HEARTBEAT.md, TOOLS.md, SOUL.md) to understand your role, then read the swain-content-desk skill. Stand by for your first heartbeat.`,
+    ]);
+    console.log(`Primed ${agentId}`);
+  } catch (err) {
+    console.error(`Failed to prime ${agentId} (non-fatal): ${err}`);
+  }
+
+  console.log(`Content desk ${agentId} provisioned at ${workspace} (region: ${region})`);
+  return { agentId, workspace };
+}
+
+export async function listDesks(): Promise<unknown[]> {
+  const config = await readConfig();
+  return (config.agents?.list ?? []).filter((a: any) => (a.id || "").endsWith("-desk"));
+}
+
+export async function deleteDesk(name: string): Promise<void> {
+  const agentId = `${name}-desk`;
+  const workspace = join(WORKSPACES_ROOT, agentId);
+  const config = await readConfig();
+
+  // Remove from gateway agent list
+  if (config.agents?.list) {
+    config.agents.list = config.agents.list.filter((a: any) => a.id !== agentId);
+  }
+  await writeConfig(config);
+
+  // Remove cron jobs
+  try {
+    const cronOutput = await openclaw(["cron", "list", "--json"]);
+    const cronData = JSON.parse(cronOutput);
+    const jobs = cronData.jobs || cronData;
+    for (const job of (Array.isArray(jobs) ? jobs : [])) {
+      if (job.agentId === agentId) {
+        await openclaw(["cron", "rm", job.id, "--json"]);
+        console.log(`Removed cron job: ${job.name} (${job.id})`);
+      }
+    }
+  } catch (err) {
+    console.warn(`Cron cleanup for ${agentId}: ${err}`);
+  }
+
+  // Delete workspace
+  await rm(workspace, { recursive: true, force: true });
+
+  // Delete agent sessions/state dir
+  await rm(join("/root/.openclaw/agents", agentId), { recursive: true, force: true });
+
+  // Delete fallback symlink
+  await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
+
+  // Unregister from Convex
+  try {
+    const proc = Bun.spawn([
+      "swain", "agent", "delete",
+      `--agent=${agentId}`, "--force", "--json",
+    ], { stdout: "pipe", stderr: "pipe" });
+    await proc.exited;
+    console.log(`Desk unregistered from Convex: ${agentId}`);
+  } catch (err) {
+    console.error(`Convex unregistration failed (non-fatal): ${err}`);
+  }
+
+  console.log(`Content desk ${agentId} deleted (removed from gateway, workspace, Convex)`);
 }
 
 // --- Queries ---

@@ -81,6 +81,13 @@ swain advisor list [--json]
 swain advisor delete <agentId> [--json]
 ```
 
+### Desks
+```bash
+swain desk list [--json]
+swain desk create --name=<slug> --region=<description> [--json]
+swain desk delete <name> [--json]
+```
+
 ### Styles & Images
 ```bash
 swain style list [--json]

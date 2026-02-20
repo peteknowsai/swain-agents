@@ -6,6 +6,9 @@ import {
   provisionPool,
   getPoolStatus,
   provisionStylist,
+  provisionContentDesk,
+  listDesks,
+  deleteDesk,
 } from "./provision";
 import { type CaptainInput } from "./templates";
 
@@ -99,6 +102,26 @@ const server = Bun.serve({
       // POST /stylist/provision — create stylist system agent
       if (pathname === "/stylist/provision" && method === "POST") {
         return json(await provisionStylist(), 201);
+      }
+
+      // POST /desks — provision content desk
+      if (pathname === "/desks" && method === "POST") {
+        const body = (await req.json()) as { name: string; region: string };
+        if (!body.name || !body.region) return error("name and region are required");
+        const result = await provisionContentDesk(body);
+        return json(result, 201);
+      }
+
+      // GET /desks — list content desks
+      if (pathname === "/desks" && method === "GET") {
+        return json({ desks: await listDesks() });
+      }
+
+      // DELETE /desks/:name — delete content desk
+      const deskDeleteMatch = matchRoute(pathname, "/desks/:name");
+      if (deskDeleteMatch && method === "DELETE") {
+        await deleteDesk(deskDeleteMatch.name);
+        return json({ status: "deleted", name: deskDeleteMatch.name });
       }
 
       return error("Not found", 404);

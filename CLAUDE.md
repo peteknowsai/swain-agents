@@ -30,9 +30,9 @@ bun run dev            # bun --watch run index.ts
 
 **Supporting directories:**
 
-- **`skills/`** — Canonical OpenClaw skill definitions (SKILL.md files). `swain-cli` is symlinked as a global skill on the VPS (`~/.openclaw/skills/swain-cli` → repo). Other skills are seeds copied into agent workspaces during provisioning.
+- **`skills/`** — Canonical OpenClaw skill definitions (SKILL.md files). Single source of truth. On the VPS, `~/.openclaw/skills/swain-cli` is a global symlink to the repo, and each agent workspace symlinks its `skills/` directory here too. A `git pull` updates all agents immediately.
 
-- **`templates/`** — Workspace templates for new advisors (AGENTS.md, TOOLS.md, HEARTBEAT.md + skills/). Used by `api/provision.ts` — rendered with `{{userId}}` placeholders.
+- **`templates/`** — Workspace templates for new advisors (AGENTS.md, TOOLS.md, HEARTBEAT.md). Used by `api/provision.ts` — rendered with `{{userId}}` placeholders.
 
 ## VPS Deployment
 
@@ -47,7 +47,7 @@ ssh root@76.13.106.143 "cd /root/clawd/swain-agents && git pull"
 
 For `api/` changes, GitHub Actions auto-deploys on push to main (pulls and restarts the service).
 
-For `skills/` changes, `git pull` updates the global `swain-cli` skill immediately (symlinked). Other skills live as workspace copies and are not auto-synced.
+For `skills/` changes, `git pull` updates all skills immediately — both the global `swain-cli` symlink and all workspace skill symlinks resolve to `skills/` in this repo.
 
 ## Key Conventions
 

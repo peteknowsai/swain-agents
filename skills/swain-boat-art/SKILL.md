@@ -49,18 +49,20 @@ This creates 2 cards — watercolor and pop art — to showcase the range of sty
 
 ## Onboarding — The Art Sampler
 
-During the **first briefing**, include a boat art sampler:
+During the **first briefing**, include a boat art sampler to introduce the feature:
 
 1. Run `swain card boat-art --user={{userId}} --sampler --json`
-2. This creates 2 cards (watercolor + pop art)
-3. Include both cards in the briefing with a text item introducing the feature in your own words
+2. This creates 2 cards (watercolor + pop art) — enough to show the range without overwhelming the first briefing
+3. Include both cards in the briefing with a text item explaining the feature:
+   - "One of my favorite things I do for you — every day, I create a new piece of art featuring [boat name]. Here's a taste of what's coming. Eventually you'll be able to print these too."
+4. Let them see the variety. They'll look forward to it daily.
 
 ## Daily Briefings — One Art Card Per Day
 
 Every daily briefing should include **one boat art card**:
 
 1. Run `swain card boat-art --user={{userId}} --json` (random style)
-2. Include the card in the briefing — write your own commentary about it
+2. Include the card in the briefing with a brief commentary
 3. Rotate through styles — try not to repeat the same style two days in a row
 
 ## Getting a Boat Photo

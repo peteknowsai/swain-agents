@@ -60,25 +60,47 @@ briefing.
    - **Match the captain's interests** from Honcho context and recent conversations
    - **Avoid repeating** cards from yesterday's briefing
 
-7. **Flag content gaps** — If your captain cares about something and the library
+7. **Pick a Question of the Day**
+   Check which profile fields are still unknown:
+   ```bash
+   swain boat profile --user={{userId}} --json
+   ```
+   Pick ONE missing P1 or P2 field from the **swain-profile** skill. Craft a natural
+   question that ties into today's briefing content, and add it as a text item near the
+   end of the briefing (before the closing).
+
+   Example — if the briefing includes a maintenance card and `engineHours` is unknown:
+   ```json
+   { "type": "text", "content": "By the way, where are you sitting on engine hours? I'll set up your service schedule so nothing sneaks up on you." }
+   ```
+
+   **Guidelines:**
+   - ONE question per briefing, max
+   - Must feel like a dock neighbor asking, not a form field
+   - Tie it to a card in the briefing when possible (makes it contextual)
+   - Skip if all P1/P2 fields are filled or captain hasn't engaged recently
+   - Never ask two briefings in a row with questions — alternate
+   - Read the swain-profile skill's question templates for phrasing
+
+8. **Flag content gaps** — If your captain cares about something and the library
    doesn't have it, tell Mr. Content:
    ```
    sessions_send(sessionKey="agent:mr-content:main", message="My captain [name] is into [topic] around [location] but I can't find anything in the library on it. Would be great to get some content on this.")
    ```
    Mr. Content coordinates the content desks — he'll route it to the right one.
 
-8. **Read full card content** for each selected card:
+9. **Read full card content** for each selected card:
    ```bash
    swain card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
-9. **Build briefing items** as a JSON array:
+10. **Build briefing items** as a JSON array:
    - Start with a greeting text item (personalized, 1-2 sentences)
    - For each selected card: add a commentary text item, then a card reference
    - End with a closing note text item
 
-10. **Assemble the briefing**
+11. **Assemble the briefing**
     ```bash
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```

@@ -3,6 +3,8 @@ import {
   deleteAdvisor,
   listAdvisors,
   lookupByUserId,
+  provisionPool,
+  getPoolStatus,
 } from "./provision";
 import { type CaptainInput } from "./templates";
 
@@ -14,13 +16,10 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-/** Verify bearer token */
 function auth(req: Request): boolean {
-  const header = req.headers.get("authorization");
-  return header === `Bearer ${TOKEN}`;
+  return req.headers.get("authorization") === `Bearer ${TOKEN}`;
 }
 
-/** JSON response helper */
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data, null, 2), {
     status,
@@ -28,21 +27,14 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-/** Error response helper */
 function error(message: string, status = 400): Response {
   return json({ error: message }, status);
 }
 
-/** Extract route params: match URL path against pattern with :params */
-function matchRoute(
-  pathname: string,
-  pattern: string
-): Record<string, string> | null {
+function matchRoute(pathname: string, pattern: string): Record<string, string> | null {
   const pathParts = pathname.split("/").filter(Boolean);
   const patternParts = pattern.split("/").filter(Boolean);
-
   if (pathParts.length !== patternParts.length) return null;
-
   const params: Record<string, string> = {};
   for (let i = 0; i < patternParts.length; i++) {
     if (patternParts[i].startsWith(":")) {
@@ -61,55 +53,46 @@ const server = Bun.serve({
     const { pathname } = url;
     const method = req.method;
 
-    // --- Health (no auth) ---
+    // Health (no auth)
     if (pathname === "/health" && method === "GET") {
       let agentCount = 0;
-      try {
-        const advisors = await listAdvisors();
-        agentCount = advisors.length;
-      } catch {
-        // openclaw may not be available during health check
-      }
-      return json({
-        status: "ok",
-        service: "swain-agent-api",
-        agentCount,
-        uptime: process.uptime(),
-      });
+      try { agentCount = (await listAdvisors()).length; } catch {}
+      return json({ status: "ok", service: "swain-agent-api", agentCount, uptime: process.uptime() });
     }
 
-    // --- Auth required for everything else ---
-    if (!auth(req)) {
-      return error("Unauthorized", 401);
-    }
+    if (!auth(req)) return error("Unauthorized", 401);
 
     try {
-      // --- POST /advisors ---
+      // POST /advisors — assign from pool
       if (pathname === "/advisors" && method === "POST") {
         const body = (await req.json()) as CaptainInput;
-        if (!body.userId || !body.name) {
-          return error("userId and name are required");
-        }
+        if (!body.userId || !body.name) return error("userId and name are required");
         const result = await provisionAdvisor(body);
         return json(result, 201);
       }
 
-      // --- GET /advisors ---
+      // GET /advisors
       if (pathname === "/advisors" && method === "GET") {
         const userId = url.searchParams.get("userId");
-        if (userId) {
-          const agentId = await lookupByUserId(userId);
-          return json({ agentId });
-        }
-        const advisors = await listAdvisors();
-        return json({ advisors });
+        if (userId) return json({ agentId: await lookupByUserId(userId) });
+        return json({ advisors: await listAdvisors() });
       }
 
-      // --- DELETE /advisors/:agentId ---
+      // DELETE /advisors/:agentId — release back to pool
       const deleteMatch = matchRoute(pathname, "/advisors/:agentId");
       if (deleteMatch && method === "DELETE") {
         await deleteAdvisor(deleteMatch.agentId);
         return json({ status: "deleted", agentId: deleteMatch.agentId });
+      }
+
+      // POST /pool/provision — create pool agents
+      if (pathname === "/pool/provision" && method === "POST") {
+        return json(await provisionPool());
+      }
+
+      // GET /pool/status
+      if (pathname === "/pool/status" && method === "GET") {
+        return json(await getPoolStatus());
       }
 
       return error("Not found", 404);

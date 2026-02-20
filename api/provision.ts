@@ -1,6 +1,5 @@
 import { mkdir, cp, readFile, writeFile, rm, symlink } from "fs/promises";
 import { join } from "path";
-import { randomUUID } from "crypto";
 import {
   type CaptainInput,
   generateSoul,
@@ -94,6 +93,17 @@ async function setupAdvisorSkills(workspaceDir: string): Promise<void> {
     try { await rm(target, { recursive: true, force: true }); } catch {}
     await symlink(join(SKILLS_ROOT, skill), target);
   }
+}
+
+async function openclaw(args: string[]): Promise<string> {
+  const proc = Bun.spawn(["openclaw", ...args], { stdout: "pipe", stderr: "pipe" });
+  const stdout = await new Response(proc.stdout).text();
+  const stderr = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new Error(`openclaw ${args.join(" ")} failed (exit ${exitCode}): ${stderr}`);
+  }
+  return stdout.trim();
 }
 
 function generateMemorySeed(input: CaptainInput): string {
@@ -247,77 +257,53 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   reg[input.userId] = agentId;
   await saveRegistry(reg);
 
-  // 5. Create daily briefing cron
+  // 5. Create daily briefing cron + trigger intro
   if (phone) {
     try { await createDailyBriefingCron(input, agentId); }
     catch (err) { console.error(`Daily briefing cron failed (non-fatal): ${err}`); }
-  }
 
-  // 6. Send intro — system event wakes the agent's main session immediately
-  if (phone) {
-    try { await sendIntroEvent(input, agentId, phone); }
-    catch (err) { console.error(`Intro event failed (non-fatal): ${err}`); }
+    // Wait for config hot-reload to process binding/allowFrom changes
+    await Bun.sleep(2000);
+
+    // Synchronous intro via main session (blocks until agent completes turn)
+    try { await triggerIntro(agentId, input, phone); }
+    catch (err) { console.error(`Intro trigger failed (non-fatal): ${err}`); }
   }
 
   console.log(`Advisor ${agentId} assigned to ${input.name} (${input.userId})`);
   return { agentId, status: "assigned", workspace };
 }
 
-// --- Intro: isolated cron job via openclaw CLI ---
-// Uses `openclaw cron add` with --agent to target the specific advisor.
-// The job fires in 30s as an isolated session — no heartbeat dependency.
+// --- Intro: synchronous via main session ---
+// Uses `openclaw agent --agent --message` to run intro in the agent's main session.
+// Main session has full tool access (message tool, etc). Blocks until complete.
 
-async function sendIntroEvent(input: CaptainInput, agentId: string, phone: string): Promise<void> {
-  const message = `New captain assigned! You are now ${input.name}'s personal boat advisor. Read the swain-onboarding skill and follow Phase 1 exactly. Send the intro message via the message tool, update onboarding step, then reply NO_REPLY. Captain info: name="${input.name}", boat="${input.boatName || "unknown"}", phone="${phone}", userId="${input.userId}".`;
-
-  const proc = Bun.spawn([
-    "openclaw", "cron", "add",
+async function triggerIntro(agentId: string, input: CaptainInput, phone: string): Promise<void> {
+  const output = await openclaw([
+    "agent",
     "--agent", agentId,
-    "--name", `Intro - ${input.name}`,
-    "--at", "30s",
-    "--session", "isolated",
-    "--message", message,
-    "--wake", "now",
-    "--no-deliver",
-    "--timeout-seconds", "120",
-    "--delete-after-run",
-    "--json",
-  ], { stdout: "pipe", stderr: "pipe" });
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) throw new Error(`cron add failed (exit ${exitCode}): ${stderr}`);
-  console.log(`Intro cron created for ${agentId}: ${stdout.trim()}`);
+    "--message", `You've been assigned as ${input.name}'s advisor. Read the swain-onboarding skill for Phase 1 instructions and send your intro message on WhatsApp now. Captain info: name="${input.name}", boat="${input.boatName || "boat"}", marina="${input.marina || "unknown"}", phone="${phone}", userId="${input.userId}".`,
+  ]);
+  console.log(`Intro triggered for ${agentId}: ${output.slice(0, 200)}`);
 }
 
-// --- Daily briefing cron ---
+// --- Daily briefing cron via CLI ---
 
 async function createDailyBriefingCron(input: CaptainInput, agentId: string): Promise<void> {
-  let cronData: { version: number; jobs: any[] };
-  try { cronData = JSON.parse(await readFile(CRON_JOBS_FILE, "utf-8")); }
-  catch { cronData = { version: 1, jobs: [] }; }
-
-  const now = Date.now();
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const minuteOffset = hash % 20; // spread 11:00–11:19 UTC
 
-  cronData.jobs.push({
-    id: randomUUID(),
-    agentId,
-    name: `Daily briefing - ${input.name}`,
-    enabled: true,
-    createdAtMs: now,
-    updatedAtMs: now,
-    schedule: { kind: "cron", expr: `${minuteOffset} 11 * * *`, tz: "UTC" },
-    sessionTarget: "main",
-    wakeMode: "next-heartbeat",
-    payload: {
-      kind: "systemEvent",
-      text: `It's briefing time. Build today's daily briefing for ${input.name} using the swain-advisor skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
-    },
-  });
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `Daily briefing - ${input.name}`,
+    "--cron", `${minuteOffset} 11 * * *`,
+    "--tz", "UTC",
+    "--session", "main",
+    "--system-event", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-advisor skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
+    "--wake", "next-heartbeat",
+  ]);
 
-  await writeFile(CRON_JOBS_FILE, JSON.stringify(cronData, null, 2));
   console.log(`Daily briefing cron created for ${agentId}: ${minuteOffset} 11 * * * UTC`);
 }
 

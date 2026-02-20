@@ -17,7 +17,7 @@ const POOL_SIZE = 10;
 
 // Skills symlinked into each advisor workspace
 const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
-const ALL_SKILLS = ["swain-onboarding", "swain-advisor", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library"];
+const ALL_SKILLS = ["swain-onboarding", "swain-advisor", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
 
 // --- Helpers ---
 

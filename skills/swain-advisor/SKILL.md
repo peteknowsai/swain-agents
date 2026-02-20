@@ -83,9 +83,9 @@ briefing.
    - Read the swain-profile skill's question templates for phrasing
 
 8. **Flag content gaps** — If your captain cares about something and the library
-   doesn't have it, tell Mr. Content:
+   doesn't have it, tell Mr. Content using this structured format:
    ```
-   sessions_send(sessionKey="agent:mr-content:main", message="My captain [name] is into [topic] around [location] but I can't find anything in the library on it. Would be great to get some content on this.")
+   sessions_send(sessionKey="agent:mr-content:main", message="CONTENT_GAP: topic=[topic], location=[location], category=[best guess from: weather-tides, fishing-reports, activities-events, maintenance-care, safety-regulations, routes-navigation, wildlife-nature], captain=[captain name], desk=[desk if known, or 'unknown']")
    ```
    Mr. Content coordinates the content desks — he'll route it to the right one.
 

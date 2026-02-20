@@ -21,6 +21,7 @@ import { run as runStyle } from './commands/style';
 import { run as runOnboarding } from './commands/onboarding';
 import { run as runUser } from './commands/user';
 import { run as runAdvisor } from './commands/advisor';
+import { run as runDesk } from './commands/desk';
 
 import { print, colors } from './lib/worker-client';
 
@@ -44,6 +45,7 @@ ${colors.bold}COMMANDS${colors.reset}
   briefing                User briefings (list, get, assemble, validate)
   user                    User management (list, get, update, onboard-status, upload-boat-image)
   advisor                 Advisor agents (list, delete)
+  desk                    Content desks (list, create, delete)
 
   style                   Browse image styles (list, get)
   onboarding              Onboarding templates (list, seed)
@@ -120,6 +122,9 @@ async function main(): Promise<void> {
       break;
     case 'advisor':
       await runAdvisor(subArgs);
+      break;
+    case 'desk':
+      await runDesk(subArgs);
       break;
     default:
       print(`${colors.red}Unknown command: ${command}${colors.reset}`);

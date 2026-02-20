@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Interactive agent selector — connects to VPS agents via TUI
+# Usage: heyswain [agent-id]
+#
+# With no args, presents a menu then opens TUI.
+# With agent name, opens TUI directly.
+#
+#   heyswain              → menu → TUI
+#   heyswain swain        → TUI with Swain
+#   heyswain commodore    → TUI with Commodore
+
+set -euo pipefail
+
+VPS="root@76.13.106.143"
+
+# Display names → VPS agent IDs
+declare -A AGENT_IDS=(
+  [cto]="swain-cto"
+  [commodore]="commodore"
+  [mr-content]="mr-content"
+  [swain]="main"
+  [tampa-bay-desk]="tampa-bay-desk"
+  [sw-florida-desk]="sw-florida-desk"
+  [se-florida-desk]="se-florida-desk"
+  [ne-florida-desk]="ne-florida-desk"
+  [crystal-coast-desk]="crystal-coast-desk"
+)
+declare -A AGENTS=(
+  [cto]="Swain CTO (swain dev)"
+  [commodore]="Advisor Commander (swain ops)"
+  [mr-content]="Editor-in-Chief (swain content)"
+  [swain]="Swain — Fleet lead (manages all agents)"
+  [tampa-bay-desk]="Tampa Bay regional desk"
+  [sw-florida-desk]="SW Florida regional desk"
+  [se-florida-desk]="SE Florida regional desk"
+  [ne-florida-desk]="NE Florida regional desk"
+  [crystal-coast-desk]="Crystal Coast regional desk"
+)
+AGENT_ORDER=(swain cto commodore mr-content tampa-bay-desk sw-florida-desk se-florida-desk ne-florida-desk crystal-coast-desk)
+
+pick_agent() {
+  if command -v fzf &>/dev/null; then
+    for id in "${AGENT_ORDER[@]}"; do
+      printf "%s — %s\n" "$id" "${AGENTS[$id]}"
+    done | fzf --prompt="agent> " --height=10 --reverse | cut -d' ' -f1
+  else
+    echo "Swain Agents" >&2
+    echo "============" >&2
+    for i in "${!AGENT_ORDER[@]}"; do
+      printf "  %d) %-14s %s\n" $((i+1)) "${AGENT_ORDER[$i]}" "${AGENTS[${AGENT_ORDER[$i]}]}" >&2
+    done
+    echo "" >&2
+    read -rp "Select (1-${#AGENT_ORDER[@]}): " choice
+    if [[ ! "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#AGENT_ORDER[@]} )); then
+      echo "Invalid selection" >&2
+      exit 1
+    fi
+    echo "${AGENT_ORDER[$((choice-1))]}"
+  fi
+}
+
+if [[ $# -ge 1 ]]; then
+  AGENT="$1"
+  if [[ -z "${AGENTS[$AGENT]+x}" ]]; then
+    echo "Unknown agent: $AGENT"
+    echo "Available: ${AGENT_ORDER[*]}"
+    exit 1
+  fi
+else
+  AGENT=$(pick_agent)
+  [[ -z "$AGENT" ]] && exit 0
+fi
+
+VPS_ID="${AGENT_IDS[$AGENT]}"
+
+echo "Connecting to $AGENT..."
+ssh -t "$VPS" "openclaw tui --session agent:$VPS_ID:tui"

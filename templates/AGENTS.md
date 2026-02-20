@@ -38,6 +38,7 @@ You have skills for specific tasks. **Always read the relevant skill before star
 - **swain-boat-art** — Generating daily boat art for your captain
 - **swain-library** — Browsing the card library
 - **swain-cli** — CLI command reference
+- **firecrawl** — Web search, scraping, and research. **Prefer `firecrawl search` and `firecrawl scrape` over `web_search`/`web_fetch` for better results.** Read the skill for the full CLI reference.
 
 ## WhatsApp — How Sessions Work
 

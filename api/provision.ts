@@ -30,8 +30,22 @@ function normalizePhone(phone: string): string {
   return phone.startsWith("+") ? phone : `+${digits}`;
 }
 
+/**
+ * Convert E.164 phone to WhatsApp's internal format.
+ * Mexico: +52 + 10 digits → +521 + 10 digits (WhatsApp kept the old mobile prefix)
+ * Everyone else: pass through as-is.
+ */
+function toWhatsAppPhone(e164Phone: string): string {
+  const phone = e164Phone.startsWith("+") ? e164Phone : `+${e164Phone}`;
+  // Mexican mobiles: +52XXXXXXXXXX (13 chars) → +521XXXXXXXXXX
+  if (/^\+52\d{10}$/.test(phone)) {
+    return `+521${phone.slice(3)}`;
+  }
+  return phone;
+}
+
 function phoneToBindingPeerId(e164Phone: string): string {
-  return e164Phone.startsWith("+") ? e164Phone : `+${e164Phone}`;
+  return toWhatsAppPhone(e164Phone);
 }
 
 function poolAgentId(index: number): string {
@@ -214,11 +228,12 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
 
   const agentId = available.agentId;
   const workspace = join(WORKSPACES_ROOT, agentId);
-  const jid = phone ? phone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
+  const waPhone = phone ? toWhatsAppPhone(phone) : "";
+  const jid = waPhone ? waPhone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
 
-  // 1. Personalize workspace
+  // 1. Personalize workspace (use WhatsApp-format phone in templates)
   for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
-    const rendered = await renderTemplate(file, { userId: input.userId, phone, jid, captainName: input.name });
+    const rendered = await renderTemplate(file, { userId: input.userId, phone: waPhone, jid, captainName: input.name });
     await writeFile(join(workspace, file), rendered);
   }
   await setupAdvisorSkills(workspace);
@@ -246,17 +261,17 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   }
 
   // 3. WhatsApp routing (config write only — no gateway restart)
-  if (phone) {
+  if (waPhone) {
     const config = await readConfig();
     if (!config.channels) config.channels = {};
     if (!config.channels.whatsapp) config.channels.whatsapp = {};
     const allowFrom: string[] = config.channels.whatsapp.allowFrom ?? [];
-    if (!allowFrom.includes(phone)) {
-      allowFrom.push(phone);
+    if (!allowFrom.includes(waPhone)) {
+      allowFrom.push(waPhone);
       config.channels.whatsapp.allowFrom = allowFrom;
     }
     if (!config.bindings) config.bindings = [];
-    const peerId = phoneToBindingPeerId(phone);
+    const peerId = phoneToBindingPeerId(waPhone);
     if (!config.bindings.find((b: any) => b.match?.peer?.id === peerId && b.match?.channel === "whatsapp")) {
       config.bindings.push({
         agentId,
@@ -278,7 +293,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   await saveRegistry(reg);
 
   // 5. Create daily briefing cron + trigger intro
-  if (phone) {
+  if (waPhone) {
     try { await createDailyBriefingCron(input, agentId); }
     catch (err) { console.error(`Daily briefing cron failed (non-fatal): ${err}`); }
 
@@ -286,7 +301,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     await Bun.sleep(2000);
 
     // Synchronous intro via main session (blocks until agent completes turn)
-    try { await triggerIntro(agentId, input, phone); }
+    try { await triggerIntro(agentId, input, waPhone); }
     catch (err) { console.error(`Intro trigger failed (non-fatal): ${err}`); }
   }
 

@@ -19,8 +19,7 @@ const POOL_SIZE = 10;
 
 // Skills symlinked into each advisor workspace
 const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
-const ADVISOR_SKILLS = ["swain-onboarding", "swain-advisor", "swain-boat-art", "swain-profile"];
-const SHARED_SKILLS = ["swain-cli", "swain-card-create", "swain-library"];
+const ALL_SKILLS = ["swain-onboarding", "swain-advisor", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library"];
 
 // --- Helpers ---
 
@@ -90,12 +89,7 @@ async function copyAuthProfile(agentId: string): Promise<void> {
 async function setupAdvisorSkills(workspaceDir: string): Promise<void> {
   const skillsDest = join(workspaceDir, "skills");
   await mkdir(skillsDest, { recursive: true });
-  for (const skill of ADVISOR_SKILLS) {
-    const target = join(skillsDest, skill);
-    try { await rm(target, { recursive: true, force: true }); } catch {}
-    await symlink(join(SKILLS_ROOT, "advisor", skill), target);
-  }
-  for (const skill of SHARED_SKILLS) {
+  for (const skill of ALL_SKILLS) {
     const target = join(skillsDest, skill);
     try { await rm(target, { recursive: true, force: true }); } catch {}
     await symlink(join(SKILLS_ROOT, skill), target);
@@ -269,20 +263,31 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   return { agentId, status: "assigned", workspace };
 }
 
-// --- Intro: direct system event (no cron) ---
+// --- Intro: isolated cron job via openclaw CLI ---
+// Uses `openclaw cron add` with --agent to target the specific advisor.
+// The job fires in 30s as an isolated session — no heartbeat dependency.
 
 async function sendIntroEvent(input: CaptainInput, agentId: string, phone: string): Promise<void> {
-  const text = `New captain assigned! You are now ${input.name}'s personal boat advisor. Read the swain-onboarding skill and follow Phase 1 exactly. Send the intro message via the message tool, update onboarding step, then reply NO_REPLY. Captain info: name="${input.name}", boat="${input.boatName || "unknown"}", phone="${phone}", userId="${input.userId}".`;
+  const message = `New captain assigned! You are now ${input.name}'s personal boat advisor. Read the swain-onboarding skill and follow Phase 1 exactly. Send the intro message via the message tool, update onboarding step, then reply NO_REPLY. Captain info: name="${input.name}", boat="${input.boatName || "unknown"}", phone="${phone}", userId="${input.userId}".`;
 
-  const proc = Bun.spawn(
-    ["openclaw", "system", "event", "--mode", "now", "--agent", agentId, "--text", text],
-    { stdout: "pipe", stderr: "pipe" },
-  );
+  const proc = Bun.spawn([
+    "openclaw", "cron", "add",
+    "--agent", agentId,
+    "--name", `Intro - ${input.name}`,
+    "--at", "30s",
+    "--session", "isolated",
+    "--message", message,
+    "--wake", "now",
+    "--no-deliver",
+    "--timeout-seconds", "120",
+    "--delete-after-run",
+    "--json",
+  ], { stdout: "pipe", stderr: "pipe" });
   const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();
   const exitCode = await proc.exited;
-  if (exitCode !== 0) throw new Error(`system event failed (exit ${exitCode}): ${stderr}`);
-  console.log(`Intro event sent to ${agentId}: ${stdout.trim()}`);
+  if (exitCode !== 0) throw new Error(`cron add failed (exit ${exitCode}): ${stderr}`);
+  console.log(`Intro cron created for ${agentId}: ${stdout.trim()}`);
 }
 
 // --- Daily briefing cron ---

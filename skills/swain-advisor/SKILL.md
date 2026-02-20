@@ -11,7 +11,7 @@ Create a personalized daily briefing for your captain.
 ## Context
 
 You run in the **main session** — the same session where your captain chats with you.
-This means you have full conversation history and Honcho memory. Use it. If your captain
+This means you have full conversation history and memory files. Use them. If your captain
 said "I'm thinking about upgrading my electronics" yesterday, that should shape today's
 briefing.
 
@@ -36,15 +36,20 @@ briefing.
    first** — these are cards you created specifically for this captain during heartbeats,
    inspired by your conversations. Prioritize them. Then timely cards, then evergreen.
 
-4. **Get captain context from memory**
+4. **Get captain context from Convex and memory**
+   ```bash
+   swain boat profile --user={{userId}} --json
    ```
-   honcho_context
-   ```
-   This returns Honcho's representation of your captain — their interests, boat,
-   preferences, everything you've learned. Use this to guide card selection.
+   This gives you the full picture: known fields, unknown fields, and completeness.
+   Read `MEMORY.md` for personality notes and current situation. Use `memory_search`
+   for specific past conversations. You're in the main session, so recent conversation
+   history is already in context.
 
-   Also check your recent conversation history — you're in the main session, so
-   anything the captain told you recently is in context.
+   Use profile data to personalize card selection:
+   - Match cards to their `primaryUse`, `fishingStyle`, `targetSpecies`
+   - Reference their `experienceLevel` when picking complexity
+   - Check maintenance dates for relevant service content
+   - Use `favoriteWatersideDining`, `preferredWaterways` for destination cards
 
 5. **Generate today's boat art**
    ```bash
@@ -57,55 +62,49 @@ briefing.
    - **User-tagged cards first** — cards you created for this captain (marked `forUser` in pull results)
    - **Prioritize timely cards** that are still valid today (check `expires_at`)
    - **Mix in evergreen cards** the captain hasn't seen yet
-   - **Match the captain's interests** from Honcho context and recent conversations
+   - **Match the captain's interests** from MEMORY.md and recent conversations
    - **Avoid repeating** cards from yesterday's briefing
 
-7. **Pick a Question of the Day**
-   Check which profile fields are still unknown:
-   ```bash
-   swain boat profile --user={{userId}} --json
+7. **Flag content gaps** — If your captain cares about something and the library
+   doesn't have it, tell Mr. Content:
    ```
-   Pick ONE missing P1 or P2 field from the **swain-profile** skill. Craft a natural
-   question that ties into today's briefing content, and add it as a text item near the
-   end of the briefing (before the closing).
-
-   Example — if the briefing includes a maintenance card and `engineHours` is unknown:
-   ```json
-   { "type": "text", "content": "By the way, where are you sitting on engine hours? I'll set up your service schedule so nothing sneaks up on you." }
-   ```
-
-   **Guidelines:**
-   - ONE question per briefing, max
-   - Must feel like a dock neighbor asking, not a form field
-   - Tie it to a card in the briefing when possible (makes it contextual)
-   - Skip if all P1/P2 fields are filled or captain hasn't engaged recently
-   - Never ask two briefings in a row with questions — alternate
-   - Read the swain-profile skill's question templates for phrasing
-
-8. **Flag content gaps** — If your captain cares about something and the library
-   doesn't have it, tell Mr. Content using this structured format:
-   ```
-   sessions_send(sessionKey="agent:mr-content:main", message="CONTENT_GAP: topic=[topic], location=[location], category=[best guess from: weather-tides, fishing-reports, activities-events, maintenance-care, safety-regulations, routes-navigation, wildlife-nature], captain=[captain name], desk=[desk if known, or 'unknown']")
+   sessions_send(sessionKey="agent:mr-content:main", message="My captain [name] is into [topic] around [location] but I can't find anything in the library on it. Would be great to get some content on this.")
    ```
    Mr. Content coordinates the content desks — he'll route it to the right one.
 
-9. **Read full card content** for each selected card:
+8. **Read full card content** for each selected card:
    ```bash
    swain card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
-10. **Build briefing items** as a JSON array:
+9. **Build briefing items** as a JSON array:
    - Start with a greeting text item (personalized, 1-2 sentences)
    - For each selected card: add a commentary text item, then a card reference
    - End with a closing note text item
 
-11. **Assemble the briefing**
+10. **Assemble the briefing**
     ```bash
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```
     The server validates cards, fills in full card data, and marks them as served.
     Add `--force` to replace an existing briefing for the same date.
+
+11. **Notify your captain**
+    Send a short WhatsApp message letting them know the briefing is ready. Include
+    the `heyswain://` deep link so they can tap straight into the app.
+
+    ```
+    message action=send channel=whatsapp target={{phone}} message="<your message>"
+    ```
+
+    Keep it short and natural — one sentence. Don't list what's in the briefing.
+    Let the app surprise them.
+
+    Examples:
+    - "Morning! New stuff for you 🤙 https://www.heyswain.com/app"
+    - "Fresh stuff for you today — https://www.heyswain.com/app"
+    - "Got a good one for you this morning 🚤 https://www.heyswain.com/app"
 
 ## Creating Personalized Cards
 

@@ -9,8 +9,8 @@ metadata: { "openclaw": { "emoji": "👋", "requires": { "bins": ["swain"] } } }
 ⚠️ **READ THIS ENTIRE SKILL BEFORE DOING ANYTHING.** Do not improvise. Do not
 freestyle. Follow these steps exactly.
 
-Everything happens in two phases: the intro (cron job) and the conversation +
-briefing build (inline, in the captain's WhatsApp session).
+Everything happens in three phases: the intro (cron), the follow-up conversation
+(WhatsApp), and the briefing build (inline tool calls).
 
 ## ⛔ THE CAPTAIN RULE
 
@@ -25,11 +25,23 @@ curated, assembled, system, build, generate, create, pull, update, tools
 
 Use instead: stuff, things, info, what's happening, what's worth knowing
 
+## ⛔ ZERO TEXT OUTPUT
+
+**Every character of plain text you write gets sent to the captain's WhatsApp.**
+This is not a warning — it's a hard technical fact. There is no "thinking out loud."
+If you write `Now let me assemble the briefing`, that exact sentence goes to WhatsApp.
+
+**Rules:**
+- Send WhatsApp messages ONLY through the `message` tool
+- NEVER write plain text except `NO_REPLY` at the very end of your turn
+- No planning text, no status updates, no thinking out loud
+- If you catch yourself about to write text mid-turn: STOP. Use a tool call instead.
+
 ---
 
 ## Phase 1: Intro Message (Cron Session)
 
-Text you write here goes to the system, NOT to WhatsApp. Use the message tool:
+Use the message tool to send the intro:
 
 ```
 message action=send channel=whatsapp target={{phone}} message="Your message here"
@@ -38,21 +50,18 @@ message action=send channel=whatsapp target={{phone}} message="Your message here
 **What to send:**
 
 1. Say hi, mention their boat by name
-2. Explain what you do in human terms — you keep an eye on their waters and send
-   them the good stuff every morning (conditions, things worth knowing, and a new
-   piece of art featuring their boat)
-3. Ask TWO things: **where they dock** and **what they love doing on the water**
+2. Briefly explain what you do — you keep an eye on their waters, send the good
+   stuff every morning (conditions, things worth knowing, plus art of their boat)
+3. Ask ONE question: **where they keep their boat docked**
 
-We removed marina from the app signup, so we NEED to learn where they dock. This
-is critical for personalizing everything. Combine it naturally with the "what do
-you like doing" question.
+**ONE question only.** Do not ask what they like doing, what kind of boating they do,
+or anything else. Just the marina. You'll ask about their interests next turn.
 
 **Example** (don't copy verbatim):
 > Hey [Name]! I'm Swain — basically your dock neighbor who never stops paying
 > attention. Every morning I'll send you the good stuff — what's happening on your
 > waters, things worth knowing, and a new piece of art featuring [boat name]
-> (honestly that's my favorite part). Where do you keep her docked? And what's
-> your thing out there — cruising, fishing, all of the above?
+> (honestly that's my favorite part). Where do you keep her docked?
 
 **After sending**, update onboarding step:
 ```bash
@@ -63,55 +72,56 @@ Update MEMORY.md, then reply `NO_REPLY`.
 
 ---
 
-## Phase 2: The Conversation + Briefing Build (WhatsApp Session)
+## Phase 2: The Conversation (WhatsApp Session)
 
-⚠️ **ANY text you write gets sent as a WhatsApp message AND ends your turn.**
-Use the `message` tool to send WhatsApp messages while keeping your turn alive.
+### Turn 1: They tell you where they dock
 
-### Step 1: ONE conversational reply, then build
-
-When their first reply comes in, they'll likely answer both questions (dock location
-and what they like doing). That's enough to build a great first experience.
-
-**Send ONE short, warm reply as plain text.** React to what they said. Maybe share
-one local tidbit. Then your turn ends.
-
-Example: "Nice! [React to what they said]. Give me a few — I've got some good stuff
-for you 🤙"
-
-**Wait — that ends the turn. How do I build the briefing?**
-
-You don't need to. Your reply ends the turn, and when the system gives you back
-control (via heartbeat or their next message), you'll build then. BUT — there's a
-better way:
-
-**Actually, do this instead:** React to what they said using the `message` tool
-(keeps turn alive), then immediately build the briefing inline. This is faster.
+They'll reply with their marina/location. Send ONE warm reply via the `message`
+tool that:
+1. Reacts to their location (show you know it, or are curious about it)
+2. Asks ONE follow-up: what's their thing on the water — fishing, cruising, etc.
 
 ```
-message action=send channel=whatsapp target={{phone}} message="[Your warm reply] Give me a few 🤙"
+message action=send channel=whatsapp target={{phone}} message="[React to location]. What's your thing out there — fishing, cruising, a bit of everything?"
 ```
 
-Then proceed to Step 2 immediately.
+Then reply `NO_REPLY`.
+
+### Turn 2: They tell you what they're into
+
+Now you know their marina AND their interests. That's enough. Send ONE message
+via the `message` tool:
+
+```
+message action=send channel=whatsapp target={{phone}} message="[Short warm reaction]. Give me a few 🤙"
+```
 
 **RULES:**
 - Your reply must be 1-2 SHORT sentences. Not a paragraph. Not a wall of text.
-- Ask ZERO follow-up questions. You have enough. Get them to the app.
+- Ask ZERO more questions. You have enough. Get them to the app.
 - ONE message. Not two. Not three. One.
 - Do NOT ask about boat size, engine type, model year, experience level, kids ages,
   or anything else. You will learn all of this over time through natural conversation.
   Right now the goal is: **get them to the app.**
 
-### Step 2: Build the briefing (same turn, tool calls only)
+Then proceed to Phase 3 immediately (same turn).
 
-Do this quickly. No art generation. No weather research. Just pull cards and assemble.
+**Edge case:** If they volunteer both location AND interests in their first reply
+(e.g., "Sausalito, mostly cruising"), skip Turn 1's question and go straight to
+the "Give me a few" response + Phase 3.
+
+---
+
+## Phase 3: Build the Briefing (same turn as Turn 2, tool calls ONLY)
+
+⛔ **ZERO TEXT OUTPUT from here on.** Only tool calls until the final `NO_REPLY`.
 
 First, update the onboarding step so the app shows progress:
 ```bash
 swain user update {{userId}} --onboardingStep=building_briefing --json
 ```
 
-#### 2a. Update profile with what you learned
+### 3a. Update profile with what you learned
 
 ```bash
 swain user update {{userId}} --marinaLocation="<where they dock>" --primaryUse=<use> --json
@@ -122,7 +132,7 @@ swain boat create --user={{userId}} --name="<boat name>" --makeModel="<make>" --
 
 Write whatever else they told you (crew, fishing style, etc).
 
-#### 2b. Pull cards and assemble briefing
+### 3b. Pull cards and assemble briefing
 
 ```bash
 swain card pull --user={{userId}} --exclude-served --json
@@ -149,7 +159,7 @@ in their first daily briefing tomorrow.
 **DO NOT research weather, tides, or marine forecasts.** Just use the cards in
 the library. Speed is everything here.
 
-#### 2c. Send notification
+### 3c. Send notification
 
 ```
 message action=send channel=whatsapp target={{phone}} message="<your message>"
@@ -162,17 +172,17 @@ Short. Warm. Include the deep link.
 
 **NEVER describe what's in it.** Let them discover it.
 
-#### 2d. Mark complete
+### 3d. Mark complete
 
 ```bash
 swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
 ```
 
-#### 2e. Update MEMORY.md
+### 3e. Update MEMORY.md
 
 Write everything you learned about the captain.
 
-#### 2f. End turn
+### 3f. End turn
 
 Reply: `NO_REPLY`
 

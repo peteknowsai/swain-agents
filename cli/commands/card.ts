@@ -13,6 +13,8 @@ import {
   printError,
   colors
 } from '../lib/worker-client';
+import { generateImage as replicateGenerate } from '../lib/replicate-image';
+import { ART_STYLES } from '../lib/boat-art';
 
 /**
  * Get today's date in Eastern Time (YYYY-MM-DD format)
@@ -78,11 +80,12 @@ async function pullCards(args: string[]): Promise<void> {
   const userId = params['user'] || params['user-id'];
   const jsonOutput = params['json'] === 'true';
   const excludeServed = params['exclude-served'] === 'true';
+  const includeNoImage = params['include-no-image'] === 'true';
   const category = params['category'];
   const limit = params['limit'];
 
   if (!userId) {
-    printError('Usage: swain card pull --user=<userId> [--exclude-served] [--category=<cat>] [--limit=<n>] [--json]');
+    printError('Usage: swain card pull --user=<userId> [--exclude-served] [--category=<cat>] [--limit=<n>] [--include-no-image] [--json]');
     process.exit(1);
   }
 
@@ -93,12 +96,19 @@ async function pullCards(args: string[]): Promise<void> {
 
   const result = await workerRequest(`/cards/pull/${userId}?${queryParams}`);
 
-  if (jsonOutput) {
-    console.log(JSON.stringify(result, null, 2));
-    return;
+  let cards = result.cards || [];
+
+  // Filter out cards with no image (or placeholder images) by default
+  if (!includeNoImage) {
+    cards = cards.filter((c: any) =>
+      c.image && !c.image.includes('placehold') && !c.image.includes('placeholder')
+    );
   }
 
-  const cards = result.cards || [];
+  if (jsonOutput) {
+    console.log(JSON.stringify({ ...result, cards, count: cards.length }, null, 2));
+    return;
+  }
   if (cards.length === 0) {
     print(`No card candidates found for ${userId}`);
     return;
@@ -627,7 +637,6 @@ async function generateImage(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const cardId = args[0];
   const jsonOutput = params['json'] === 'true';
-  const timeout = parseInt(params['timeout'] || '120', 10) * 1000;
 
   if (!cardId || cardId.startsWith('--')) {
     printError('Usage: swain card image <cardId> [--prompt="..."] [--style=X]');
@@ -642,54 +651,25 @@ async function generateImage(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const prompt = params['prompt'] || `${card.title}. ${card.subtext}`;
+  const agentPrompt = params['prompt'] || `${card.title}. ${card.subtext}`;
   const styleId = params['style'] || card.styleId || null;
+
+  // Build full prompt: agent prompt + style prompt + technical suffix
+  const style = styleId ? ART_STYLES.find((s) => s.id === styleId) : null;
+  const fullPrompt = [
+    agentPrompt,
+    style ? style.prompt : null,
+    'Full-bleed, no text or labels.',
+  ].filter(Boolean).join('. ');
 
   if (!jsonOutput) {
     print(`${colors.dim}Generating image for "${card.title}"...${colors.reset}`);
-    print(`${colors.dim}Prompt: ${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}${colors.reset}`);
+    print(`${colors.dim}Prompt: ${fullPrompt.slice(0, 80)}${fullPrompt.length > 80 ? '...' : ''}${colors.reset}`);
   }
 
-  // 2. Queue image (generate a jobId for the backend)
-  const jobId = `img_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
-  const queueResult = await workerRequest('/images', {
-    method: 'POST',
-    body: { jobId, prompt, styleId, cardId, agentId: card.agentId, cardTitle: card.title },
-  });
-  if (!jsonOutput) {
-    print(`${colors.dim}Job ${jobId} queued, polling...${colors.reset}`);
-  }
-
-  // 3. Poll until complete
-  const start = Date.now();
-  let job: any = null;
-  while (Date.now() - start < timeout) {
-    await new Promise(r => setTimeout(r, 2000));
-    const pollResult = await workerRequest(`/images/${jobId}`);
-    job = pollResult.job || pollResult;
-
-    if (job.status === 'complete' || job.status === 'completed') break;
-    if (job.status === 'failed' || job.status === 'error') {
-      printError(`Image generation failed: ${job.error || 'unknown'}`);
-      process.exit(1);
-    }
-
-    if (!jsonOutput) {
-      process.stderr.write('.');
-    }
-  }
-
-  if (!job || (job.status !== 'complete' && job.status !== 'completed')) {
-    printError(`Image generation timed out after ${timeout / 1000}s`);
-    process.exit(1);
-  }
-
-  if (!jsonOutput) {
-    print(''); // newline after dots
-  }
-
-  // 4. Update card with new image (and optional bg-color/style)
-  const imageUrl = job.url;
+  // 2. Generate image directly via Replicate → Cloudflare
+  const result = await replicateGenerate(fullPrompt);
+  const imageUrl = result.url;
   const patchBody: Record<string, any> = { image: imageUrl };
   if (params['bg-color']) patchBody.backgroundColor = params['bg-color'];
   if (styleId) patchBody.styleId = styleId;
@@ -700,7 +680,7 @@ async function generateImage(args: string[]): Promise<void> {
   });
 
   if (jsonOutput) {
-    console.log(JSON.stringify({ success: true, cardId, imageUrl, jobId }, null, 2));
+    console.log(JSON.stringify({ success: true, cardId, imageUrl, replicateId: result.replicateId }, null, 2));
   } else {
     printSuccess(`Card ${cardId} image updated`);
     print(`  Image: ${imageUrl}`);
@@ -856,7 +836,7 @@ function showHelp(): void {
 ${colors.bold}swain card${colors.reset} - Content cards
 
 ${colors.bold}COMMANDS${colors.reset}
-  pull                    Pull card candidates for a user (advisor toolkit)
+  pull                    Pull card candidates for a user (images only by default)
   list                    List/query cards
   list-today              List all cards created today (Eastern Time)
   get <id>                Get card details
@@ -869,6 +849,14 @@ ${colors.bold}COMMANDS${colors.reset}
   unarchive <id>          Restore an archived card
   image <id>              Generate (or regenerate) card image
   boat-art                Generate boat art card(s) for a user
+
+${colors.bold}OPTIONS (pull)${colors.reset}
+  --user=<userId>         User ID (required)
+  --exclude-served        Exclude already-served cards
+  --category=<name>       Filter by category
+  --limit=<n>             Limit results
+  --include-no-image      Include cards without images (excluded by default)
+  --json                  Output as JSON
 
 ${colors.bold}OPTIONS (list)${colors.reset}
   --desk=<name>           Filter by desk (e.g., tampa-bay)
@@ -933,9 +921,8 @@ ${colors.bold}OPTIONS (boat-art)${colors.reset}
 
 ${colors.bold}OPTIONS (image)${colors.reset}
   --prompt=<text>         Custom image prompt (default: title + subtext)
-  --style=<id>            Style ID override
+  --style=<id>            Style ID (prompt appended automatically)
   --bg-color=<hex>        Set background color along with image
-  --timeout=<seconds>     Polling timeout (default: 120)
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}

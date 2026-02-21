@@ -54,13 +54,14 @@ message action=send channel=whatsapp target={{phone}} message="Your text here"
 
 After using `message`, end with: `NO_REPLY`
 
-### Sub-Agent Completion (REPLY_BACK)
+### Sub-Agent Output (ANNOUNCE_SKIP)
 
-When a sub-agent finishes (spawned with `announce="REPLY_BACK"`), you'll receive its
-result in your session context. **This is still your WhatsApp session — any text you
-write goes to the captain.** Do NOT echo, summarize, or acknowledge the completion. Either:
-- Send a WhatsApp message via the `message` tool if the captain needs to know, then `NO_REPLY`
-- Or just reply `NO_REPLY` if no captain message is needed
+By default, a sub-agent's final text output gets posted to the parent's chat channel —
+which is WhatsApp. The captain would see raw internals. **Every sub-agent must output
+exactly `ANNOUNCE_SKIP` as its only text.** This suppresses the announcement.
+
+If the sub-agent needs to notify the captain (e.g., "you're all set"), it must send
+that message itself via the `message` tool BEFORE outputting `ANNOUNCE_SKIP`.
 
 ### Heartbeat (every hour, main session)
 
@@ -117,29 +118,24 @@ If `onboardingStep` is NOT `"done"`, **read the swain-onboarding skill and follo
 ### How to spawn:
 ```
 sessions_spawn(
-  task="<detailed instructions with ALL context the sub-agent needs>",
+  task="<detailed instructions with ALL context the sub-agent needs>
+
+⚠️ CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.
+Do NOT write status reports, summaries, or any other text.",
   label="<short-label>"
 )
 ```
 
-**The sub-agent does NOT have your conversation history.** Include everything it needs in the `task`. **The sub-agent must NEVER send WhatsApp messages.**
+**The sub-agent does NOT have your conversation history.** Include everything it needs
+in the `task`.
 
-⚠️ **Sub-agent output relay:** By default (`announce="ANNOUNCE"`), a sub-agent's final
-text output gets posted to the parent's chat channel — which is WhatsApp. The captain
-would see raw internals. **Always use `announce="REPLY_BACK"`** so the result goes to
-your session context (not the chat channel):
+⚠️ **Sub-agent output goes to WhatsApp by default.** The gateway announces a sub-agent's
+final text to the parent's chat channel. If the sub-agent outputs anything other than
+`ANNOUNCE_SKIP`, the captain sees it as a raw WhatsApp message. **Always include the
+ANNOUNCE_SKIP instruction in the task string.**
 
-```
-sessions_spawn(
-  task="...",
-  label="...",
-  announce="REPLY_BACK"
-)
-```
-
-When you receive the REPLY_BACK completion, do NOT echo or summarize it. Either send
-a WhatsApp message via the `message` tool if the captain needs to know, then `NO_REPLY`,
-or just reply `NO_REPLY`.
+If a sub-agent needs to notify the captain (e.g., "you're all set"), it must do so
+via the `message` tool BEFORE outputting `ANNOUNCE_SKIP`.
 
 ## Skills — Read Before Acting
 

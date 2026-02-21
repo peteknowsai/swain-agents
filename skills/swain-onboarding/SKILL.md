@@ -122,10 +122,6 @@ Once you have marina + interests, get them to the app.
 
 **Do NOT build the briefing yourself.** Spawn a sub-agent to handle all backend work.
 
-⚠️ **Always use `announce="REPLY_BACK"`** so the sub-agent's output goes to your
-session context, NOT to the WhatsApp chat channel. Without this, any text the sub-agent
-produces gets sent directly to the captain's phone.
-
 After sending your "Give me a few" message, spawn immediately:
 
 ```
@@ -135,6 +131,7 @@ sessions_spawn(
 Captain: {{captainName}}
 userId: {{userId}}
 Boat: {{boatName}}
+Phone: {{phone}}
 Marina: <what they told you>
 Interests: <what they told you>
 
@@ -147,12 +144,16 @@ Steps:
    Include a photo_upload item asking for a pic of their boat.
 5. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
 6. Write MEMORY.md with everything learned about the captain
+7. Send the 'all set' notification via WhatsApp:
+   message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
 DO NOT generate boat art. DO NOT research weather. Just use cards from the library.
-DO NOT send any WhatsApp messages. The parent agent handles all WhatsApp.
-Speed is everything — under 2 minutes total.",
-  label="onboarding-briefing",
-  announce="REPLY_BACK"
+Speed is everything — under 2 minutes total.
+
+⚠️ CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.
+Do NOT write status reports, summaries, or any other text. If you write anything
+other than ANNOUNCE_SKIP, it gets sent to the captain's WhatsApp as a raw message.",
+  label="onboarding-briefing"
 )
 ```
 
@@ -162,12 +163,8 @@ history, so include everything it needs.
 
 After spawning, send your follow-up message (below), then reply `NO_REPLY`.
 
-**When the sub-agent completes**, you'll receive a completion notification. When you
-do, send the "all set" notification and reply `NO_REPLY`:
-```
-message action=send channel=whatsapp target={{phone}} message="You're all set — first one's ready for you 🤙 https://www.heyswain.com/app"
-```
-Then: `NO_REPLY`
+The sub-agent handles both the briefing build AND the "all set" notification.
+You do NOT need to wait for a completion signal or send anything else.
 
 ---
 

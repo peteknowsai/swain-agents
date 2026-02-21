@@ -1,7 +1,7 @@
 /**
  * replicate-image.ts
  *
- * Generate images via Replicate API (lucataco/nano-banana-txt2img)
+ * Generate images via Replicate API (google/nano-banana-pro)
  * and upload to Cloudflare Images.
  *
  * Env vars required:

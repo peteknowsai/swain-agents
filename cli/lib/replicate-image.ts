@@ -56,8 +56,19 @@ function checkEnv(): {
  */
 async function runReplicate(
   prompt: string,
-  replicateToken: string
+  replicateToken: string,
+  imageInputUrl?: string
 ): Promise<{ outputUrl: string; predictionId: string }> {
+  // Build input — image-to-image when a source image is provided
+  const input: Record<string, any> = {
+    prompt,
+    aspect_ratio: imageInputUrl ? "match_input_image" : "4:3",
+    output_format: "jpg",
+  };
+  if (imageInputUrl) {
+    input.image_input = [imageInputUrl];
+  }
+
   // Create prediction
   const createRes = await fetch(REPLICATE_MODEL_URL, {
     method: "POST",
@@ -66,13 +77,7 @@ async function runReplicate(
       "Content-Type": "application/json",
       Prefer: "wait",  // Use Replicate's sync mode — waits up to 60s
     },
-    body: JSON.stringify({
-      input: {
-        prompt,
-        aspect_ratio: "4:3",
-        output_format: "jpg",
-      },
-    }),
+    body: JSON.stringify({ input }),
   });
 
   if (!createRes.ok) {
@@ -204,15 +209,21 @@ async function uploadToCloudflare(
  * Generate an image from a prompt using Replicate and upload to Cloudflare Images.
  *
  * @param prompt - The image generation prompt
+ * @param opts.imageInputUrl - Optional source image URL for image-to-image (restyle) mode
  * @returns Cloudflare delivery URL, image ID, and Replicate prediction ID
  */
 export async function generateImage(
-  prompt: string
+  prompt: string,
+  opts?: { imageInputUrl?: string }
 ): Promise<ReplicateImageResult> {
   const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
 
   // Step 1: Generate via Replicate
-  const { outputUrl, predictionId } = await runReplicate(prompt, replicateToken);
+  const { outputUrl, predictionId } = await runReplicate(
+    prompt,
+    replicateToken,
+    opts?.imageInputUrl
+  );
 
   // Step 2: Download and upload to Cloudflare Images
   const { url, imageId } = await uploadToCloudflare(

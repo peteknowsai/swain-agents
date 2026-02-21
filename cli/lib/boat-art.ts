@@ -1,24 +1,11 @@
 /**
  * boat-art.ts
  *
- * Generate stylized boat art using Replicate (nano-banana model)
- * and upload to Cloudflare Images.
- *
- * Supports two modes:
- * 1. Text-to-image: Generate from boat description (no photo needed)
- * 2. Image-to-image: Restyle an existing boat photo (better results)
- *
- * Env vars required:
- *   REPLICATE_API_TOKEN        — Replicate API token
- *   CLOUDFLARE_ACCOUNT_ID      — Cloudflare account ID
- *   CLOUDFLARE_IMAGES_API_TOKEN — Cloudflare Images API token
+ * Boat art styles, prompts, and content helpers.
+ * Image generation delegated to replicate-image.ts.
  */
 
-const REPLICATE_MODEL_URL =
-  "https://api.replicate.com/v1/models/google/nano-banana-pro/predictions";
-
-const CF_DELIVERY_BASE =
-  "https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA";
+import { generateImage } from './replicate-image';
 
 export const ART_STYLES = [
   {
@@ -75,20 +62,6 @@ export const ART_STYLES = [
 
 export type ArtStyleId = (typeof ART_STYLES)[number]["id"];
 
-function checkEnv() {
-  const replicateToken = process.env.REPLICATE_API_TOKEN;
-  if (!replicateToken) {
-    throw new Error("REPLICATE_API_TOKEN is not set.");
-  }
-  const cfAccountId =
-    process.env.CLOUDFLARE_ACCOUNT_ID || "5a6fef07a998d84ec047ef43d0543342";
-  const cfImagesToken = process.env.CLOUDFLARE_IMAGES_API_TOKEN;
-  if (!cfImagesToken) {
-    throw new Error("CLOUDFLARE_IMAGES_API_TOKEN is not set.");
-  }
-  return { replicateToken, cfAccountId, cfImagesToken };
-}
-
 /**
  * Build a prompt for boat art generation.
  */
@@ -138,135 +111,13 @@ export function buildBoatArtPrompt(opts: {
 
 /**
  * Generate a single boat art image via Replicate and upload to Cloudflare.
- *
- * @param prompt - The image generation/editing prompt
- * @param imageInputUrl - Optional URL of the boat photo for img2img
- * @returns Cloudflare delivery URL and metadata
+ * Delegates to the consolidated replicate-image module.
  */
 export async function generateBoatArt(
   prompt: string,
   imageInputUrl?: string
 ): Promise<{ url: string; imageId: string; replicateId: string }> {
-  const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
-
-  // Build Replicate input
-  const input: any = {
-    prompt,
-    aspect_ratio: "4:3",
-    output_format: "jpg",
-  };
-
-  if (imageInputUrl) {
-    input.image_input = [imageInputUrl];
-    input.aspect_ratio = "match_input_image";
-  }
-
-  // Create prediction with sync mode
-  const createRes = await fetch(REPLICATE_MODEL_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${replicateToken}`,
-      "Content-Type": "application/json",
-      Prefer: "wait",
-    },
-    body: JSON.stringify({ input }),
-  });
-
-  if (!createRes.ok) {
-    const errText = await createRes.text();
-    throw new Error(`Replicate create failed [${createRes.status}]: ${errText}`);
-  }
-
-  let prediction = (await createRes.json()) as any;
-
-  // Check if already done (sync mode)
-  if (prediction.status === "succeeded" && prediction.output) {
-    const outputUrl = Array.isArray(prediction.output)
-      ? prediction.output[0]
-      : prediction.output;
-    const cfResult = await uploadToCf(outputUrl, cfAccountId, cfImagesToken);
-    return { ...cfResult, replicateId: prediction.id };
-  }
-
-  if (prediction.status === "failed" || prediction.status === "canceled") {
-    throw new Error(`Replicate ${prediction.status}: ${prediction.error || "unknown"}`);
-  }
-
-  // Poll for completion
-  const pollUrl =
-    prediction.urls?.get ||
-    `https://api.replicate.com/v1/predictions/${prediction.id}`;
-  const maxPollTime = 120_000;
-  const pollInterval = 2_000;
-  const startTime = Date.now();
-
-  while (Date.now() - startTime < maxPollTime) {
-    await new Promise((r) => setTimeout(r, pollInterval));
-    const pollRes = await fetch(pollUrl, {
-      headers: { Authorization: `Bearer ${replicateToken}` },
-    });
-    if (!pollRes.ok) {
-      throw new Error(`Replicate poll failed [${pollRes.status}]`);
-    }
-    prediction = await pollRes.json();
-
-    if (prediction.status === "succeeded" && prediction.output) {
-      const outputUrl = Array.isArray(prediction.output)
-        ? prediction.output[0]
-        : prediction.output;
-      const cfResult = await uploadToCf(outputUrl, cfAccountId, cfImagesToken);
-      return { ...cfResult, replicateId: prediction.id };
-    }
-    if (prediction.status === "failed" || prediction.status === "canceled") {
-      throw new Error(`Replicate ${prediction.status}: ${prediction.error || "unknown"}`);
-    }
-  }
-
-  throw new Error("Replicate prediction timed out after 120s");
-}
-
-/**
- * Upload image from URL to Cloudflare Images.
- */
-async function uploadToCf(
-  imageUrl: string,
-  cfAccountId: string,
-  cfImagesToken: string
-): Promise<{ url: string; imageId: string }> {
-  const imgRes = await fetch(imageUrl);
-  if (!imgRes.ok) {
-    throw new Error(`Failed to download image [${imgRes.status}]`);
-  }
-  const imageData = await imgRes.arrayBuffer();
-
-  const formData = new FormData();
-  formData.append(
-    "file",
-    new Blob([imageData], { type: "image/jpeg" }),
-    "boat-art.jpg"
-  );
-
-  const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/images/v1`;
-  const cfRes = await fetch(cfUrl, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${cfImagesToken}` },
-    body: formData,
-  });
-
-  if (!cfRes.ok) {
-    const errText = await cfRes.text();
-    throw new Error(`Cloudflare upload failed [${cfRes.status}]: ${errText}`);
-  }
-
-  const json = (await cfRes.json()) as any;
-  if (!json.success || !json.result) {
-    throw new Error(`Cloudflare upload failed: ${json.errors?.[0]?.message || "unknown"}`);
-  }
-
-  return {
-    url: `${CF_DELIVERY_BASE}/${json.result.id}/public`,
-    imageId: json.result.id,
-  };
+  return generateImage(prompt, { imageInputUrl });
 }
 
 /**

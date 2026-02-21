@@ -54,6 +54,14 @@ message action=send channel=whatsapp target={{phone}} message="Your text here"
 
 After using `message`, end with: `NO_REPLY`
 
+### Sub-Agent Completion (REPLY_BACK)
+
+When a sub-agent finishes (spawned with `announce="REPLY_BACK"`), you'll receive its
+result in your session context. **This is still your WhatsApp session — any text you
+write goes to the captain.** Do NOT echo, summarize, or acknowledge the completion. Either:
+- Send a WhatsApp message via the `message` tool if the captain needs to know, then `NO_REPLY`
+- Or just reply `NO_REPLY` if no captain message is needed
+
 ### Heartbeat (every hour, main session)
 
 You wake up hourly via heartbeat — still in the main session, with full conversation
@@ -115,6 +123,23 @@ sessions_spawn(
 ```
 
 **The sub-agent does NOT have your conversation history.** Include everything it needs in the `task`. **The sub-agent must NEVER send WhatsApp messages.**
+
+⚠️ **Sub-agent output relay:** By default (`announce="ANNOUNCE"`), a sub-agent's final
+text output gets posted to the parent's chat channel — which is WhatsApp. The captain
+would see raw internals. **Always use `announce="REPLY_BACK"`** so the result goes to
+your session context (not the chat channel):
+
+```
+sessions_spawn(
+  task="...",
+  label="...",
+  announce="REPLY_BACK"
+)
+```
+
+When you receive the REPLY_BACK completion, do NOT echo or summarize it. Either send
+a WhatsApp message via the `message` tool if the captain needs to know, then `NO_REPLY`,
+or just reply `NO_REPLY`.
 
 ## Skills — Read Before Acting
 

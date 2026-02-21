@@ -120,8 +120,11 @@ Once you have marina + interests, get them to the app.
 
 ## Phase 3: Spawn Sub-Agent for Briefing Build
 
-**Do NOT build the briefing yourself.** Spawn a sub-agent to handle all backend
-work. This prevents text leaks — sub-agent output goes to the system, not WhatsApp.
+**Do NOT build the briefing yourself.** Spawn a sub-agent to handle all backend work.
+
+⚠️ **Always use `announce="REPLY_BACK"`** so the sub-agent's output goes to your
+session context, NOT to the WhatsApp chat channel. Without this, any text the sub-agent
+produces gets sent directly to the captain's phone.
 
 After sending your "Give me a few" message, spawn immediately:
 
@@ -131,7 +134,6 @@ sessions_spawn(
 
 Captain: {{captainName}}
 userId: {{userId}}
-Phone: {{phone}}
 Boat: {{boatName}}
 Marina: <what they told you>
 Interests: <what they told you>
@@ -143,14 +145,14 @@ Steps:
 4. Read the swain-advisor skill and follow its briefing workflow (steps 3-10)
    to pull cards, write commentary, and assemble the briefing.
    Include a photo_upload item asking for a pic of their boat.
-5. Send notification:
-   message action=send channel=whatsapp target={{phone}} message='You are all set — first one is ready for you 🤙 https://www.heyswain.com/app'
-6. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
-7. Write MEMORY.md with everything learned about the captain
+5. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
+6. Write MEMORY.md with everything learned about the captain
 
 DO NOT generate boat art. DO NOT research weather. Just use cards from the library.
+DO NOT send any WhatsApp messages. The parent agent handles all WhatsApp.
 Speed is everything — under 2 minutes total.",
-  label="onboarding-briefing"
+  label="onboarding-briefing",
+  announce="REPLY_BACK"
 )
 ```
 
@@ -158,7 +160,14 @@ Speed is everything — under 2 minutes total.",
 and phone from what you learned in the conversation. The sub-agent has NO conversation
 history, so include everything it needs.
 
-After spawning, reply `NO_REPLY`.
+After spawning, send your follow-up message (below), then reply `NO_REPLY`.
+
+**When the sub-agent completes**, you'll receive a completion notification. When you
+do, send the "all set" notification and reply `NO_REPLY`:
+```
+message action=send channel=whatsapp target={{phone}} message="You're all set — first one's ready for you 🤙 https://www.heyswain.com/app"
+```
+Then: `NO_REPLY`
 
 ---
 

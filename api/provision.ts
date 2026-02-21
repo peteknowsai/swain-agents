@@ -14,7 +14,7 @@ const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 const POOL_STATE_FILE = "/root/swain-agent-api/pool-state.json";
 const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
-const POOL_SIZE = 10;
+const POOL_SIZE = 20;
 
 // Skills symlinked into each advisor workspace
 const SKILLS_ROOT = "/root/clawd/swain-agents/skills";

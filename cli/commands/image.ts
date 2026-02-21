@@ -117,7 +117,7 @@ ${colors.bold}Examples:${colors.reset}
   swain image generate "fishing scene at sunset" --style=golden-hour --json
 
 ${colors.bold}Notes:${colors.reset}
-  - Uses Replicate API (nano-banana model) → uploads to Cloudflare Images
+  - Uses Replicate API (Nano Banana Pro) → uploads to Cloudflare Images
   - Your prompt is the creative vision — aspect ratio, bleed, no-text are added automatically
   - Pass --style=<id> to catalog which style was used (metadata only)
   - Typical generation time: 10-30 seconds

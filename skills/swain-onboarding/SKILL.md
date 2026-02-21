@@ -100,7 +100,17 @@ message action=send channel=whatsapp target={{phone}} message="Your short reply 
 message action=send channel=whatsapp target={{phone}} message="[Short warm reaction]. Give me a few 🤙"
 ```
 
-Then spawn a sub-agent for the briefing build (Phase 3) and reply `NO_REPLY`.
+Then spawn a sub-agent for the briefing build (Phase 3).
+
+After spawning, send ONE more message letting them know you're around:
+```
+message action=send channel=whatsapp target={{phone}} message="By the way — you can always text me. Want different stuff, have questions about your boat, need a hand with something — I'm here."
+```
+
+Don't copy that verbatim — say it in your own voice. Keep it short. The point is:
+they should know this is a two-way relationship, not a broadcast.
+
+Then reply `NO_REPLY`.
 
 **DON'T over-collect.** Do NOT ask about boat size, engine type, model year,
 experience level, kids ages, or anything else. You'll learn all of that over time.

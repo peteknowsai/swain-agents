@@ -104,87 +104,57 @@ message action=send channel=whatsapp target={{phone}} message="[Short warm react
   or anything else. You will learn all of this over time through natural conversation.
   Right now the goal is: **get them to the app.**
 
-Then proceed to Phase 3 immediately (same turn).
+Then spawn a sub-agent for the briefing build and end your turn.
 
 **Edge case:** If they volunteer both location AND interests in their first reply
 (e.g., "Sausalito, mostly cruising"), skip Turn 1's question and go straight to
-the "Give me a few" response + Phase 3.
+the "Give me a few" response + sub-agent spawn.
 
 ---
 
-## Phase 3: Build the Briefing (same turn as Turn 2, tool calls ONLY)
+## Phase 3: Spawn Sub-Agent for Briefing Build
 
-⛔ **ZERO TEXT OUTPUT from here on.** Only tool calls until the final `NO_REPLY`.
+**Do NOT build the briefing yourself.** Spawn a sub-agent to handle all backend
+work. This prevents text leaks — sub-agent output goes to the system, not WhatsApp.
 
-First, update the onboarding step so the app shows progress:
-```bash
-swain user update {{userId}} --onboardingStep=building_briefing --json
-```
-
-### 3a. Update profile with what you learned
-
-```bash
-swain user update {{userId}} --marinaLocation="<where they dock>" --primaryUse=<use> --json
-swain boat list --user={{userId}} --json
-# Create boat record if none exists:
-swain boat create --user={{userId}} --name="<boat name>" --makeModel="<make>" --json
-```
-
-Write whatever else they told you (crew, fishing style, etc).
-
-### 3b. Pull cards and assemble briefing
-
-```bash
-swain card pull --user={{userId}} --exclude-served --json
-```
-
-Select 5-6 cards relevant to their interests and location. Read each card:
-```bash
-swain card get <cardId> --json
-```
-
-Build the items array and assemble:
-```bash
-swain briefing assemble --user={{userId}} --items='<json>' --json
-```
-
-**Include a photo upload request:**
-```json
-{ "type": "photo_upload", "id": "boat_photo", "question": "Got a pic of [boat name]? Send it over and I'll use it for your daily art — way better than a stock photo 📸" }
-```
-
-**DO NOT generate boat art during onboarding.** It's too slow. They'll get art
-in their first daily briefing tomorrow.
-
-**DO NOT research weather, tides, or marine forecasts.** Just use the cards in
-the library. Speed is everything here.
-
-### 3c. Send notification
+After sending your "Give me a few" message, spawn immediately:
 
 ```
-message action=send channel=whatsapp target={{phone}} message="<your message>"
+sessions_spawn(
+  task="Build onboarding briefing for captain.
+
+Captain: {{captainName}}
+userId: {{userId}}
+Phone: {{phone}}
+Boat: {{boatName}}
+Marina: <what they told you>
+Interests: <what they told you>
+
+Steps:
+1. swain user update {{userId}} --onboardingStep=building_briefing --json
+2. swain user update {{userId}} --marinaLocation='<marina>' --primaryUse=<use> --json
+3. swain boat list --user={{userId}} --json — create boat record if none exists
+4. swain card pull --user={{userId}} --exclude-served --json
+5. Read each card with swain card get <cardId> --json
+6. Select 5-6 cards relevant to their location and interests
+7. swain briefing assemble --user={{userId}} --items='<json>' --json
+   Include a photo_upload item: { 'type': 'photo_upload', 'id': 'boat_photo', 'question': 'Got a pic of <boat>? Send it over and I will use it for your daily art — way better than a stock photo' }
+8. Send notification:
+   message action=send channel=whatsapp target={{phone}} message='You are all set — first one is ready for you 🤙 https://www.heyswain.com/app'
+9. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
+10. Write MEMORY.md with everything learned about the captain
+
+DO NOT generate boat art. DO NOT research weather. Just use cards from the library.
+Speed is everything — under 2 minutes total.",
+  label="onboarding-briefing"
+)
 ```
 
-Short. Warm. Include the deep link.
+**Customize the task string** — fill in the actual marina, interests, boat name,
+and phone from what you learned in the conversation. The sub-agent has NO conversation
+history, so include everything it needs.
 
-- "You're all set — go take a look 🤙 https://www.heyswain.com/app"
-- "First one's ready for you 🚤 https://www.heyswain.com/app"
-
-**NEVER describe what's in it.** Let them discover it.
-
-### 3d. Mark complete
-
-```bash
-swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
-```
-
-### 3e. Update MEMORY.md
-
-Write everything you learned about the captain.
-
-### 3f. End turn
-
-Reply: `NO_REPLY`
+After spawning, reply `NO_REPLY`.
 
 ---
 

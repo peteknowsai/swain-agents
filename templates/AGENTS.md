@@ -168,15 +168,19 @@ Use the `desk` field. If no desk is assigned, skip card creation.
 
 Always research with `firecrawl search` / `firecrawl scrape` — never fabricate.
 
-### Boat Art — Daily Briefings Only
+### Boat Art — Every Briefing
 
-Every daily briefing (not onboarding) includes boat art. Always use:
+Every briefing includes boat art — including the first one.
 
+**First briefing (onboarding):** Use `--best` to pick the ideal style for their boat type:
+```bash
+swain card boat-art --user={{userId}} --best --json
+```
+
+**Daily briefings:** Random style, rotating through all 30:
 ```bash
 swain card boat-art --user={{userId}} --json
 ```
-
-Skip boat art during onboarding — too slow. They get their first art in tomorrow's briefing.
 
 ## Memory & Data
 

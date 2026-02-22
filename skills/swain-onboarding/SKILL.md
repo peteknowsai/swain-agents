@@ -148,15 +148,19 @@ Steps:
         message='CONTENT_GAP: topic=new-desk-needed, location=<location>, userId={{userId}}, captain=<name>, desk=unknown')
       Do NOT assign a desk — Mr. Content will provision one and assign it.
 4. swain boat list --user={{userId}} --json — create boat record if none exists
-5. Read the swain-advisor skill and follow its briefing workflow (steps 3-10)
+5. Generate ONE boat art card using --best (picks ideal style for their boat type):
+   swain card boat-art --user={{userId}} --best --json
+   Include this card in the briefing. This is the captain's first piece of art —
+   it should be a wow moment.
+6. Read the swain-advisor skill and follow its briefing workflow (steps 3-10)
    to pull cards, write commentary, and assemble the briefing.
    Include a photo_upload item asking for a pic of their boat.
-6. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
-7. Write MEMORY.md with everything learned about the captain
-8. Send the 'all set' notification via WhatsApp:
+7. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
+8. Write MEMORY.md with everything learned about the captain
+9. Send the 'all set' notification via WhatsApp:
    message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
-DO NOT generate boat art. DO NOT research weather. Just use cards from the library.
+DO NOT research weather. Just use cards from the library (plus the one boat art card).
 Speed is everything — under 2 minutes total.
 
 ⚠️ CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.

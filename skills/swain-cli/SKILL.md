@@ -58,7 +58,7 @@ swain card get <cardId> [--json]
 swain card library --user=<userId> [--json]
 swain card create --desk=<desk> --title=<text> --subtext=<text> --content=<md> [options] [--json]
 swain card image <cardId> --prompt="..." [--style=<id>] [--bg-color=<hex>] [--json]
-swain card boat-art --user=<userId> [--sampler] [--json]
+swain card boat-art --user=<userId> [--style=<id>] [--sampler] [--json]
 swain card coverage [--desk=<desk>] [--json]
 ```
 

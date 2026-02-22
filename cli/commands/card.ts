@@ -13,8 +13,7 @@ import {
   printError,
   colors
 } from '../lib/worker-client';
-import { generateImage as replicateGenerate } from '../lib/replicate-image';
-import { ART_STYLES } from '../lib/boat-art';
+import { generate, PROMPT_FULL_BLEED, ART_STYLES } from '../lib/image';
 
 /**
  * Get today's date in Eastern Time (YYYY-MM-DD format)
@@ -661,21 +660,17 @@ async function generateImage(args: string[]): Promise<void> {
   const agentPrompt = params['prompt'] || `${card.title}. ${card.subtext}`;
   const styleId = params['style'] || card.styleId || null;
 
-  // Build full prompt: agent prompt + style prompt + technical suffix
+  // Build full prompt: agent prompt + style prompt
   const style = styleId ? ART_STYLES.find((s) => s.id === styleId) : null;
-  const fullPrompt = [
-    agentPrompt,
-    style ? style.prompt : null,
-    'Full-bleed, no text or labels.',
-  ].filter(Boolean).join('. ');
+  const combinedPrompt = [agentPrompt, style ? style.prompt : null].filter(Boolean).join('. ');
 
   if (!jsonOutput) {
     print(`${colors.dim}Generating image for "${card.title}"...${colors.reset}`);
-    print(`${colors.dim}Prompt: ${fullPrompt.slice(0, 80)}${fullPrompt.length > 80 ? '...' : ''}${colors.reset}`);
+    print(`${colors.dim}Prompt: ${combinedPrompt.slice(0, 80)}${combinedPrompt.length > 80 ? '...' : ''}${colors.reset}`);
   }
 
-  // 2. Generate image directly via Replicate → Cloudflare
-  const result = await replicateGenerate(fullPrompt);
+  // 2. Generate image via unified image library
+  const result = await generate(combinedPrompt, { suffix: PROMPT_FULL_BLEED });
   const imageUrl = result.url;
   const patchBody: Record<string, any> = { image: imageUrl };
   if (params['bg-color']) patchBody.backgroundColor = params['bg-color'];
@@ -716,16 +711,16 @@ async function boatArt(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Dynamic import of boat-art lib
+  // Dynamic import of image lib
   const {
     ART_STYLES,
     buildBoatArtPrompt,
-    generateBoatArt,
+    generate: generateImg,
     pickRandomStyle,
     getSamplerStyles,
     getStyleDefaultBgColor,
     buildBoatArtContent,
-  } = await import('../lib/boat-art');
+  } = await import('../lib/image');
 
   // 1. Fetch user profile
   const userResult = await workerRequest(`/users/${userId}`);
@@ -739,7 +734,6 @@ async function boatArt(args: string[]): Promise<void> {
   const boatType = user.boatType || undefined;
   const boatMakeModel = user.boatMakeModel || undefined;
   const boatColor = undefined; // Not in schema yet — future enhancement
-  const marina = user.marinaLocation || user.location || undefined;
   const boatImageUrl = user.boatImageUrl || undefined;
   const hasPhoto = !!boatImageUrl;
   const agentId = getAgentId(params) || process.env.AGENT_ID || 'advisor';
@@ -779,12 +773,11 @@ async function boatArt(args: string[]): Promise<void> {
         boatType,
         boatMakeModel,
         boatColor,
-        marina,
         style,
         hasPhoto,
       });
 
-      const result = await generateBoatArt(prompt, hasPhoto ? boatImageUrl : undefined);
+      const result = await generateImg(prompt, { imageInputUrl: hasPhoto ? boatImageUrl : undefined });
 
       // 4. Create card with background color and rich content
       const cardId = `card_${crypto.randomUUID().slice(0, 8)}`;
@@ -920,9 +913,9 @@ ${colors.bold}OPTIONS (coverage)${colors.reset}
 ${colors.bold}OPTIONS (boat-art)${colors.reset}
   --user=<userId>         User ID (required)
   --sampler               Generate 6-style sampler (for onboarding)
-  --style=<id>            Specific style (watercolor, oil-painting, pop-art,
-                          japanese-woodblock, impressionist, comic-book,
-                          art-deco, minimalist, sunset-silhouette, neon)
+  --style=<id>            Specific style (20 available, e.g. clean-line,
+                          watercolor, pop-art, retro-poster, gold-foil;
+                          run with invalid id to see full list)
   --agent-id=<id>         Agent ID (defaults to AGENT_ID env var)
   --json                  Output as JSON
 

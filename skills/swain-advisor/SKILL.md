@@ -36,7 +36,30 @@ briefing.
    first** — these are cards you created specifically for this captain during heartbeats,
    inspired by your conversations. Prioritize them. Then timely cards, then evergreen.
 
-4. **Get captain context from Convex and memory**
+4. **Fill the gap if needed**
+   Count how many usable content cards came back from the pull (exclude boat art).
+   If fewer than **9** content candidates:
+
+   1. Identify topics the captain cares about — check their profile, MEMORY.md,
+      and recent conversations
+   2. Research 2-3 topics with `firecrawl_search` — quick searches, not deep dives
+   3. Create cards one at a time:
+      ```bash
+      swain card create --desk=<desk> --user={{userId}} \
+        --category=<category> --title="<headline>" \
+        --subtext="<2-3 sentence preview>" \
+        --content="<full markdown>" \
+        --freshness=<timely|evergreen> --json
+      ```
+   4. These cards go straight into today's briefing selection pool
+
+   **Create cards one at a time** — research, create, then move to the next. Don't
+   try to batch all research and all creation into one pass.
+
+   If `firecrawl_search` is slow or rate-limited, create cards from your own knowledge
+   (boat type tips, general boating content for the captain's region) rather than failing.
+
+5. **Get captain context from Convex and memory**
    ```bash
    swain boat profile --user={{userId}} --json
    ```
@@ -51,46 +74,50 @@ briefing.
    - Check maintenance dates for relevant service content
    - Use `favoriteWatersideDining`, `preferredWaterways` for destination cards
 
-5. **Generate today's boat art**
+6. **Generate today's boat art**
    ```bash
    swain card boat-art --user={{userId}} --json
    ```
    This creates a card with stylized art of the captain's boat. Include it in every
    briefing. Read the **swain-boat-art** skill for style options.
 
-6. **Select 5-8 cards** based on:
+7. **Select 8-10 cards** based on:
    - **User-tagged cards first** — cards you created for this captain (marked `forUser` in pull results)
    - **Prioritize timely cards** that are still valid today (check `expires_at`)
    - **Mix in evergreen cards** the captain hasn't seen yet
    - **Match the captain's interests** from MEMORY.md and recent conversations
    - **Avoid repeating** cards from yesterday's briefing
 
-7. **Flag content gaps** — If your captain cares about something and the library
+   **Hard floor: every briefing must have at least 8 cards total** (including boat art).
+   If you still can't reach 8 after creating cards on the fly, include what you have —
+   but this should be rare.
+
+8. **Flag content gaps** — If your captain cares about something and the library
    doesn't have it, tell Mr. Content:
    ```
    sessions_send(sessionKey="agent:mr-content:main", message="My captain [name] is into [topic] around [location] but I can't find anything in the library on it. Would be great to get some content on this.")
    ```
    Mr. Content coordinates the content desks — he'll route it to the right one.
 
-8. **Read full card content** for each selected card:
+9. **Read full card content** for each selected card:
    ```bash
    swain card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
-9. **Build briefing items** as a JSON array:
+10. **Build briefing items** as a JSON array:
    - Start with a greeting text item (personalized, 1-2 sentences)
    - For each selected card: add a commentary text item, then a card reference
    - End with a closing note text item
 
-10. **Assemble the briefing**
+11. **Assemble the briefing**
     ```bash
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```
     The server validates cards, fills in full card data, and marks them as served.
     Add `--force` to replace an existing briefing for the same date.
 
-11. **Notify your captain**
+12. **Notify your captain**
     Send a short WhatsApp message letting them know the briefing is ready. Include
     the `heyswain://` deep link so they can tap straight into the app.
 

@@ -152,16 +152,27 @@ Steps:
    swain card boat-art --user={{userId}} --best --json
    Include this card in the briefing. This is the captain's first piece of art —
    it should be a wow moment.
-6. Read the swain-advisor skill and follow its briefing workflow (steps 3-10)
+6. The first briefing must have at least **5 cards total** (including the boat art
+   card you just generated). After pulling cards in the advisor workflow, if you
+   have fewer than 4 content cards, create quick cards on the fly:
+   - Topics: captain's stated interests + marina location + boat type
+     (e.g., fishing spots near their marina, local waterway guide, their boat
+     model maintenance tips)
+   - Research each with a quick firecrawl_search — one search per card, grab
+     the top result, write a card
+   - Create cards one at a time (research → create → next)
+   - If firecrawl is slow, create cards from your own knowledge instead
+7. Read the swain-advisor skill and follow its briefing workflow (steps 3-11)
    to pull cards, write commentary, and assemble the briefing.
    Include a photo_upload item asking for a pic of their boat.
-7. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
-8. Write MEMORY.md with everything learned about the captain
-9. Send the 'all set' notification via WhatsApp:
+8. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
+9. Write MEMORY.md with everything learned about the captain
+10. Send the 'all set' notification via WhatsApp:
    message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
-DO NOT research weather. Just use cards from the library (plus the one boat art card).
-Speed is everything — under 2 minutes total.
+Prefer library cards. If the library has fewer than 4 content cards for this captain,
+create a few quick cards based on their interests and location. Speed matters — quick
+firecrawl searches, not deep research. Under 5 minutes total.
 
 ⚠️ CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.
 Do NOT write status reports, summaries, or any other text. If you write anything
@@ -184,8 +195,9 @@ You do NOT need to wait for a completion signal or send anything else.
 ## Timing
 
 The entire flow from captain's first reply to "you're all set" notification should
-take **under 2 minutes.** If it's taking longer, you're doing too much. Strip it
-down. The goal is to get them into the app excited, not to build the perfect briefing.
-Tomorrow's briefing will be better. And the day after that even better.
+take **under 5 minutes.** A thin briefing is worse than a slightly slower one — the
+captain already got "give me a few" and they're not watching a clock. The goal is to
+get them into the app excited. Tomorrow's briefing will be better. And the day after
+that even better.
 
 **If anything fails, recover silently. Never send errors to WhatsApp.**

@@ -105,24 +105,40 @@ briefing.
    ```
    Read each card to understand the content before writing your commentary.
 
-10. **Quality gate — polish every card before assembly**
+10. **Quality gate — style and polish every card before assembly**
 
-    Two passes, in order (you need the image before you can pick a matching bg color):
+    Boat-art cards are exempt from all of this — they already have images, styles, and
+    don't use background colors.
 
-    **Pass 1: Generate missing images**
-    For each selected card, check if `image` is present (and not a placeholder URL).
-    If missing, generate one:
+    For every **content card** that's missing an image, style it like the stylist would:
+
+    **Step A: Pick a style** based on the card's category and content:
+
+    | Category | Best styles | Default bg color |
+    |----------|------------|------------------|
+    | weather-tides | `watercolor`, `japanese-woodblock` | `#4a6fa5` |
+    | fishing | `watercolor`, `japanese-woodblock` | `#6b8f71` |
+    | dining-lifestyle | `art-deco`, `retro-poster` | `#d4a373` |
+    | safety | `comic-book`, `pop-art` | `#e63946` |
+    | destinations | `retro-poster`, `vintage-florida` | `#e76f51` |
+    | gear-maintenance | `blueprint`, `clean-line` | `#2d3748` |
+    | events-wildlife | `pop-art`, `comic-book` | `#f77f00` |
+    | general/other | `screen-print`, `colored-pencil` | `#5c4033` |
+
+    Vary styles across cards — don't use the same style twice in one briefing.
+
+    **Step B: Write a scene prompt** — describe what the image should depict based on
+    the card's content. Be specific ("Redfish tailing in shallow grass flats at dawn")
+    not generic ("fish in water"). 1-2 sentences max.
+
+    **Step C: Generate the styled image**
     ```bash
-    swain card image <cardId> --fast --json
+    swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
     ```
-    Boat-art cards are exempt — they already have images from `swain card boat-art`.
 
-    **Pass 2: Set missing background colors**
-    For each content card (NOT boat-art), check if `backgroundColor` is set.
-    If missing: view the card's image URL (you're multimodal — you can see images),
-    pick a dominant color from the image, and darken it enough to work as a card
-    background (white text sits on top, so it needs to be dark enough for contrast).
-    Boat-art cards don't use background colors — the app displays just the image.
+    For cards that already have images but are missing `backgroundColor`:
+    View the image (you're multimodal), pick a dominant color darkened enough for
+    white text contrast, then:
     ```bash
     swain card update <cardId> --bg-color=#... --json
     ```
@@ -181,16 +197,26 @@ Never fabricate content.
 
 ## Briefing Item Types
 
+⚠️ **ONLY these three types exist.** Using any other type (greeting, closing, image,
+photo-upload, etc.) will break the briefing on iOS.
+
 ```json
-// Text item (greeting, commentary, closing)
+// Text item (greeting, commentary, closing — all use type "text")
 { "type": "text", "content": "Your personalized message here" }
 
 // Card reference (server hydrates full card data)
 { "type": "card", "id": "card_abc123" }
+
+// Photo upload prompt (onboarding only — asks captain for a boat photo)
+{ "type": "photo_upload", "prompt": "Send a photo of your boat" }
 ```
 
-You do NOT need to include card titles, images, or content in the items — just the
-card ID. The server fills in everything.
+**Critical format rules:**
+- Text items use `"content"` (NOT `"text"`, NOT `"message"`)
+- Card items use `"id"` (NOT `"cardId"`) — just the ID, server fills in everything
+- Photo upload uses underscore: `photo_upload` (NOT `photo-upload`)
+- There is NO `"greeting"` type — greetings are `{ "type": "text", "content": "..." }`
+- There is NO `"closing"` type — closings are `{ "type": "text", "content": "..." }`
 
 ## Commentary Guidelines
 

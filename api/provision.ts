@@ -544,7 +544,29 @@ export async function provisionContentDesk({ name, region }: { name: string; reg
 
 export async function listDesks(): Promise<unknown[]> {
   const config = await readConfig();
-  return (config.agents?.list ?? []).filter((a: any) => (a.id || "").endsWith("-desk"));
+  return (config.agents?.list ?? [])
+    .filter((a: any) => (a.id || "").endsWith("-desk"))
+    .map((a: any) => ({ ...a, paused: !a.heartbeat }));
+}
+
+export async function pauseDesk(name: string): Promise<void> {
+  const agentId = `${name}-desk`;
+  const config = await readConfig();
+  const agent = (config.agents?.list ?? []).find((a: any) => a.id === agentId);
+  if (!agent) throw new Error(`Desk agent ${agentId} not found`);
+  delete agent.heartbeat;
+  await writeConfig(config);
+  console.log(`Content desk ${agentId} paused (heartbeat removed)`);
+}
+
+export async function unpauseDesk(name: string): Promise<void> {
+  const agentId = `${name}-desk`;
+  const config = await readConfig();
+  const agent = (config.agents?.list ?? []).find((a: any) => a.id === agentId);
+  if (!agent) throw new Error(`Desk agent ${agentId} not found`);
+  agent.heartbeat = { every: "4h" };
+  await writeConfig(config);
+  console.log(`Content desk ${agentId} unpaused (heartbeat: 4h)`);
 }
 
 export async function deleteDesk(name: string): Promise<void> {

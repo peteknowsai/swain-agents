@@ -9,6 +9,8 @@ import {
   provisionContentDesk,
   listDesks,
   deleteDesk,
+  pauseDesk,
+  unpauseDesk,
 } from "./provision";
 import { type CaptainInput } from "./templates";
 
@@ -115,6 +117,20 @@ const server = Bun.serve({
       // GET /desks — list content desks
       if (pathname === "/desks" && method === "GET") {
         return json({ desks: await listDesks() });
+      }
+
+      // POST /desks/:name/pause — pause content desk
+      const deskPauseMatch = matchRoute(pathname, "/desks/:name/pause");
+      if (deskPauseMatch && method === "POST") {
+        await pauseDesk(deskPauseMatch.name);
+        return json({ status: "paused", name: deskPauseMatch.name });
+      }
+
+      // POST /desks/:name/unpause — unpause content desk
+      const deskUnpauseMatch = matchRoute(pathname, "/desks/:name/unpause");
+      if (deskUnpauseMatch && method === "POST") {
+        await unpauseDesk(deskUnpauseMatch.name);
+        return json({ status: "active", name: deskUnpauseMatch.name });
       }
 
       // DELETE /desks/:name — delete content desk

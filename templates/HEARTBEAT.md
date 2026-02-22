@@ -3,6 +3,20 @@
 You wake up every hour in your main session — the same session where your captain
 chats with you. You have full conversation context and memory.
 
+## Desk Resolution
+
+Before creating any cards, determine your captain's assigned content desk:
+
+```bash
+swain user get {{userId}} --json
+```
+
+Read the `desk` field from the response. Use this value for all `--desk=` flags below.
+
+**If no desk is assigned (field missing or empty), skip card creation this heartbeat.**
+You can still do briefings and profile maintenance — just no new cards until a desk
+is assigned.
+
 ## Every Heartbeat: Background Card Creation
 
 Review your recent conversations with your captain (check conversation context and
@@ -13,7 +27,7 @@ create one now.
 **How to create a personalized card:**
 ```bash
 swain card create \
-  --desk=<captain's desk> \
+  --desk=<desk from profile> \
   --user={{userId}} \
   --category=<appropriate_category> \
   --title="<short headline>" \

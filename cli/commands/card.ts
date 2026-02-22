@@ -787,11 +787,10 @@ async function boatArt(args: string[]): Promise<void> {
 
       // 4. Create card with background color and rich content
       const cardId = `card_${crypto.randomUUID().slice(0, 8)}`;
-      const title = `${boatName} — ${style.name}`;
+      const title = style.name;
       const subtext = isSampler
         ? `Your boat reimagined in ${style.name.toLowerCase()} style`
         : `Today's ${style.name.toLowerCase()} art of ${boatName}`;
-      const content = buildBoatArtContent({ boatName, style, isSampler });
       const backgroundColor = getStyleDefaultBgColor(style.id);
 
       await workerRequest('/cards', {
@@ -802,10 +801,10 @@ async function boatArt(args: string[]): Promise<void> {
           userId,
           type: 'card',
           category: 'boat-art',
+          styleId: style.id,
           freshness: 'evergreen',
           title,
           subtext,
-          contentMarkdown: content,
           image: result.url,
           backgroundColor,
           cardDate: getTodayDate(),

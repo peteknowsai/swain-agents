@@ -120,3 +120,7 @@ A real photo makes the art dramatically better. Ways to get one:
   ```
 
 Once a photo is on file, all future boat art automatically uses it for image-to-image generation.
+
+## Art Display Mode (iOS)
+
+Boat art cards include a `styleId` field, which triggers **art display mode** on iOS: full-bleed image rendering, automatic bookmarking, and the title overridden to the style name. You don't set this manually — the `swain card boat-art` command handles it — but it's why art cards look different from regular cards in the app.

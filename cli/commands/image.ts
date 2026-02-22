@@ -13,7 +13,7 @@ import {
   printError,
   colors
 } from '../lib/worker-client';
-import { generateImage } from '../lib/replicate-image';
+import { generate } from '../lib/image';
 
 /**
  * Parse CLI arguments
@@ -34,14 +34,6 @@ function parseArgs(args: string[]): Record<string, string> {
     }
   }
   return parsed;
-}
-
-/**
- * Append technical requirements to the agent's creative prompt.
- * Aspect ratio is handled by the model parameter, not the prompt.
- */
-function wrapPrompt(creativePrompt: string): string {
-  return `${creativePrompt.trim()}. Full-bleed, no text or labels.`;
 }
 
 /**
@@ -69,9 +61,7 @@ async function generateImageCommand(args: string[]): Promise<void> {
       if (styleId) print(`  Style (catalog): ${styleId}`);
     }
 
-    // Wrap the agent's creative prompt with technical boilerplate
-    const fullPrompt = wrapPrompt(prompt);
-    const result = await generateImage(fullPrompt);
+    const result = await generate(prompt);
 
     if (jsonOutput) {
       console.log(JSON.stringify({

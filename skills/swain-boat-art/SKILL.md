@@ -8,6 +8,14 @@ metadata: { "openclaw": { "emoji": "🎨", "requires": { "bins": ["swain"] } } }
 
 Every captain gets a new piece of art featuring their boat, every single day. This is a signature Swain feature. Art is print-ready — optimized for posters, stickers, coffee mugs, and koozies.
 
+## ⚠️ Critical: Only Use This Command
+
+**NEVER create boat-art cards with `swain card create`.** Always use `swain card boat-art`.
+This command automatically sets `styleId`, `backgroundColor`, `category`, and `title` — all
+required for iOS art display mode. Without `styleId`, the hydration layer can't resolve the
+style name, and the card renders broken on iOS (no full-bleed image, no title override, no
+auto-bookmarking).
+
 ## How It Works
 
 The `swain card boat-art` command generates stylized art of the captain's boat and creates a card automatically.

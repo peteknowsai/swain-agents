@@ -105,19 +105,41 @@ briefing.
    ```
    Read each card to understand the content before writing your commentary.
 
-10. **Build briefing items** as a JSON array:
+10. **Quality gate — polish every card before assembly**
+
+    Two passes, in order (you need the image before you can pick a matching bg color):
+
+    **Pass 1: Generate missing images**
+    For each selected card, check if `image` is present (and not a placeholder URL).
+    If missing, generate one:
+    ```bash
+    swain card image <cardId> --fast --json
+    ```
+    Boat-art cards are exempt — they already have images from `swain card boat-art`.
+
+    **Pass 2: Set missing background colors**
+    For each content card (NOT boat-art), check if `backgroundColor` is set.
+    If missing: view the card's image URL (you're multimodal — you can see images),
+    pick a dominant color from the image, and darken it enough to work as a card
+    background (white text sits on top, so it needs to be dark enough for contrast).
+    Boat-art cards don't use background colors — the app displays just the image.
+    ```bash
+    swain card update <cardId> --bg-color=#... --json
+    ```
+
+11. **Build briefing items** as a JSON array:
    - Start with a greeting text item (personalized, 1-2 sentences)
    - For each selected card: add a commentary text item, then a card reference
    - End with a closing note text item
 
-11. **Assemble the briefing**
+12. **Assemble the briefing**
     ```bash
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```
     The server validates cards, fills in full card data, and marks them as served.
     Add `--force` to replace an existing briefing for the same date.
 
-12. **Notify your captain**
+13. **Notify your captain**
     Send a short WhatsApp message letting them know the briefing is ready. Include
     the `heyswain://` deep link so they can tap straight into the app.
 

@@ -100,10 +100,22 @@ messages. You're getting to know each other.
 message action=send channel=whatsapp target={{phone}} message="Your short reply here"
 ```
 
-**Once you know both marina AND interests**, wrap up the conversation:
+**Once you know both marina AND interests**, wrap up the conversation.
+
+Set realistic expectations — you're about to go research their waters and put their
+first briefing together. That takes a few minutes, not a few seconds. Don't say
+"give me a sec" or "one moment" — be upfront about the wait without being clinical.
+The captain should feel like you're going to go do real work for them, not just
+push a button.
+
 ```
-message action=send channel=whatsapp target={{phone}} message="[Short warm reaction]. Give me a few 🤙"
+message action=send channel=whatsapp target={{phone}} message="<your message>"
 ```
+
+**Examples** (don't copy verbatim — say it in your voice):
+- "Love it. Let me go dig into what's happening around [marina] and put your first morning report together. Back in a few minutes."
+- "Nice — I know those waters. Give me a few minutes to pull everything together for you."
+- "Perfect. I'm gonna go do some homework on [area] and get your first report ready. Sit tight."
 
 Then spawn a sub-agent for the briefing build (Phase 3).
 
@@ -153,13 +165,10 @@ Steps:
         message='CONTENT_GAP: topic=new-desk-needed, location=<location>, userId={{userId}}, captain=<name>, desk=unknown')
       Do NOT assign a desk — Mr. Content will provision one and assign it.
 4. swain boat list --user={{userId}} --json — create boat record if none exists
-5. Generate ONE boat art card using --best (picks ideal style for their boat type):
-   swain card boat-art --user={{userId}} --best --json
-   Include this card in the briefing. This is the captain's first piece of art —
-   it should be a wow moment.
-6. The first briefing must have at least **5 cards total** (including the boat art
-   card you just generated). After pulling cards in the advisor workflow, if you
-   have fewer than 4 content cards, create quick cards on the fly:
+5. Pull cards and create content if needed:
+   The first briefing must have at least **5 cards total** (including boat art).
+   After pulling cards in the advisor workflow, if you have fewer than 4 content
+   cards, create quick cards on the fly:
    - Topics: captain's stated interests + marina location + boat type
      (e.g., fishing spots near their marina, local waterway guide, their boat
      model maintenance tips)
@@ -167,12 +176,34 @@ Steps:
      the top result, write a card
    - Create cards one at a time (research → create → next)
    - If firecrawl is slow, create cards from your own knowledge instead
-7. Read the swain-advisor skill and follow its briefing workflow (steps 3-11)
-   to pull cards, write commentary, and assemble the briefing.
-   Include a photo_upload item asking for a pic of their boat.
-8. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
-9. Write MEMORY.md with everything learned about the captain
-10. Send the 'all set' notification via WhatsApp:
+6. Quality gate — polish every content card before assembly:
+   **Pass 1: Generate missing images**
+   For each selected content card, check if `image` is present (not a placeholder).
+   If missing: swain card image <cardId> --fast --json
+   Boat-art cards are exempt (they already have images).
+   **Pass 2: Set missing background colors**
+   For each content card (NOT boat-art), check if `backgroundColor` is set.
+   If missing: view the card's image (you're multimodal — you can see image URLs),
+   pick a dominant color, darken it enough for white text contrast, then:
+   swain card update <cardId> --bg-color=#... --json
+   Boat-art cards don't use background colors — the app displays just the image.
+7. Generate ONE boat art card AFTER content cards are polished:
+   ALWAYS use: swain card boat-art --user={{userId}} --best --json
+   NEVER create boat-art cards with swain card create. The boat-art command handles
+   styleId, print-ready prompts, and iOS art display mode. Manual boat-art cards
+   render broken.
+   Include this card in the briefing. This is the captain's first piece of art —
+   it should be a wow moment.
+8. Read the swain-advisor skill and follow its briefing workflow to pull cards,
+   write commentary, and assemble the briefing with this ordering:
+   - Greeting → content cards with commentary → **boat art card last** → photo upload item
+   - Boat art commentary should bridge to the photo ask: something like
+     'Here's your boat in [style]. Every day you get a new one in a different
+     style. Send me a photo and these get way better.'
+   - Photo upload item immediately after boat art
+9. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
+10. Write MEMORY.md with everything learned about the captain
+11. Send the 'all set' notification via WhatsApp:
    message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
 Prefer library cards. If the library has fewer than 4 content cards for this captain,

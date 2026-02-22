@@ -13,6 +13,9 @@
 const REPLICATE_MODEL_URL =
   "https://api.replicate.com/v1/models/google/nano-banana-pro/predictions";
 
+const REPLICATE_MODEL_URL_FAST =
+  "https://api.replicate.com/v1/models/google/nano-banana/predictions";
+
 const CF_DELIVERY_BASE =
   "https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA";
 
@@ -57,7 +60,8 @@ function checkEnv(): {
 async function runReplicate(
   prompt: string,
   replicateToken: string,
-  imageInputUrl?: string
+  imageInputUrl?: string,
+  fast?: boolean
 ): Promise<{ outputUrl: string; predictionId: string }> {
   // Build input — image-to-image when a source image is provided
   const input: Record<string, any> = {
@@ -70,7 +74,8 @@ async function runReplicate(
   }
 
   // Create prediction
-  const createRes = await fetch(REPLICATE_MODEL_URL, {
+  const modelUrl = fast ? REPLICATE_MODEL_URL_FAST : REPLICATE_MODEL_URL;
+  const createRes = await fetch(modelUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${replicateToken}`,
@@ -214,7 +219,7 @@ async function uploadToCloudflare(
  */
 export async function generateImage(
   prompt: string,
-  opts?: { imageInputUrl?: string }
+  opts?: { imageInputUrl?: string; fast?: boolean }
 ): Promise<ReplicateImageResult> {
   const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
 
@@ -222,7 +227,8 @@ export async function generateImage(
   const { outputUrl, predictionId } = await runReplicate(
     prompt,
     replicateToken,
-    opts?.imageInputUrl
+    opts?.imageInputUrl,
+    opts?.fast
   );
 
   // Step 2: Download and upload to Cloudflare Images

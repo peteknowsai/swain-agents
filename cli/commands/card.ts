@@ -13,7 +13,7 @@ import {
   printError,
   colors
 } from '../lib/worker-client';
-import { generate, PROMPT_FULL_BLEED, ART_STYLES } from '../lib/image';
+import { generate, PROMPT_FULL_BLEED, PROMPT_CARD_CONTEXT, ART_STYLES } from '../lib/image';
 
 /**
  * Get today's date in Eastern Time (YYYY-MM-DD format)
@@ -659,18 +659,22 @@ async function generateImage(args: string[]): Promise<void> {
 
   const agentPrompt = params['prompt'] || `${card.title}. ${card.subtext}`;
   const styleId = params['style'] || card.styleId || null;
+  const fast = params['fast'] === 'true';
 
   // Build full prompt: agent prompt + style prompt
   const style = styleId ? ART_STYLES.find((s) => s.id === styleId) : null;
   const combinedPrompt = [agentPrompt, style ? style.prompt : null].filter(Boolean).join('. ');
 
+  // Content cards use PROMPT_CARD_CONTEXT (no baked-in title text); styled/art cards use PROMPT_FULL_BLEED
+  const suffix = style ? PROMPT_FULL_BLEED : PROMPT_CARD_CONTEXT;
+
   if (!jsonOutput) {
-    print(`${colors.dim}Generating image for "${card.title}"...${colors.reset}`);
+    print(`${colors.dim}Generating image for "${card.title}"${fast ? ' (fast)' : ''}...${colors.reset}`);
     print(`${colors.dim}Prompt: ${combinedPrompt.slice(0, 80)}${combinedPrompt.length > 80 ? '...' : ''}${colors.reset}`);
   }
 
   // 2. Generate image via unified image library
-  const result = await generate(combinedPrompt, { suffix: PROMPT_FULL_BLEED });
+  const result = await generate(combinedPrompt, { suffix, fast });
   const imageUrl = result.url;
   const patchBody: Record<string, any> = { image: imageUrl };
   if (params['bg-color']) patchBody.backgroundColor = params['bg-color'];
@@ -926,6 +930,7 @@ ${colors.bold}OPTIONS (boat-art)${colors.reset}
 ${colors.bold}OPTIONS (image)${colors.reset}
   --prompt=<text>         Custom image prompt (default: title + subtext)
   --style=<id>            Style ID (prompt appended automatically)
+  --fast                  Use fast model (nano-banana) instead of quality (nano-banana-pro)
   --bg-color=<hex>        Set background color along with image
   --json                  Output as JSON
 

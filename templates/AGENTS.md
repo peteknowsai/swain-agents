@@ -172,6 +172,11 @@ Always research with `firecrawl search` / `firecrawl scrape` — never fabricate
 
 Every briefing includes boat art — including the first one.
 
+**⚠️ ALWAYS use `swain card boat-art` for boat art. NEVER use `swain card create` with
+category "boat-art".** The `boat-art` command automatically sets `styleId`, which iOS
+needs for art display mode (full-bleed rendering, title override to style name, auto-
+bookmarking). Manually created cards won't have `styleId` and will render broken on iOS.
+
 **First briefing (onboarding):** Use `--best` to pick the ideal style for their boat type:
 ```bash
 swain card boat-art --user={{userId}} --best --json

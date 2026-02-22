@@ -62,6 +62,7 @@ swain card create \
 - **Don't set `--category` manually** — server handles this
 - **Don't generate images or set `--style-id`** — a stylist agent picks the art style, generates the image, and assigns it after you create the card
 - **Don't set `--image`** — same reason
+- **NEVER create boat-art cards with this command** — use `swain card boat-art` instead. It auto-sets `styleId`, `backgroundColor`, and proper metadata that iOS needs for art display mode. Manual boat-art cards will render broken.
 
 ## Response
 

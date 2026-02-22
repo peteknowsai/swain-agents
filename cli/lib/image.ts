@@ -22,9 +22,10 @@ export const PROMPT_CARD_CONTEXT = 'This image accompanies a story card - the he
 export async function generate(prompt: string, opts?: {
   imageInputUrl?: string;
   suffix?: string;  // defaults to PROMPT_FULL_BLEED
+  fast?: boolean;   // use nano-banana (fast) instead of nano-banana-pro (quality)
 }): Promise<ReplicateImageResult> {
   const fullPrompt = `${prompt.trim()}. ${opts?.suffix ?? PROMPT_FULL_BLEED}`;
-  return generateImage(fullPrompt, { imageInputUrl: opts?.imageInputUrl });
+  return generateImage(fullPrompt, { imageInputUrl: opts?.imageInputUrl, fast: opts?.fast });
 }
 
 // ── Boat art styles ────────────────────────────────────────────────

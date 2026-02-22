@@ -110,33 +110,28 @@ briefing.
     Boat-art cards are exempt from all of this — they already have images, styles, and
     don't use background colors.
 
-    For every **content card** that's missing an image, style it like the stylist would:
-
-    **Step A: Pick a style** based on the card's category and content:
-
-    | Category | Best styles | Default bg color |
-    |----------|------------|------------------|
-    | weather-tides | `watercolor`, `japanese-woodblock` | `#4a6fa5` |
-    | fishing | `watercolor`, `japanese-woodblock` | `#6b8f71` |
-    | dining-lifestyle | `art-deco`, `retro-poster` | `#d4a373` |
-    | safety | `comic-book`, `pop-art` | `#e63946` |
-    | destinations | `retro-poster`, `vintage-florida` | `#e76f51` |
-    | gear-maintenance | `blueprint`, `clean-line` | `#2d3748` |
-    | events-wildlife | `pop-art`, `comic-book` | `#f77f00` |
-    | general/other | `screen-print`, `colored-pencil` | `#5c4033` |
-
-    Vary styles across cards — don't use the same style twice in one briefing.
-
-    **Step B: Write a scene prompt** — describe what the image should depict based on
-    the card's content. Be specific ("Redfish tailing in shallow grass flats at dawn")
-    not generic ("fish in water"). 1-2 sentences max.
-
-    **Step C: Generate the styled image**
+    **First, browse the style catalog:**
     ```bash
-    swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
+    swain style list --json
     ```
+    This returns all available styles with IDs and descriptions. You'll pick from
+    these for each card.
 
-    For cards that already have images but are missing `backgroundColor`:
+    **For every content card missing an image:**
+
+    1. **Pick a style** from the catalog that matches the card's category and mood.
+       Vary your picks — don't reuse the same style in one briefing.
+    2. **Write a scene prompt** that captures the card's content. Be specific
+       ("Redfish tailing in shallow grass flats at dawn") not generic ("fish in
+       water"). Bake the style's aesthetic into the prompt. 1-2 sentences.
+    3. **Pick a background color** — muted, dark enough for white text contrast.
+       Match the style and content mood.
+    4. **Generate:**
+       ```bash
+       swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
+       ```
+
+    **For cards that have images but no `backgroundColor`:**
     View the image (you're multimodal), pick a dominant color darkened enough for
     white text contrast, then:
     ```bash

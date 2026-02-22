@@ -181,27 +181,25 @@ Steps:
 
 6. Quality gate — style and polish every content card:
    Boat-art cards are exempt from all of this.
-   For every content card missing an image, you are the stylist:
 
-   Pick a style based on the card's category:
-   - weather-tides → watercolor or japanese-woodblock (bg: #4a6fa5)
-   - fishing → watercolor or japanese-woodblock (bg: #6b8f71)
-   - dining-lifestyle → art-deco or retro-poster (bg: #d4a373)
-   - safety → comic-book or pop-art (bg: #e63946)
-   - destinations → retro-poster or vintage-florida (bg: #e76f51)
-   - gear-maintenance → blueprint or clean-line (bg: #2d3748)
-   - general → screen-print or colored-pencil (bg: #5c4033)
+   First, browse the style catalog:
+   swain style list --json
+   This returns all available styles with IDs and descriptions.
 
-   Write a 1-2 sentence scene prompt matching the card content (be specific,
-   not generic). Then generate the styled image:
-   swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> \
-     --prompt='<scene description>' --json
+   For every content card missing an image:
+   a. Pick a style from the catalog that fits the card's category and mood.
+      Vary your picks — don't reuse the same style in one briefing.
+   b. Write a 1-2 sentence scene prompt matching the card content. Be specific
+      ('Redfish tailing in shallow grass flats at dawn') not generic ('fish in
+      water'). Bake the style's aesthetic into the prompt.
+   c. Pick a background color — muted, dark enough for white text contrast.
+   d. Generate:
+      swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> \
+        --prompt='<scene description>' --json
 
    For cards that have images but no backgroundColor: view the image, pick a
    dominant color darkened for white text contrast, then:
    swain card update <cardId> --bg-color=#... --json
-
-   Vary styles — don't use the same style twice in one briefing.
 
 7. Generate ONE boat art card AFTER content cards are polished:
    ALWAYS use: swain card boat-art --user={{userId}} --best --json

@@ -70,6 +70,12 @@ The `swain card boat-art` command generates stylized art of the captain's boat a
 
 ## Commands
 
+### Generate the best style for this boat (first briefing)
+```bash
+swain card boat-art --user={{userId}} --best --json
+```
+Automatically picks the most impressive style based on the boat's make/model and type. A Viking sportfisher gets clean-line illustration, a sailboat gets watercolor, a pontoon gets cartoon, etc. **Use this for the first briefing.**
+
 ### Generate a single art card (random style)
 ```bash
 swain card boat-art --user={{userId}} --json
@@ -80,21 +86,15 @@ swain card boat-art --user={{userId}} --json
 swain card boat-art --user={{userId}} --style=nautical-tattoo --json
 ```
 
-### Generate the 2-style sampler (onboarding only)
-```bash
-swain card boat-art --user={{userId}} --sampler --json
-```
-This creates 2 cards — clean-line and pop art — to showcase the range.
+## First Briefing — Best Style
 
-## Onboarding — The Art Sampler
+The captain's first piece of boat art should be a wow moment. Use `--best` to automatically pick the style that'll look most impressive for their specific boat:
 
-During the **first briefing**, include a boat art sampler to introduce the feature:
-
-1. Run `swain card boat-art --user={{userId}} --sampler --json`
-2. This creates 2 cards (clean-line + pop art) — enough to show the range without overwhelming the first briefing
-3. Include both cards in the briefing with a text item explaining the feature:
-   - "One of my favorite things I do for you — every day, I create a new piece of art featuring [boat name]. Here's a taste of what's coming. Eventually you'll be able to print these too."
-4. Let them see the variety. They'll look forward to it daily.
+1. Run `swain card boat-art --user={{userId}} --best --json`
+2. This picks the ideal style based on boat type/make (sportfishers get clean-line, sailboats get watercolor, bay boats get vintage-florida, etc.)
+3. Include the card in the briefing with something like:
+   - "One of my favorite things I do for you — every day, I create a new piece of art featuring [boat name]. Here's today's. Eventually you'll be able to print these on stuff too."
+4. One card, maximum impact. Tomorrow they get a different style.
 
 ## Daily Briefings — One Art Card Per Day
 

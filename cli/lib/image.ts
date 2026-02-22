@@ -276,6 +276,63 @@ export function buildBoatArtPrompt(opts: {
 }
 
 /**
+ * Pick the single best style for a boat's first impression.
+ * Matches on boatType and boatMakeModel keywords to find the style
+ * that'll look most impressive as the captain's first piece of art.
+ */
+export function pickBestStyle(boatType?: string, boatMakeModel?: string): (typeof ART_STYLES)[number] {
+  const text = `${boatType || ""} ${boatMakeModel || ""}`.toLowerCase();
+
+  // Sportfisher / convertible — clean technical illustration is the money shot
+  if (/sportfish|convertible|viking|bertram|hatteras|cabo|jarrett|spencer|merritt|jim smith|sculley|release|riviera/.test(text)) {
+    return ART_STYLES.find(s => s.id === "clean-line")!;
+  }
+  // Sailboat — watercolor captures those lines perfectly
+  if (/sail|sloop|ketch|yawl|cutter|catalina|beneteau|hunter|jeanneau|island packet|hinckley|swan|oyster|hallberg|dufour|tartan/.test(text)) {
+    return ART_STYLES.find(s => s.id === "watercolor")!;
+  }
+  // Motor yacht / cruiser — art deco luxury
+  if (/yacht|cruiser|azimut|sunseeker|princess|ferretti|prestige|tiara|pursuit|sea ray.*[4-9]\d/.test(text)) {
+    return ART_STYLES.find(s => s.id === "art-deco")!;
+  }
+  // Classic / vintage — fine engraving for heritage boats
+  if (/classic|vintage|chris.?craft|riva|garwood|hacker|antique|wooden/.test(text)) {
+    return ART_STYLES.find(s => s.id === "nautical-engraving")!;
+  }
+  // Bay / flats / skiff — Florida coastal culture
+  if (/bay\s?boat|flats|skiff|pathfinder|maverick|hewes|east cape|chittum|beavertail|hells? bay|action craft/.test(text)) {
+    return ART_STYLES.find(s => s.id === "vintage-florida")!;
+  }
+  // Center console — screen print, fishing-forward
+  if (/center console|boston whaler|yellowfin|contender|seavee|invincible|cobia|robalo|sportsman|key west|everglades|regulator|freeman|grady|fountain|scout/.test(text)) {
+    return ART_STYLES.find(s => s.id === "screen-print")!;
+  }
+  // Pontoon / deck — fun and playful
+  if (/pontoon|deck boat|bennington|harris|sun tracker|sylvan|crest|manitou|godfrey|avalon/.test(text)) {
+    return ART_STYLES.find(s => s.id === "cartoon")!;
+  }
+  // Ski / wake — vibrant and active
+  if (/ski|wake|malibu|mastercraft|nautique|centurion|supra|tige|moomba|axis/.test(text)) {
+    return ART_STYLES.find(s => s.id === "pop-art")!;
+  }
+  // Bass / freshwater — bold and sporty
+  if (/bass|ranger|skeeter|nitro|triton|phoenix|vexus|tracker/.test(text)) {
+    return ART_STYLES.find(s => s.id === "stencil")!;
+  }
+  // Trawler — classic voyaging aesthetic
+  if (/trawler|kadey|nordhavn|fleming|grand banks|american tug|ranger tug|helmsman|nordic tug/.test(text)) {
+    return ART_STYLES.find(s => s.id === "nautical-engraving")!;
+  }
+  // Catamaran — bold outlines handle the wide beam
+  if (/catamaran|cat|lagoon|fountaine|leopard|gemini|seawind|bali/.test(text)) {
+    return ART_STYLES.find(s => s.id === "japanese-woodblock")!;
+  }
+
+  // Default — clean-line is always impressive
+  return ART_STYLES.find(s => s.id === "clean-line")!;
+}
+
+/**
  * Pick a random style, optionally excluding recently used ones.
  */
 export function pickRandomStyle(exclude: ArtStyleId[] = []): (typeof ART_STYLES)[number] {

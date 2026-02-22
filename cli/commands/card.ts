@@ -704,10 +704,11 @@ async function boatArt(args: string[]): Promise<void> {
   const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['user'];
   const jsonOutput = params['json'] === 'true';
   const isSampler = params['sampler'] === 'true';
+  const isBest = params['best'] === 'true';
   const styleParam = params['style'];
 
   if (!userId) {
-    printError('Usage: swain card boat-art --user=<userId> [--style=<styleId>] [--sampler] [--json]');
+    printError('Usage: swain card boat-art --user=<userId> [--style=<styleId>] [--best] [--sampler] [--json]');
     process.exit(1);
   }
 
@@ -717,6 +718,7 @@ async function boatArt(args: string[]): Promise<void> {
     buildBoatArtPrompt,
     generate: generateImg,
     pickRandomStyle,
+    pickBestStyle,
     getSamplerStyles,
     getStyleDefaultBgColor,
     buildBoatArtContent,
@@ -755,6 +757,10 @@ async function boatArt(args: string[]): Promise<void> {
       process.exit(1);
     }
     styles = [found];
+  } else if (isBest) {
+    const best = pickBestStyle(boatType, boatMakeModel);
+    styles = [best];
+    if (!jsonOutput) print(`${colors.dim}Best style for ${boatMakeModel || boatType || 'boat'}: ${best.name}${colors.reset}`);
   } else {
     styles = [pickRandomStyle()];
   }
@@ -912,10 +918,9 @@ ${colors.bold}OPTIONS (coverage)${colors.reset}
 
 ${colors.bold}OPTIONS (boat-art)${colors.reset}
   --user=<userId>         User ID (required)
-  --sampler               Generate 6-style sampler (for onboarding)
-  --style=<id>            Specific style (20 available, e.g. clean-line,
-                          watercolor, pop-art, retro-poster, gold-foil;
-                          run with invalid id to see full list)
+  --best                  Pick ideal style for boat type (use for first briefing)
+  --style=<id>            Specific style (30 available; invalid id shows full list)
+  --sampler               Generate 2-style sampler
   --agent-id=<id>         Agent ID (defaults to AGENT_ID env var)
   --json                  Output as JSON
 

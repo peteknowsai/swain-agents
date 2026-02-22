@@ -138,13 +138,22 @@ Interests: <what they told you>
 Steps:
 1. swain user update {{userId}} --onboardingStep=building_briefing --json
 2. swain user update {{userId}} --marinaLocation='<marina>' --primaryUse=<use> --json
-3. swain boat list --user={{userId}} --json — create boat record if none exists
-4. Read the swain-advisor skill and follow its briefing workflow (steps 3-10)
+3. Assign content desk:
+   a. swain desk list --json
+   b. Match captain's marina/location to a desk's region. Use fuzzy reasoning
+      (e.g., 'Dog River Marina' → 'Mobile Bay, AL' → mobile-bay desk).
+   c. If match found: swain user update {{userId}} --desk=<desk-name> --json
+   d. If no match: send gap report to Mr. Content:
+      sessions_send(sessionKey='agent:mr-content:main',
+        message='CONTENT_GAP: topic=new-desk-needed, location=<location>, userId={{userId}}, captain=<name>, desk=unknown')
+      Do NOT assign a desk — Mr. Content will provision one and assign it.
+4. swain boat list --user={{userId}} --json — create boat record if none exists
+5. Read the swain-advisor skill and follow its briefing workflow (steps 3-10)
    to pull cards, write commentary, and assemble the briefing.
    Include a photo_upload item asking for a pic of their boat.
-5. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
-6. Write MEMORY.md with everything learned about the captain
-7. Send the 'all set' notification via WhatsApp:
+6. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
+7. Write MEMORY.md with everything learned about the captain
+8. Send the 'all set' notification via WhatsApp:
    message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
 DO NOT generate boat art. DO NOT research weather. Just use cards from the library.

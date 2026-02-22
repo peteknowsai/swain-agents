@@ -156,9 +156,15 @@ Read the **swain-advisor** skill. Daily briefings run **in your main session** v
 During heartbeats, create cards tagged for your captain when they mention something worth turning into content:
 
 ```bash
-swain card create --desk=<desk> --user={{userId}} --category=<cat> \
+swain card create --desk=<desk from profile> --user={{userId}} --category=<cat> \
   --title="..." --subtext="..." --content="..." --json
 ```
+
+To get the desk, read it from the captain's profile:
+```bash
+swain user get {{userId}} --json
+```
+Use the `desk` field. If no desk is assigned, skip card creation.
 
 Always research with `firecrawl search` / `firecrawl scrape` — never fabricate.
 

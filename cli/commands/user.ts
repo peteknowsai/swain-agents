@@ -259,7 +259,7 @@ async function updateUser(args: string[]): Promise<void> {
   const updatableFields = [
     // Basics
     'captainName', 'phone', 'messagingPhone', 'location', 'marinaLocation',
-    'timezone', 'interests', 'favoriteTopics',
+    'timezone', 'interests', 'favoriteTopics', 'desk',
     // Legacy boat fields (on user record)
     'boatName', 'boatMakeModel', 'boatYear', 'boatImageUrl',
     'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
@@ -352,7 +352,7 @@ ${colors.bold}COMMANDS${colors.reset}
 ${colors.bold}UPDATE FIELDS${colors.reset}
   ${colors.bold}Basics:${colors.reset}
   --captainName --phone --messagingPhone --location --marinaLocation
-  --timezone --interests --favoriteTopics
+  --timezone --interests --favoriteTopics --desk
 
   ${colors.bold}Legacy boat (on user record — prefer 'swain boat update'):${colors.reset}
   --boatName --boatMakeModel --boatYear --boatLength --boatType

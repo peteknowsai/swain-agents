@@ -165,50 +165,81 @@ Steps:
         message='CONTENT_GAP: topic=new-desk-needed, location=<location>, userId={{userId}}, captain=<name>, desk=unknown')
       Do NOT assign a desk — Mr. Content will provision one and assign it.
 4. swain boat list --user={{userId}} --json — create boat record if none exists
-5. Pull cards and create content if needed:
+5. Pull card candidates:
+   swain card pull --user={{userId}} --exclude-served --include-no-image --json
    The first briefing must have at least **5 cards total** (including boat art).
-   After pulling cards in the advisor workflow, if you have fewer than 4 content
-   cards, create quick cards on the fly:
+   If you have fewer than 4 content cards, create quick ones on the fly:
    - Topics: captain's stated interests + marina location + boat type
-     (e.g., fishing spots near their marina, local waterway guide, their boat
-     model maintenance tips)
-   - Research each with a quick firecrawl_search — one search per card, grab
-     the top result, write a card
-   - Create cards one at a time (research → create → next)
+   - Research each with a quick firecrawl_search — one search per card
+   - Create cards one at a time:
+     swain card create --desk=<desk> --user={{userId}} \
+       --title='<3-6 word headline>' \
+       --subtext='<2-3 sentence preview>' \
+       --content='<full markdown>' \
+       --category=<category> --freshness=<timely|evergreen> --json
    - If firecrawl is slow, create cards from your own knowledge instead
-6. Quality gate — polish every content card before assembly:
-   **Pass 1: Generate missing images**
-   For each selected content card, check if `image` is present (not a placeholder).
-   If missing: swain card image <cardId> --fast --json
-   Boat-art cards are exempt (they already have images).
-   **Pass 2: Set missing background colors**
-   For each content card (NOT boat-art), check if `backgroundColor` is set.
-   If missing: view the card's image (you're multimodal — you can see image URLs),
-   pick a dominant color, darken it enough for white text contrast, then:
+
+6. Quality gate — style and polish every content card:
+   Boat-art cards are exempt from all of this.
+   For every content card missing an image, you are the stylist:
+
+   Pick a style based on the card's category:
+   - weather-tides → watercolor or japanese-woodblock (bg: #4a6fa5)
+   - fishing → watercolor or japanese-woodblock (bg: #6b8f71)
+   - dining-lifestyle → art-deco or retro-poster (bg: #d4a373)
+   - safety → comic-book or pop-art (bg: #e63946)
+   - destinations → retro-poster or vintage-florida (bg: #e76f51)
+   - gear-maintenance → blueprint or clean-line (bg: #2d3748)
+   - general → screen-print or colored-pencil (bg: #5c4033)
+
+   Write a 1-2 sentence scene prompt matching the card content (be specific,
+   not generic). Then generate the styled image:
+   swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> \
+     --prompt='<scene description>' --json
+
+   For cards that have images but no backgroundColor: view the image, pick a
+   dominant color darkened for white text contrast, then:
    swain card update <cardId> --bg-color=#... --json
-   Boat-art cards don't use background colors — the app displays just the image.
+
+   Vary styles — don't use the same style twice in one briefing.
+
 7. Generate ONE boat art card AFTER content cards are polished:
    ALWAYS use: swain card boat-art --user={{userId}} --best --json
-   NEVER create boat-art cards with swain card create. The boat-art command handles
-   styleId, print-ready prompts, and iOS art display mode. Manual boat-art cards
-   render broken.
-   Include this card in the briefing. This is the captain's first piece of art —
-   it should be a wow moment.
-8. Read the swain-advisor skill and follow its briefing workflow to pull cards,
-   write commentary, and assemble the briefing with this ordering:
-   - Greeting → content cards with commentary → **boat art card last** → photo upload item
-   - Boat art commentary should bridge to the photo ask: something like
-     'Here's your boat in [style]. Every day you get a new one in a different
-     style. Send me a photo and these get way better.'
+   NEVER create boat-art cards with swain card create. The boat-art command
+   handles styleId, print-ready prompts, and iOS art display mode. Manual
+   boat-art cards render broken.
+
+8. Assemble the briefing. Build a JSON array of items with this EXACT format:
+
+   ⚠️ ONLY these three types exist. Any other type breaks iOS.
+   - Text:         { \"type\": \"text\", \"content\": \"Your message\" }
+   - Card:         { \"type\": \"card\", \"id\": \"card_xxx\" }
+   - Photo upload: { \"type\": \"photo_upload\", \"prompt\": \"Send a photo of your boat\" }
+
+   CRITICAL FORMAT RULES:
+   - Text items use \"content\" (NOT \"text\", NOT \"message\")
+   - Card items use \"id\" (NOT \"cardId\") — just the ID, server fills in everything
+   - Photo upload uses underscore: photo_upload (NOT photo-upload)
+   - There is NO \"greeting\" type — greetings are { \"type\": \"text\" }
+   - There is NO \"closing\" type — closings are { \"type\": \"text\" }
+
+   Ordering:
+   - Greeting text → content cards (each with a commentary text before it) →
+     boat art card LAST → photo upload item
+   - Boat art commentary bridges to the photo ask, like:
+     'Here's [boatName] in [styleName]. Every day you get a new one in a
+     different style. Send me a photo and these get way better.'
    - Photo upload item immediately after boat art
+
+   Then assemble:
+   swain briefing assemble --user={{userId}} --items='<json_array>' --json
+
 9. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
 10. Write MEMORY.md with everything learned about the captain
 11. Send the 'all set' notification via WhatsApp:
    message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
-Prefer library cards. If the library has fewer than 4 content cards for this captain,
-create a few quick cards based on their interests and location. Speed matters — quick
-firecrawl searches, not deep research. Under 5 minutes total.
+Speed matters — quick firecrawl searches, not deep research. Under 5 minutes total.
 
 ⚠️ CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.
 Do NOT write status reports, summaries, or any other text. If you write anything

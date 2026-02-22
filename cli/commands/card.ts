@@ -470,7 +470,14 @@ async function updateCard(args: string[]): Promise<void> {
   const body: Record<string, any> = {};
   if (params['title']) body.title = params['title'];
   if (params['subtext']) body.subtext = params['subtext'];
-  if (params['image']) body.image = params['image'];
+  if (params['image']) {
+    let imageUrl = params['image'];
+    // Fix malformed Cloudflare variant paths (e.g. /card/card → /public)
+    if (imageUrl.includes('imagedelivery.net/') && !imageUrl.endsWith('/public')) {
+      imageUrl = imageUrl.replace(/\/[^/]+\/[^/]+$/, '/public');
+    }
+    body.image = imageUrl;
+  }
   if (params['bg-color']) body.backgroundColor = params['bg-color'];
   if (params['style-id']) body.styleId = params['style-id'];
   if (params['category']) body.category = params['category'];

@@ -215,7 +215,7 @@ Steps:
    - Card:         { \"type\": \"card\", \"id\": \"card_xxx\" }
    - Boat art:     { \"type\": \"boat_art\", \"image\": \"<url>\", \"styleName\": \"Art Deco\", \"boatName\": \"Fat Cat\" }
    - Closing:      { \"type\": \"closing\", \"content\": \"Have a great day!\" }
-   - Photo upload: { \"type\": \"photo_upload\", \"prompt\": \"Send a photo of your boat\" }
+   - Photo upload: { \"type\": \"photo_upload\" }  (put contextual copy in a preceding text item)
 
    Ordering (exact sequence — closing is ALWAYS the last item):
    - greeting → text + card pairs → boat art → text (bridge) → photo_upload → closing

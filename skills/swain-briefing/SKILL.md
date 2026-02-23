@@ -263,18 +263,27 @@ First-class type for boat art — not a card reference. Built from `swain card b
 Use these to learn about your captain over time — weave them into briefings
 when it feels natural, not as a survey dump.
 
+**⚠️ Schema v1.2.0: `prompt` and `question` fields have been REMOVED from all
+interactive item types. Items with those fields will fail validation at assembly
+time. Put all contextual copy in a preceding `text` item instead.**
+
 | Type | Fields | Purpose |
 |------|--------|---------|
-| `survey` | `id`, `question`, `field`, `options` | Single-select question |
-| `multi_select` | `id`, `prompt`, `field`, `options`, `min_selections?`, `max_selections?` | Multi-select question |
-| `text_input` | `id`, `question`, `field`, `placeholder?`, `optional?` | Free text input |
-| `photo_upload` | `id?`, `prompt?`, `field?` | Ask for a photo (boat, dock, catch) |
+| `survey` | `id`, `field`, `options` | Single-select question |
+| `multi_select` | `id`, `field`, `options`, `min_selections?`, `max_selections?` | Multi-select question |
+| `text_input` | `id`, `field`, `placeholder?`, `optional?` | Free text input |
+| `photo_upload` | `id?`, `field?` | Ask for a photo (boat, dock, catch) |
 | `image_upload` | `id`, `title`, `description?`, `optional?` | Generic image upload |
 
+Always place a `text` item before an interactive item to provide context:
+
 ```json
-{ "type": "survey", "id": "experience", "question": "How would you describe your boating experience?", "field": "experienceLevel", "options": ["New to boating", "A few seasons", "Seasoned captain"] }
-{ "type": "text_input", "id": "home_dock", "question": "Where do you keep your boat?", "field": "marinaLocation", "placeholder": "e.g. Tampa Bay Marina" }
-{ "type": "photo_upload", "prompt": "Got a photo of your boat? Makes the art way better." }
+{ "type": "text", "content": "How would you describe your boating experience?" }
+{ "type": "survey", "id": "experience", "field": "experienceLevel", "options": ["New to boating", "A few seasons", "Seasoned captain"] }
+{ "type": "text", "content": "Where do you keep your boat?" }
+{ "type": "text_input", "id": "home_dock", "field": "marinaLocation", "placeholder": "e.g. Tampa Bay Marina" }
+{ "type": "text", "content": "Got a photo of your boat? Makes the art way better." }
+{ "type": "photo_upload" }
 ```
 
 ### Inline cards

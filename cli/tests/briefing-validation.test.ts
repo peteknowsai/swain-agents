@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { validateItems } from '@peteknowsai/briefing-schema';
+import { validateItems } from '../lib/briefing-schema';
 
 describe('briefing item validation', () => {
   it('accepts valid greeting + card + closing', () => {
-    const items = [
+    const result = validateItems([
       { type: 'greeting', content: 'Morning!' },
       { type: 'card', id: 'card_abc123' },
       { type: 'closing', content: 'Have a great day!' },
-    ];
-    const result = validateItems(items);
+    ]);
     expect(result.success).toBe(true);
   });
 
@@ -33,22 +32,28 @@ describe('briefing item validation', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].index).toBe(0);
+      expect(result.errors[0]).toContain('unknown type "banana"');
     }
   });
 
-  it('rejects text item missing content', () => {
+  it('rejects text item using "text" field instead of "content"', () => {
     const result = validateItems([
       { type: 'text', text: 'wrong field' },
     ]);
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[0]).toContain('"content", not "text"');
+    }
   });
 
-  it('rejects card item missing id', () => {
+  it('rejects card item with cardId instead of id', () => {
     const result = validateItems([
       { type: 'card', cardId: 'card_abc123' },
     ]);
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[0]).toContain('"id", not "cardId"');
+    }
   });
 
   it('rejects card with id not starting with card_', () => {
@@ -56,6 +61,9 @@ describe('briefing item validation', () => {
       { type: 'card', id: 'abc123' },
     ]);
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[0]).toContain('card_');
+    }
   });
 
   it('rejects empty content string', () => {
@@ -66,23 +74,22 @@ describe('briefing item validation', () => {
   });
 
   it('reports multiple errors with correct indices', () => {
-    const items = [
+    const result = validateItems([
       { type: 'text', content: 'valid' },
       { type: 'bogus' },
       { type: 'text', content: 'also valid' },
       { type: 'card' }, // missing id
-    ];
-    const result = validateItems(items);
+    ]);
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.length).toBe(2);
-      expect(result.errors[0].index).toBe(1);
-      expect(result.errors[1].index).toBe(3);
+      expect(result.errors[0]).toContain('[1]');
+      expect(result.errors[1]).toContain('[3]');
     }
   });
 
   it('accepts a full realistic briefing', () => {
-    const items = [
+    const result = validateItems([
       { type: 'greeting', content: 'Morning, Bobby! Great day to get out on the water.' },
       { type: 'text', content: 'Conditions look perfect for your usual run.' },
       { type: 'card', id: 'card_weather_123' },
@@ -90,8 +97,7 @@ describe('briefing item validation', () => {
       { type: 'card', id: 'card_fishing_456' },
       { type: 'card', id: 'card_boatart_789' },
       { type: 'closing', content: 'Have a great day on the water!' },
-    ];
-    const result = validateItems(items);
+    ]);
     expect(result.success).toBe(true);
   });
 });

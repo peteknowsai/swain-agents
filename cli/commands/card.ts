@@ -662,11 +662,23 @@ async function generateImage(args: string[]): Promise<void> {
   const fast = params['fast'] === 'true';
 
   // Build full prompt: agent prompt + style prompt
-  const style = styleId ? ART_STYLES.find((s) => s.id === styleId) : null;
-  const combinedPrompt = [agentPrompt, style ? style.prompt : null].filter(Boolean).join('. ');
+  let stylePrompt: string | null = null;
+  const artStyle = styleId ? ART_STYLES.find((s) => s.id === styleId) : null;
+  if (artStyle) {
+    stylePrompt = artStyle.prompt;
+  } else if (styleId) {
+    // Fall back to Convex style catalog
+    try {
+      const convexStyle = await workerRequest(`/styles/${styleId}`);
+      if (convexStyle?.style?.description) {
+        stylePrompt = convexStyle.style.description;
+      }
+    } catch { /* style not found — proceed without */ }
+  }
+  const combinedPrompt = [agentPrompt, stylePrompt].filter(Boolean).join('. ');
 
   // Content cards use PROMPT_CARD_CONTEXT (no baked-in title text); styled/art cards use PROMPT_FULL_BLEED
-  const suffix = style ? PROMPT_FULL_BLEED : PROMPT_CARD_CONTEXT;
+  const suffix = stylePrompt ? PROMPT_FULL_BLEED : PROMPT_CARD_CONTEXT;
 
   if (!jsonOutput) {
     print(`${colors.dim}Generating image for "${card.title}"${fast ? ' (fast)' : ''}...${colors.reset}`);

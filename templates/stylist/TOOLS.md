@@ -8,6 +8,9 @@
 ## Key Commands
 
 ```bash
+# List available art styles
+swain style list --json
+
 # Find unstyled cards
 swain card list --unstyled --limit=5 --json
 
@@ -21,6 +24,6 @@ swain card image <cardId> --prompt="..." --style=<id> --bg-color=<hex> --json
 swain card update <cardId> --bg-color=<hex> --style-id=<id> --json
 ```
 
-## Available Art Styles
+## Styles
 
-watercolor, oil-painting, pop-art, japanese-woodblock, impressionist, comic-book, art-deco, minimalist, sunset-silhouette, neon
+Run `swain style list --json` to get the current style catalog. Don't hardcode style IDs — they change.

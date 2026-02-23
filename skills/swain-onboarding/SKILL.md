@@ -170,14 +170,14 @@ Steps:
    The first briefing must have at least **5 cards total** (including boat art).
    If you have fewer than 4 content cards, create quick ones on the fly:
    - Topics: captain's stated interests + marina location + boat type
-   - Research each with a quick firecrawl_search — one search per card
+   - Research each with `firecrawl search "<topic>" --limit 5` — one search per card
    - Create cards one at a time:
      swain card create --desk=<desk> --user={{userId}} \
        --title='<3-6 word headline>' \
        --subtext='<2-3 sentence preview>' \
        --content='<full markdown>' \
        --category=<category> --freshness=<timely|evergreen> --json
-   - If firecrawl is slow, create cards from your own knowledge instead
+   - If `firecrawl` is slow, create cards from your own knowledge instead
 
 6. Quality gate — style and polish every content card:
    Boat-art cards are exempt from all of this.
@@ -233,7 +233,8 @@ Steps:
 11. Send the 'all set' notification via WhatsApp:
    message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
 
-Speed matters — quick firecrawl searches, not deep research. Under 5 minutes total.
+Tools: `swain` (CLI for cards, briefings, users) and `firecrawl` (web search and scraping).
+Speed matters — quick searches, not deep research. Under 5 minutes total.
 
 ⚠️ CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.
 Do NOT write status reports, summaries, or any other text. If you write anything

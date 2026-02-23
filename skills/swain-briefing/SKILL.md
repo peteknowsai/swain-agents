@@ -175,7 +175,12 @@ briefing.
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```
     The CLI validates item format locally, then the server validates cards,
-    fills in full card data, and marks them as served.
+    fills in full card data, and marks them as served. The response includes
+    `artIds` — shareable art record IDs for any `boat_art` items:
+    ```json
+    { "success": true, "briefingId": "...", "itemCount": 5, "date": "2026-02-22", "artIds": ["art_a1b2c3d4"] }
+    ```
+    Each art ID maps to a shareable URL: `https://www.heyswain.com/art/{artId}`
 
 13. **Notify your captain**
     Send a short WhatsApp message letting them know the briefing is ready. Include

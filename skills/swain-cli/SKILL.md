@@ -62,6 +62,13 @@ swain card boat-art --user=<userId> [--best] [--style=<id>] [--sampler] [--json]
 swain card coverage [--desk=<desk>] [--json]
 ```
 
+### Boat Art (generate + save)
+```bash
+swain boat-art create --user=<userId> [--best] [--style=<id>] [--json]
+swain boat-art list --user=<userId> [--json]
+```
+`create` generates art AND saves it as a boatArt record with a shareable URL (`heyswain.com/art/{artId}`). Use this when a captain requests art outside of briefings.
+
 ### Briefings
 ```bash
 swain briefing previous --user=<userId> [--json]

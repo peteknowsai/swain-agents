@@ -4,19 +4,22 @@
  * Source of truth is the schema package. When it adds/changes types,
  * update VALID_TYPES and the type-specific checks below.
  *
- * Types and fields (from briefing-schema@1.1.0):
+ * Types and fields (from briefing-schema@1.2.0):
  *   greeting:       { type, content }
  *   text:           { type, content }
  *   closing:        { type, content }
  *   card:           { type, id }
  *   boat_art:       { type, image, styleName, boatName }
  *   image_card:     { type, id?, title?, subtext?, image?, content_markdown?, backgroundColor?, category? }
- *   survey:         { type, id, question?, prompt?, field?, options }
- *   multi_select:   { type, id, question?, prompt?, field?, options, min_selections?, max_selections? }
+ *   survey:         { type, id, field?, options }
+ *   multi_select:   { type, id, field?, options, min_selections?, max_selections? }
  *   multi_select_survey: (alias for multi_select)
- *   text_input:     { type, id, question?, prompt?, field?, placeholder?, optional? }
- *   photo_upload:   { type, id?, prompt?, question?, field? }
+ *   text_input:     { type, id, field?, placeholder?, optional? }
+ *   photo_upload:   { type, id?, field? }
  *   image_upload:   { type, id, title, description?, optional? }
+ *
+ * v1.2.0 BREAKING: `prompt` and `question` removed from interactive types.
+ * Contextual copy belongs in a preceding `text` item.
  */
 
 const VALID_TYPES = new Set([
@@ -67,6 +70,17 @@ function validateItem(item: unknown, index: number): string | null {
     }
     if (typeof obj.boatName !== 'string' || obj.boatName.length === 0) {
       return `[${index}] boat_art requires non-empty "boatName"`;
+    }
+  }
+
+  // Interactive types: reject removed fields (briefing-schema v1.2.0)
+  const INTERACTIVE_TYPES = ['survey', 'multi_select', 'multi_select_survey', 'text_input', 'photo_upload'];
+  if (INTERACTIVE_TYPES.includes(obj.type)) {
+    if ('prompt' in obj) {
+      return `[${index}] ${obj.type} no longer supports "prompt" (removed in schema v1.2.0) — use a preceding text item instead`;
+    }
+    if ('question' in obj) {
+      return `[${index}] ${obj.type} no longer supports "question" (removed in schema v1.2.0) — use a preceding text item instead`;
     }
   }
 

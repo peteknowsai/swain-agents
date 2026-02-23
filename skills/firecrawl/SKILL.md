@@ -52,6 +52,27 @@ firecrawl agent "Get company info" --schema '{"name":"string","founded":"number"
 firecrawl agent "query" --model spark-1-pro --wait      # Higher accuracy
 ```
 
+### Browser (Remote Sandbox)
+No local browser needed. Each session runs in an isolated sandbox with `agent-browser` pre-installed.
+
+```bash
+# Shorthand: auto-launches a session if none active
+firecrawl browser "open https://example.com"
+firecrawl browser "snapshot"                     # Returns @ref IDs for elements
+firecrawl browser "click @e5"                    # Click element by ref
+firecrawl browser "fill @e3 'search query'"      # Fill input by ref
+firecrawl browser "scrape"                       # Extract page content
+firecrawl browser close                          # Clean up session
+
+# Or manage sessions explicitly
+firecrawl browser launch-session
+firecrawl browser execute "open https://example.com"
+firecrawl browser execute "snapshot"
+firecrawl browser close
+```
+
+Use browser for pages that need JS rendering, login flows, or interactive data extraction.
+
 ## Output Tips
 
 - Single format → raw content (markdown text, HTML, etc.)

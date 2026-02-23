@@ -139,9 +139,9 @@ briefing.
     ```
 
 11. **Build briefing items** as a JSON array:
-   - Start with a greeting text item (personalized, 1-2 sentences)
-   - For each selected card: add a commentary text item, then a card reference
-   - End with a closing note text item
+   - Start with a `greeting` item (personalized, 1-2 sentences)
+   - For each selected card: add a `text` commentary item, then a `card` reference
+   - End with a `closing` item
 
 12. **Assemble the briefing**
     ```bash
@@ -221,11 +221,11 @@ Your commentary for each card should:
 
 ```json
 [
-  { "type": "text", "content": "Morning, Bobby! Looks like a great day to get out on the water." },
+  { "type": "greeting", "content": "Morning, Bobby! Looks like a great day to get out on the water." },
   { "type": "text", "content": "Conditions are looking perfect for your usual run out of Tierra Verde." },
   { "type": "card", "id": "card_weather_123" },
   { "type": "text", "content": "The redfish have been active near the mangroves this week." },
   { "type": "card", "id": "card_fishing_456" },
-  { "type": "text", "content": "Have a great day on the water! Check back tomorrow for updated conditions." }
+  { "type": "closing", "content": "Have a great day on the water! Check back tomorrow for updated conditions." }
 ]
 ```

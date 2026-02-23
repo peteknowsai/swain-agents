@@ -74,6 +74,12 @@ briefing.
    - Check maintenance dates for relevant service content
    - Use `favoriteWatersideDining`, `preferredWaterways` for destination cards
 
+   **Note the unknown fields.** The profile returns dozens of fields you don't
+   know yet — `experienceLevel`, `targetSpecies`, `typicalCrew`, `maxWindKnots`,
+   `diyPreference`, etc. Pick 1-2 unknowns that relate to today's cards and turn
+   them into `survey` or `text_input` items in the briefing. This is how you
+   learn about your captain — a little bit every day.
+
 6. **Generate today's boat art**
    ```bash
    swain card boat-art --user={{userId}} --json

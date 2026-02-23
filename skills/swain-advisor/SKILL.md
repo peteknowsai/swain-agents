@@ -139,9 +139,12 @@ briefing.
     ```
 
 11. **Build briefing items** as a JSON array:
-   - Start with a `greeting` item (personalized, 1-2 sentences)
-   - For each selected card: add a `text` commentary item, then a `card` reference
-   - End with a `closing` item
+   - Always start with a `greeting` and end with a `closing`
+   - In between: `text` commentary and `card` references, plus any interactive
+     items (surveys, text inputs, photo uploads) when they fit naturally
+   - You don't have to introduce every card — sometimes one `text` item
+     sets up two or three cards. Sometimes a card speaks for itself.
+     Mix it up based on what feels right for this captain today.
 
    Your commentary is where you make this feel personal. What you say, which
    cards you pick, how you connect them to the captain's life — that's all you.

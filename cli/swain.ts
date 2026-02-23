@@ -49,7 +49,7 @@ ${colors.bold}COMMANDS${colors.reset}
   advisor                 Advisor agents (list, delete)
   desk                    Content desks (list, create, delete)
 
-  style                   Browse image styles (list, get)
+  style                   Image styles (list, get, update)
   onboarding              Onboarding templates (list, seed)
   image                   Image generation (generate, queue, status, wait)
 

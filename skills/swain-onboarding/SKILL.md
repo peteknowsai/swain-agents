@@ -189,9 +189,10 @@ Steps:
    For every content card missing an image:
    a. Pick a style from the catalog that fits the card's category and mood.
       Vary your picks — don't reuse the same style in one briefing.
-   b. Write a 1-2 sentence scene prompt matching the card content. Be specific
-      ('Redfish tailing in shallow grass flats at dawn') not generic ('fish in
-      water'). Bake the style's aesthetic into the prompt.
+   b. Write a 1-2 sentence **scene description** specific to the card content.
+      Describe the scene, not the style — the style gets applied automatically
+      from `--style`. Be specific ('Redfish tailing in shallow grass flats at
+      dawn') not generic ('fish in water').
    c. Pick a background color — muted, dark enough for white text contrast.
    d. Generate:
       swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> \

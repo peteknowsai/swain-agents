@@ -217,13 +217,13 @@ Steps:
    - Closing:      { \"type\": \"closing\", \"content\": \"Have a great day!\" }
    - Photo upload: { \"type\": \"photo_upload\", \"prompt\": \"Send a photo of your boat\" }
 
-   Ordering:
-   - Greeting text → content cards (each with a commentary text before it) →
-     boat art LAST → photo upload item
+   Ordering (exact sequence — closing is ALWAYS the last item):
+   - greeting → text + card pairs → boat art → text (bridge) → photo_upload → closing
    - Boat art commentary bridges to the photo ask, like:
      'Here's [boatName] in [styleName]. Every day you get a new one in a
      different style. Send me a photo and these get way better.'
-   - Photo upload item immediately after boat art
+   - photo_upload goes immediately after the boat art bridge text
+   - closing goes AFTER photo_upload — it is always the final item
 
    Then assemble:
    swain briefing assemble --user={{userId}} --items='<json_array>' --json

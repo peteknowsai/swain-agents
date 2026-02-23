@@ -35,18 +35,12 @@ swain card image <cardId> \
 
 ## Available Styles
 
-| ID | Name | Best For |
-|----|------|----------|
-| `watercolor` | Watercolor | Weather, tides, sunrise/sunset, calm scenes |
-| `oil-painting` | Oil Painting | Classic maritime, heritage, rich narratives |
-| `pop-art` | Pop Art | Events, fun topics, bold announcements |
-| `japanese-woodblock` | Japanese Woodblock | Ocean conditions, wave reports, dramatic seas |
-| `impressionist` | Impressionist | Fishing, nature, golden hour, lifestyle |
-| `comic-book` | Comic Book | Safety alerts, how-to guides, action topics |
-| `art-deco` | Art Deco | Dining, nightlife, luxury, destinations |
-| `minimalist` | Minimalist | Data-heavy cards, tide tables, gear reviews |
-| `sunset-silhouette` | Sunset Silhouette | Evening events, cruising, romantic destinations |
-| `neon` | Neon | Nightlife, night fishing, festivals |
+Browse the full catalog before styling:
+```bash
+swain style list --json
+```
+Returns all styles with IDs, descriptions, and aesthetic notes. Pick styles
+that match the card's category and mood — vary your picks across a batch.
 
 ## Color Guidelines
 
@@ -61,19 +55,9 @@ Pick colors that complement the style and content. Use muted, sophisticated tone
 - Gear/maintenance: neutral grays and slate (`#2d3748`, `#495057`, `#6c757d`)
 - Events/wildlife: vibrant but tasteful (`#f77f00`, `#7b2cbf`, `#2d6a4f`)
 
-**By style (defaults):**
-- Watercolor: `#4a6fa5`
-- Oil Painting: `#5c4033`
-- Pop Art: `#e63946`
-- Japanese Woodblock: `#264653`
-- Impressionist: `#6b8f71`
-- Comic Book: `#fca311`
-- Art Deco: `#1d3557`
-- Minimalist: `#e9ecef`
-- Sunset Silhouette: `#e76f51`
-- Neon: `#0b0c10`
-
-Use category-appropriate colors when possible. Fall back to style defaults when the content doesn't suggest a clear palette.
+Use category-appropriate colors as your starting point. Adjust to complement
+the specific style you've chosen — view the style's description from `swain style list`
+to understand its aesthetic.
 
 ## Writing Image Prompts
 

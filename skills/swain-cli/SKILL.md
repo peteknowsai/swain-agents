@@ -66,9 +66,15 @@ swain card coverage [--desk=<desk>] [--json]
 ```bash
 swain briefing previous --user=<userId> [--json]
 swain briefing assemble --user=<userId> --items='<json>' [--date=<YYYY-MM-DD>] [--force] [--json]
+swain briefing validate --user=<userId> --items='<json>' [--date=<YYYY-MM-DD>] [--json]
+swain briefing history --user=<userId> [--days=<n>] [--json]
 swain briefing list [--user=<userId>] [--limit=<n>] [--json]
 swain briefing get <briefingId> [--json]
+swain briefing delete <briefingId> --confirm [--json]
 ```
+
+**Assemble and validate** run local schema validation (`@peteknowsai/briefing-schema`)
+before hitting the API. Malformed items fail instantly with fix-it messages.
 
 ### Agents
 ```bash

@@ -88,6 +88,43 @@ describe('briefing item validation', () => {
     }
   });
 
+  it('accepts valid boat_art item', () => {
+    const result = validateItems([
+      { type: 'boat_art', image: 'https://example.com/art.jpg', styleName: 'Pop Art', boatName: 'Test Boat' },
+    ]);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects boat_art missing image', () => {
+    const result = validateItems([
+      { type: 'boat_art', styleName: 'Pop Art', boatName: 'Test Boat' },
+    ]);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[0]).toContain('boat_art requires "image" URL');
+    }
+  });
+
+  it('rejects boat_art missing styleName', () => {
+    const result = validateItems([
+      { type: 'boat_art', image: 'https://example.com/art.jpg', boatName: 'Test Boat' },
+    ]);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[0]).toContain('boat_art requires non-empty "styleName"');
+    }
+  });
+
+  it('rejects boat_art missing boatName', () => {
+    const result = validateItems([
+      { type: 'boat_art', image: 'https://example.com/art.jpg', styleName: 'Pop Art' },
+    ]);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[0]).toContain('boat_art requires non-empty "boatName"');
+    }
+  });
+
   it('accepts a full realistic briefing', () => {
     const result = validateItems([
       { type: 'greeting', content: 'Morning, Bobby! Great day to get out on the water.' },
@@ -95,7 +132,7 @@ describe('briefing item validation', () => {
       { type: 'card', id: 'card_weather_123' },
       { type: 'text', content: 'The redfish have been active near the mangroves.' },
       { type: 'card', id: 'card_fishing_456' },
-      { type: 'card', id: 'card_boatart_789' },
+      { type: 'boat_art', image: 'https://example.com/art.jpg', styleName: 'Pop Art', boatName: 'Test Boat' },
       { type: 'closing', content: 'Have a great day on the water!' },
     ]);
     expect(result.success).toBe(true);

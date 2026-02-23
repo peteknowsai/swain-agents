@@ -92,8 +92,9 @@ briefing.
    ```bash
    swain card boat-art --user={{userId}} --json
    ```
-   This creates a card with stylized art of the captain's boat. Include it in every
-   briefing. Read the **swain-boat-art** skill for style options.
+   This returns image data for the captain's boat art. Take the `image`, `styleName`,
+   and `boatName` from the result — you'll use these in step 11. Read the
+   **swain-boat-art** skill for style options.
 
 7. **Select 8-10 cards** based on:
    - **User-tagged cards first** — cards you created for this captain (marked `forUser` in pull results)
@@ -121,8 +122,7 @@ briefing.
 
 10. **Quality gate — style and polish every card before assembly**
 
-    Boat-art cards are exempt from all of this — they already have images, styles, and
-    don't use background colors.
+    `boat_art` items aren't cards — they don't go through the quality gate.
 
     **First, browse the style catalog:**
     ```bash
@@ -154,13 +154,17 @@ briefing.
 
 11. **Build briefing items** as a JSON array:
    - Always start with a `greeting` and end with a `closing`
-   - In between: `text` commentary and `card` references
+   - In between: `text` commentary, `card` references, and `boat_art`
    - You don't have to introduce every card — sometimes one `text` item
      sets up two or three cards. Sometimes a card speaks for itself.
      Mix it up based on what feels right for this captain today.
    - **Include 1-2 interactive items** from your curiosity list (step 5).
      Weave them into the flow alongside related content — don't stack
      them at the end like a survey.
+   - For boat art, build the item from step 6's result:
+     ```json
+     { "type": "boat_art", "image": "<url from step 6>", "styleName": "Art Deco", "boatName": "Fat Cat" }
+     ```
 
    Your commentary is where you make this feel personal. What you say, which
    cards you pick, how you connect them to the captain's life — that's all you.
@@ -243,6 +247,13 @@ Just the ID — the server hydrates title, image, content, everything.
 { "type": "card", "id": "card_f498db98" }
 ```
 
+### Boat art
+First-class type for boat art — not a card reference. Built from `swain card boat-art` output.
+
+```json
+{ "type": "boat_art", "image": "https://imagedelivery.net/.../public", "styleName": "Art Deco", "boatName": "Fat Cat" }
+```
+
 ### Interactive items
 Use these to learn about your captain over time — weave them into briefings
 when it feels natural, not as a survey dump.
@@ -286,6 +297,7 @@ Your commentary for each card should:
   { "type": "card", "id": "card_weather_123" },
   { "type": "text", "content": "The redfish have been active near the mangroves this week." },
   { "type": "card", "id": "card_fishing_456" },
+  { "type": "boat_art", "image": "https://imagedelivery.net/.../public", "styleName": "Watercolor", "boatName": "Sea Dog" },
   { "type": "closing", "content": "Have a great day on the water!" }
 ]
 ```

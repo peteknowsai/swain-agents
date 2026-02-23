@@ -201,11 +201,10 @@ Steps:
    dominant color darkened for white text contrast, then:
    swain card update <cardId> --bg-color=#... --json
 
-7. Generate ONE boat art card AFTER content cards are polished:
-   ALWAYS use: swain card boat-art --user={{userId}} --best --json
-   NEVER create boat-art cards with swain card create. The boat-art command
-   handles styleId, print-ready prompts, and iOS art display mode. Manual
-   boat-art cards render broken.
+7. Generate boat art AFTER content cards are polished:
+   swain card boat-art --user={{userId}} --best --json
+   Take the image, styleName, and boatName from the result — you'll use
+   these as a boat_art briefing item in step 8.
 
 8. Assemble the briefing. Build a JSON array of items:
 
@@ -214,12 +213,13 @@ Steps:
    - Greeting:     { \"type\": \"greeting\", \"content\": \"Morning!\" }
    - Text:         { \"type\": \"text\", \"content\": \"Your commentary\" }
    - Card:         { \"type\": \"card\", \"id\": \"card_xxx\" }
+   - Boat art:     { \"type\": \"boat_art\", \"image\": \"<url>\", \"styleName\": \"Art Deco\", \"boatName\": \"Fat Cat\" }
    - Closing:      { \"type\": \"closing\", \"content\": \"Have a great day!\" }
    - Photo upload: { \"type\": \"photo_upload\", \"prompt\": \"Send a photo of your boat\" }
 
    Ordering:
    - Greeting text → content cards (each with a commentary text before it) →
-     boat art card LAST → photo upload item
+     boat art LAST → photo upload item
    - Boat art commentary bridges to the photo ask, like:
      'Here's [boatName] in [styleName]. Every day you get a new one in a
      different style. Send me a photo and these get way better.'

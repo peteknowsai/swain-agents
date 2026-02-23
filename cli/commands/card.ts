@@ -724,8 +724,6 @@ async function boatArt(args: string[]): Promise<void> {
     pickRandomStyle,
     pickBestStyle,
     getSamplerStyles,
-    getStyleDefaultBgColor,
-    buildBoatArtContent,
   } = await import('../lib/image');
 
   // 1. Fetch user profile
@@ -742,7 +740,6 @@ async function boatArt(args: string[]): Promise<void> {
   const boatColor = undefined; // Not in schema yet — future enhancement
   const boatImageUrl = user.boatImageUrl || undefined;
   const hasPhoto = !!boatImageUrl;
-  const agentId = getAgentId(params) || process.env.AGENT_ID || 'advisor';
 
   if (!jsonOutput) {
     print(`${colors.dim}Boat: ${boatName} (${boatMakeModel || boatType || 'boat'})${colors.reset}`);
@@ -770,7 +767,7 @@ async function boatArt(args: string[]): Promise<void> {
   }
 
   // 3. Generate images
-  const results: { style: string; url: string; imageId: string; cardId?: string }[] = [];
+  const results: { style: string; styleName: string; image: string; boatName: string }[] = [];
 
   for (const style of styles) {
     if (!jsonOutput) {
@@ -789,51 +786,25 @@ async function boatArt(args: string[]): Promise<void> {
 
       const result = await generateImg(prompt, { imageInputUrl: hasPhoto ? boatImageUrl : undefined });
 
-      // 4. Create card with background color and rich content
-      const cardId = `card_${crypto.randomUUID().slice(0, 8)}`;
-      const title = style.name;
-      const subtext = isSampler
-        ? `Your boat reimagined in ${style.name.toLowerCase()} style`
-        : `Today's ${style.name.toLowerCase()} art of ${boatName}`;
-      const backgroundColor = getStyleDefaultBgColor(style.id);
-
-      await workerRequest('/cards', {
-        method: 'POST',
-        body: {
-          cardId,
-          agentId,
-          userId,
-          type: 'card',
-          category: 'boat-art',
-          styleId: style.id,
-          freshness: 'evergreen',
-          title,
-          subtext,
-          image: result.url,
-          backgroundColor,
-          cardDate: getTodayDate(),
-        },
-      });
-
-      results.push({ style: style.id, url: result.url, imageId: result.imageId, cardId });
+      results.push({ style: style.id, styleName: style.name, image: result.url, boatName });
 
       if (!jsonOutput) {
-        print(` ✓ ${cardId}`);
+        print(` ✓ ${style.name}`);
       }
     } catch (err: any) {
       if (!jsonOutput) {
         print(` ✗ ${err.message}`);
       } else {
-        results.push({ style: style.id, url: '', imageId: '' });
+        results.push({ style: style.id, styleName: style.name, image: '', boatName });
       }
     }
   }
 
   if (jsonOutput) {
-    console.log(JSON.stringify({ success: true, userId, boatName, hasPhoto, results }, null, 2));
+    console.log(JSON.stringify({ success: true, boatName, hasPhoto, results }, null, 2));
   } else {
-    const successCount = results.filter((r) => r.cardId).length;
-    printSuccess(`Generated ${successCount}/${styles.length} boat art card(s)`);
+    const successCount = results.filter((r) => r.image).length;
+    printSuccess(`Generated ${successCount}/${styles.length} boat art image(s)`);
   }
 }
 

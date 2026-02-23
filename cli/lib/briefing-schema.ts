@@ -4,11 +4,12 @@
  * Source of truth is the schema package. When it adds/changes types,
  * update VALID_TYPES and the type-specific checks below.
  *
- * Types and fields (from briefing-schema@1.0.1):
+ * Types and fields (from briefing-schema@1.1.0):
  *   greeting:       { type, content }
  *   text:           { type, content }
  *   closing:        { type, content }
  *   card:           { type, id }
+ *   boat_art:       { type, image, styleName, boatName }
  *   image_card:     { type, id?, title?, subtext?, image?, content_markdown?, backgroundColor?, category? }
  *   survey:         { type, id, question?, prompt?, field?, options }
  *   multi_select:   { type, id, question?, prompt?, field?, options, min_selections?, max_selections? }
@@ -19,7 +20,7 @@
  */
 
 const VALID_TYPES = new Set([
-  'greeting', 'text', 'closing', 'card', 'image_card',
+  'greeting', 'text', 'closing', 'card', 'boat_art', 'image_card',
   'survey', 'multi_select', 'multi_select_survey',
   'text_input', 'photo_upload', 'image_upload',
 ]);
@@ -53,6 +54,19 @@ function validateItem(item: unknown, index: number): string | null {
     }
     if (typeof obj.content !== 'string' || obj.content.length === 0) {
       return `[${index}] ${obj.type} items require a non-empty "content" string`;
+    }
+  }
+
+  // Boat art items
+  if (obj.type === 'boat_art') {
+    if (typeof obj.image !== 'string' || !obj.image.startsWith('http')) {
+      return `[${index}] boat_art requires "image" URL`;
+    }
+    if (typeof obj.styleName !== 'string' || obj.styleName.length === 0) {
+      return `[${index}] boat_art requires non-empty "styleName"`;
+    }
+    if (typeof obj.boatName !== 'string' || obj.boatName.length === 0) {
+      return `[${index}] boat_art requires non-empty "boatName"`;
     }
   }
 

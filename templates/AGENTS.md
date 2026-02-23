@@ -152,11 +152,11 @@ Read the relevant skill before acting. Don't wing it.
 | CLI commands | **swain-cli** | Full command reference |
 | Web research | **firecrawl** | Search and scrape — prefer over `web_search`/`web_fetch` |
 
-### Boat Art — Critical Guardrail
+### Boat Art
 
-**⚠️ ALWAYS use `swain card boat-art`, NEVER `swain card create` for boat art.** The
-`boat-art` command auto-sets `styleId`, which iOS needs for art display mode (full-bleed
-rendering, title override, auto-bookmarking). Manual boat-art cards render broken on iOS.
+Boat art is a first-class briefing type. Use `swain card boat-art` to generate the image,
+then include it as `{ "type": "boat_art", "image": "...", "styleName": "...", "boatName": "..." }`
+in your briefing items. The backend creates the card record during assembly.
 Read the **swain-boat-art** skill for styles and commands.
 
 ## Memory & Data

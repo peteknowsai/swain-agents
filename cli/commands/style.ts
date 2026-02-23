@@ -2,17 +2,17 @@
 
 /**
  * Style Commands
- * swain style list|get
+ * swain style list|get|update
  *
- * Browse available image styles. Agents pick a style, then craft the full
- * creative prompt infused with that style's vibe. The styleId gets stored
- * with the image for cataloging but is NOT passed to the image generator.
+ * Browse and manage image styles. Styles have a promptText field that gets
+ * injected into image generation prompts automatically via --style.
  */
 
 import {
   workerRequest,
   print,
   printError,
+  printSuccess,
   colors
 } from '../lib/worker-client';
 
@@ -68,8 +68,7 @@ async function listStyles(args: string[]): Promise<void> {
     print('');
   }
 
-  print(`${colors.dim}Pick a style, then craft your image prompt infused with that vibe.${colors.reset}`);
-  print(`${colors.dim}Pass --style=<id> to 'swain image generate' for cataloging.${colors.reset}\n`);
+  print(`${colors.dim}Pass --style=<id> to image commands. The style's promptText is injected automatically.${colors.reset}\n`);
 }
 
 /**
@@ -109,31 +108,66 @@ async function getStyle(args: string[]): Promise<void> {
   print('');
 }
 
+/**
+ * swain style update <styleId> --prompt-text="..." [--description="..."] [--name="..."] [--json]
+ * Update a style's fields
+ */
+async function updateStyle(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const jsonOutput = params['json'] === 'true';
+  const styleId = args.find(a => !a.startsWith('--'));
+
+  if (!styleId) {
+    printError('Usage: swain style update <styleId> --prompt-text="..."');
+    process.exit(1);
+  }
+
+  const body: Record<string, string> = {};
+  if (params['prompt-text']) body.promptText = params['prompt-text'];
+  if (params['description']) body.description = params['description'];
+  if (params['name']) body.name = params['name'];
+
+  if (Object.keys(body).length === 0) {
+    printError('Nothing to update. Pass --prompt-text, --description, or --name.');
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/styles/${styleId}`, {
+    method: 'PATCH',
+    body,
+  });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({ success: true, style: result.style }, null, 2));
+    return;
+  }
+
+  printSuccess(`Style ${styleId} updated`);
+  if (body.promptText) {
+    print(`  promptText: ${body.promptText.slice(0, 80)}${body.promptText.length > 80 ? '...' : ''}`);
+  }
+}
+
 function showHelp(): void {
   print(`
-${colors.bold}swain style${colors.reset} - Browse image styles
+${colors.bold}swain style${colors.reset} - Browse and manage image styles
 
 ${colors.bold}USAGE${colors.reset}
   swain style list              List all available styles
   swain style get <styleId>     Get style details
+  swain style update <styleId>  Update a style's fields
 
 ${colors.bold}OPTIONS${colors.reset}
   --json                        Output as JSON
-
-${colors.bold}HOW IT WORKS${colors.reset}
-  1. Browse styles with 'swain style list'
-  2. Pick a style that fits the card's vibe
-  3. Craft your image prompt infused with that style
-  4. Generate: swain image generate "your prompt" --style=<styleId>
-
-  The style ID is stored with the image for cataloging.
-  The style does NOT get passed to the image generator —
-  you bake the style into your prompt.
+  --prompt-text="..."           Style prompt injected into image generation
+  --description="..."           Short human-readable description
+  --name="..."                  Display name
 
 ${colors.bold}EXAMPLES${colors.reset}
   swain style list
   swain style list --json
   swain style get misty-fog
+  swain style update cool-ocean-minimal --prompt-text="clean minimal illustration..."
 `);
 }
 
@@ -147,6 +181,9 @@ export async function run(args: string[]): Promise<void> {
       break;
     case 'get':
       await getStyle(subArgs);
+      break;
+    case 'update':
+      await updateStyle(subArgs);
       break;
     case '--help':
     case '-h':

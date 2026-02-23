@@ -670,7 +670,9 @@ async function generateImage(args: string[]): Promise<void> {
     // Fall back to Convex style catalog
     try {
       const convexStyle = await workerRequest(`/styles/${styleId}`);
-      if (convexStyle?.style?.description) {
+      if (convexStyle?.style?.promptText) {
+        stylePrompt = convexStyle.style.promptText;
+      } else if (convexStyle?.style?.description) {
         stylePrompt = convexStyle.style.description;
       }
     } catch { /* style not found — proceed without */ }

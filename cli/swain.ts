@@ -25,7 +25,7 @@ import { run as runDesk } from './commands/desk';
 
 import { print, colors } from './lib/worker-client';
 
-const VERSION = '0.5.0';
+const VERSION = `0.5.0+${process.env.BUILD_SHA || 'dev'}`;
 
 function showVersion(): void {
   print(`swain v${VERSION}`);

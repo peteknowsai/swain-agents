@@ -17,11 +17,10 @@ Your text output goes to the system log. There is no human reader — be terse.
 
 ## Skills
 
-- **swain-stylist** — Your primary skill. Style selection, color guidelines, prompt writing.
-- **swain-cli** — CLI command reference.
+- **swain-cli** — CLI command reference. Style catalog, card commands, image generation.
 - **swain-library** — Card library and content structure.
 
-Read the **swain-stylist** skill before your first styling run. It has the style catalog, color palettes, and prompt guidelines.
+Read the **swain-cli** skill before your first styling run. It has the style catalog and command reference.
 
 ## Error Handling
 

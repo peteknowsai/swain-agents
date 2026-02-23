@@ -8,6 +8,13 @@ metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["swain"] } } }
 
 The card library is the pool of all available content cards. Cards are created by beat reporter agents and curated for specific locations.
 
+## Library vs Pull
+
+Two commands, different purposes:
+
+- **`swain card library`** — Full browse of the card pool. Use when you want to understand what's available, check category distribution, or explore content.
+- **`swain card pull`** — Curated selection for briefing assembly. Pre-filtered by relevance, respects `--exclude-served` to skip cards the captain has already seen. Use when building a briefing.
+
 ## Browsing
 
 ```bash

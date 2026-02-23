@@ -1,5 +1,5 @@
 ---
-name: swain-advisor
+name: swain-briefing
 description: Create personalized daily briefings using the advisor toolkit.
 metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["swain"] } } }
 ---

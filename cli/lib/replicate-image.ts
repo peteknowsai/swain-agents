@@ -58,12 +58,13 @@ async function runReplicate(
   prompt: string,
   replicateToken: string,
   imageInputUrl?: string,
-  fast?: boolean
+  fast?: boolean,
+  aspectRatio?: string
 ): Promise<{ outputUrl: string; predictionId: string }> {
   // Build input — image-to-image when a source image is provided
   const input: Record<string, any> = {
     prompt,
-    aspect_ratio: imageInputUrl ? "match_input_image" : "4:3",
+    aspect_ratio: imageInputUrl ? "match_input_image" : (aspectRatio || "4:3"),
     output_format: "jpg",
   };
   if (imageInputUrl) {
@@ -216,7 +217,7 @@ async function uploadToCloudflare(
  */
 export async function generateImage(
   prompt: string,
-  opts?: { imageInputUrl?: string; fast?: boolean }
+  opts?: { imageInputUrl?: string; fast?: boolean; aspectRatio?: string }
 ): Promise<ReplicateImageResult> {
   const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
 
@@ -225,7 +226,8 @@ export async function generateImage(
     prompt,
     replicateToken,
     opts?.imageInputUrl,
-    opts?.fast
+    opts?.fast,
+    opts?.aspectRatio
   );
 
   // Step 2: Download and upload to Cloudflare Images

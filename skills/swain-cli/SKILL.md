@@ -73,8 +73,8 @@ swain briefing get <briefingId> [--json]
 swain briefing delete <briefingId> --confirm [--json]
 ```
 
-**Assemble and validate** run local schema validation (`@peteknowsai/briefing-schema`)
-before hitting the API. Malformed items fail instantly with fix-it messages.
+**Assemble and validate** run local schema validation before hitting the API.
+Malformed items fail instantly with fix-it messages.
 
 ### Agents
 ```bash

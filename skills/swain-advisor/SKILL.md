@@ -143,12 +143,16 @@ briefing.
    - For each selected card: add a `text` commentary item, then a `card` reference
    - End with a `closing` item
 
+   Your commentary is where you make this feel personal. What you say, which
+   cards you pick, how you connect them to the captain's life — that's all you.
+   Learn what resonates with your captain over time and adapt.
+
 12. **Assemble the briefing**
     ```bash
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```
-    The server validates cards, fills in full card data, and marks them as served.
-    Add `--force` to replace an existing briefing for the same date.
+    The CLI validates item format locally, then the server validates cards,
+    fills in full card data, and marks them as served.
 
 13. **Notify your captain**
     Send a short WhatsApp message letting them know the briefing is ready. Include
@@ -192,21 +196,58 @@ Never fabricate content.
 
 ## Briefing Item Types
 
-The CLI validates all items against `@peteknowsai/briefing-schema` before sending
-to the API. If you get the format wrong, it tells you exactly what to fix.
+The CLI validates all items before sending to the API. If you get the format
+wrong, it tells you exactly what to fix.
 
-Common types for daily briefings:
+Every briefing follows the same skeleton: **greeting → commentary + cards → closing.**
+Within that, you have the full toolkit below.
+
+### Text items
+All use `"content"` for the message body.
+
+| Type | Purpose |
+|------|---------|
+| `greeting` | Opening — first item in every briefing |
+| `text` | Commentary between cards |
+| `closing` | Sign-off — last item in every briefing |
 
 ```json
 { "type": "greeting", "content": "Morning, Bobby!" }
-{ "type": "text", "content": "Commentary between cards" }
-{ "type": "card", "id": "card_abc123" }
-{ "type": "closing", "content": "Have a great day on the water!" }
-{ "type": "photo_upload", "prompt": "Send a photo of your boat" }
+{ "type": "text", "content": "The redfish have been stacking up near your marina." }
+{ "type": "closing", "content": "Tight lines, Captain." }
 ```
 
-Text-like items (`greeting`, `text`, `closing`) use `"content"` for the message.
-Card items use `"id"` — just the ID, server fills in everything else.
+### Card references
+Just the ID — the server hydrates title, image, content, everything.
+
+```json
+{ "type": "card", "id": "card_f498db98" }
+```
+
+### Interactive items
+Use these to learn about your captain over time — weave them into briefings
+when it feels natural, not as a survey dump.
+
+| Type | Fields | Purpose |
+|------|--------|---------|
+| `survey` | `id`, `question`, `field`, `options` | Single-select question |
+| `multi_select` | `id`, `prompt`, `field`, `options`, `min_selections?`, `max_selections?` | Multi-select question |
+| `text_input` | `id`, `question`, `field`, `placeholder?`, `optional?` | Free text input |
+| `photo_upload` | `id?`, `prompt?`, `field?` | Ask for a photo (boat, dock, catch) |
+| `image_upload` | `id`, `title`, `description?`, `optional?` | Generic image upload |
+
+```json
+{ "type": "survey", "id": "experience", "question": "How would you describe your boating experience?", "field": "experienceLevel", "options": ["New to boating", "A few seasons", "Seasoned captain"] }
+{ "type": "text_input", "id": "home_dock", "question": "Where do you keep your boat?", "field": "marinaLocation", "placeholder": "e.g. Tampa Bay Marina" }
+{ "type": "photo_upload", "prompt": "Got a photo of your boat? Makes the art way better." }
+```
+
+### Inline cards
+For content that lives in the briefing itself, not the cards table.
+
+| Type | Fields |
+|------|--------|
+| `image_card` | `id?`, `title?`, `subtext?`, `image?`, `content_markdown?`, `backgroundColor?`, `category?` |
 
 ## Commentary Guidelines
 
@@ -217,7 +258,7 @@ Your commentary for each card should:
 - Reference recent conversations when appropriate ("You mentioned wanting to try...")
 - Feel like a knowledgeable friend at the marina
 
-## Example Briefing Structure
+## Example Briefing
 
 ```json
 [
@@ -226,6 +267,6 @@ Your commentary for each card should:
   { "type": "card", "id": "card_weather_123" },
   { "type": "text", "content": "The redfish have been active near the mangroves this week." },
   { "type": "card", "id": "card_fishing_456" },
-  { "type": "closing", "content": "Have a great day on the water! Check back tomorrow for updated conditions." }
+  { "type": "closing", "content": "Have a great day on the water!" }
 ]
 ```

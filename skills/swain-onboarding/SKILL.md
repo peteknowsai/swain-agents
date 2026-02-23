@@ -209,8 +209,8 @@ Steps:
 
 8. Assemble the briefing. Build a JSON array of items:
 
-   The CLI validates all items against the briefing schema before sending — if
-   you get the format wrong, it tells you exactly what to fix. Common types:
+   The CLI validates all items before sending — if you get the format wrong,
+   it tells you exactly what to fix. Available types:
    - Greeting:     { \"type\": \"greeting\", \"content\": \"Morning!\" }
    - Text:         { \"type\": \"text\", \"content\": \"Your commentary\" }
    - Card:         { \"type\": \"card\", \"id\": \"card_xxx\" }

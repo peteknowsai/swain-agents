@@ -20,9 +20,33 @@ describe('briefing item validation', () => {
 
   it('accepts photo_upload items', () => {
     const result = validateItems([
-      { type: 'photo_upload', prompt: 'Send a photo of your boat' },
+      { type: 'photo_upload' },
     ]);
     expect(result.success).toBe(true);
+  });
+
+  it('rejects prompt on interactive items (schema v1.2.0)', () => {
+    for (const type of ['survey', 'multi_select', 'text_input', 'photo_upload']) {
+      const result = validateItems([
+        { type, id: 'test', prompt: 'Some prompt', options: ['a', 'b'] },
+      ]);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.errors[0]).toContain('no longer supports "prompt"');
+      }
+    }
+  });
+
+  it('rejects question on interactive items (schema v1.2.0)', () => {
+    for (const type of ['survey', 'multi_select', 'text_input', 'photo_upload']) {
+      const result = validateItems([
+        { type, id: 'test', question: 'Some question', options: ['a', 'b'] },
+      ]);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.errors[0]).toContain('no longer supports "question"');
+      }
+    }
   });
 
   it('rejects unknown type', () => {

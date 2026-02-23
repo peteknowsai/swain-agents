@@ -42,7 +42,7 @@ briefing.
 
    1. Identify topics the captain cares about — check their profile, MEMORY.md,
       and recent conversations
-   2. Research 2-3 topics with `firecrawl_search` — quick searches, not deep dives
+   2. Research 2-3 topics with `firecrawl search "<topic>" --limit 5` — quick searches, not deep dives
    3. Create cards one at a time:
       ```bash
       swain card create --desk=<desk> --user={{userId}} \
@@ -56,7 +56,7 @@ briefing.
    **Create cards one at a time** — research, create, then move to the next. Don't
    try to batch all research and all creation into one pass.
 
-   If `firecrawl_search` is slow or rate-limited, create cards from your own knowledge
+   If `firecrawl` is slow or rate-limited, create cards from your own knowledge
    (boat type tips, general boating content for the captain's region) rather than failing.
 
 5. **Get captain context from Convex and memory**

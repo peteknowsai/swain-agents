@@ -13,6 +13,7 @@ import {
   colors
 } from '../lib/worker-client';
 import { parseArgs } from '../lib/args';
+import { validateItems } from '@peteknowsai/briefing-schema';
 
 /**
  * swain briefing list
@@ -238,6 +239,15 @@ async function assembleBriefing(args: string[]): Promise<void> {
     process.exit(1);
   }
 
+  const validation = validateItems(items);
+  if (!validation.success) {
+    printError('Briefing items failed schema validation:');
+    for (const err of validation.errors) {
+      print(`  ${colors.red}[${err.index}] ${err.error}${colors.reset}`);
+    }
+    process.exit(1);
+  }
+
   const body: Record<string, any> = { userId, items };
   if (date) body.date = date;
   if (force) body.force = true;
@@ -347,6 +357,15 @@ async function validateBriefing(args: string[]): Promise<void> {
     items = JSON.parse(itemsJson);
   } catch {
     printError('Invalid JSON in --items parameter');
+    process.exit(1);
+  }
+
+  const validation = validateItems(items);
+  if (!validation.success) {
+    printError('Briefing items failed schema validation:');
+    for (const err of validation.errors) {
+      print(`  ${colors.red}[${err.index}] ${err.error}${colors.reset}`);
+    }
     process.exit(1);
   }
 

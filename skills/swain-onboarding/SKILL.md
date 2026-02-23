@@ -207,19 +207,15 @@ Steps:
    handles styleId, print-ready prompts, and iOS art display mode. Manual
    boat-art cards render broken.
 
-8. Assemble the briefing. Build a JSON array of items with this EXACT format:
+8. Assemble the briefing. Build a JSON array of items:
 
-   ⚠️ ONLY these three types exist. Any other type breaks iOS.
-   - Text:         { \"type\": \"text\", \"content\": \"Your message\" }
+   The CLI validates all items against the briefing schema before sending — if
+   you get the format wrong, it tells you exactly what to fix. Common types:
+   - Greeting:     { \"type\": \"greeting\", \"content\": \"Morning!\" }
+   - Text:         { \"type\": \"text\", \"content\": \"Your commentary\" }
    - Card:         { \"type\": \"card\", \"id\": \"card_xxx\" }
+   - Closing:      { \"type\": \"closing\", \"content\": \"Have a great day!\" }
    - Photo upload: { \"type\": \"photo_upload\", \"prompt\": \"Send a photo of your boat\" }
-
-   CRITICAL FORMAT RULES:
-   - Text items use \"content\" (NOT \"text\", NOT \"message\")
-   - Card items use \"id\" (NOT \"cardId\") — just the ID, server fills in everything
-   - Photo upload uses underscore: photo_upload (NOT photo-upload)
-   - There is NO \"greeting\" type — greetings are { \"type\": \"text\" }
-   - There is NO \"closing\" type — closings are { \"type\": \"text\" }
 
    Ordering:
    - Greeting text → content cards (each with a commentary text before it) →

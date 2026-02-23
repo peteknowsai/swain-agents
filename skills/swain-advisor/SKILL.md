@@ -192,26 +192,21 @@ Never fabricate content.
 
 ## Briefing Item Types
 
-⚠️ **ONLY these three types exist.** Using any other type (greeting, closing, image,
-photo-upload, etc.) will break the briefing on iOS.
+The CLI validates all items against `@peteknowsai/briefing-schema` before sending
+to the API. If you get the format wrong, it tells you exactly what to fix.
+
+Common types for daily briefings:
 
 ```json
-// Text item (greeting, commentary, closing — all use type "text")
-{ "type": "text", "content": "Your personalized message here" }
-
-// Card reference (server hydrates full card data)
+{ "type": "greeting", "content": "Morning, Bobby!" }
+{ "type": "text", "content": "Commentary between cards" }
 { "type": "card", "id": "card_abc123" }
-
-// Photo upload prompt (onboarding only — asks captain for a boat photo)
+{ "type": "closing", "content": "Have a great day on the water!" }
 { "type": "photo_upload", "prompt": "Send a photo of your boat" }
 ```
 
-**Critical format rules:**
-- Text items use `"content"` (NOT `"text"`, NOT `"message"`)
-- Card items use `"id"` (NOT `"cardId"`) — just the ID, server fills in everything
-- Photo upload uses underscore: `photo_upload` (NOT `photo-upload`)
-- There is NO `"greeting"` type — greetings are `{ "type": "text", "content": "..." }`
-- There is NO `"closing"` type — closings are `{ "type": "text", "content": "..." }`
+Text-like items (`greeting`, `text`, `closing`) use `"content"` for the message.
+Card items use `"id"` — just the ID, server fills in everything else.
 
 ## Commentary Guidelines
 

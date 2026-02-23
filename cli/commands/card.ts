@@ -798,7 +798,10 @@ async function boatArt(args: string[]): Promise<void> {
         hasPhoto,
       });
 
-      const result = await generateImg(prompt, { imageInputUrl: hasPhoto ? boatImageUrl : undefined });
+      const result = await generateImg(prompt, {
+        imageInputUrl: hasPhoto ? boatImageUrl : undefined,
+        aspectRatio: '1:1',
+      });
 
       results.push({ style: style.id, styleName: style.name, image: result.url, boatName });
 

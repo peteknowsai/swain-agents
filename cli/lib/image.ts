@@ -23,9 +23,10 @@ export async function generate(prompt: string, opts?: {
   imageInputUrl?: string;
   suffix?: string;  // defaults to PROMPT_FULL_BLEED
   fast?: boolean;   // use nano-banana (fast) instead of nano-banana-pro (quality)
+  aspectRatio?: string;
 }): Promise<ReplicateImageResult> {
   const fullPrompt = `${prompt.trim()}. ${opts?.suffix ?? PROMPT_FULL_BLEED}`;
-  return generateImage(fullPrompt, { imageInputUrl: opts?.imageInputUrl, fast: opts?.fast });
+  return generateImage(fullPrompt, { imageInputUrl: opts?.imageInputUrl, fast: opts?.fast, aspectRatio: opts?.aspectRatio });
 }
 
 // ── Boat art styles ────────────────────────────────────────────────

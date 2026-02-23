@@ -123,10 +123,11 @@ async function createBoatArt(args: string[]): Promise<void> {
     method: 'POST',
     body: {
       userId,
-      image: result.url,
+      imageUrl: result.url,
       styleId: style.id,
       styleName: style.name,
-      boatName,
+      source: 'agent',
+      prompt: prompt,
     },
   });
 

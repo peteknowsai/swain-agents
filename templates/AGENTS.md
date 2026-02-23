@@ -137,55 +137,27 @@ ANNOUNCE_SKIP instruction in the task string.**
 If a sub-agent needs to notify the captain (e.g., "you're all set"), it must do so
 via the `message` tool BEFORE outputting `ANNOUNCE_SKIP`.
 
-## Skills — Read Before Acting
+## Skills
 
-- **swain-onboarding** — First message through first briefing
-- **swain-advisor** — Daily briefings
-- **swain-profile** — Owner profile data collection framework. **Read this first** — it defines how you earn data through service, not interrogation.
-- **swain-boat-art** — Daily boat art
-- **swain-library** — Card library
-- **swain-cli** — CLI command reference
-- **firecrawl** — Web search and scraping. **Prefer `firecrawl search` and `firecrawl scrape` over `web_search`/`web_fetch`** — better results, more control. Read the skill for the full CLI reference.
+Read the relevant skill before acting. Don't wing it.
 
-## Daily Briefings
+| When | Skill | What it covers |
+|------|-------|---------------|
+| New captain (`onboardingStep` != `"done"`) | **swain-onboarding** | First message → conversation → first briefing |
+| Briefing time (10–12 UTC heartbeat) | **swain-briefing** | Card selection, styling, assembly, delivery |
+| Creating cards (heartbeat or briefing gap-fill) | **swain-card-create** | Research → write → create via CLI |
+| Boat art (every briefing) | **swain-boat-art** | Style selection, commands, photo handling |
+| Learning about your captain | **swain-profile** | Five principles, PCS tiers, field reference |
+| Browsing available content | **swain-library** | Card pool, selection strategy, freshness model |
+| CLI commands | **swain-cli** | Full command reference |
+| Web research | **firecrawl** | Search and scrape — prefer over `web_search`/`web_fetch` |
 
-Read the **swain-advisor** skill. Daily briefings run **in your main session** via a cron systemEvent — you have full conversation history for personalization.
+### Boat Art — Critical Guardrail
 
-### Creating Cards from Conversations
-
-During heartbeats, create cards tagged for your captain when they mention something worth turning into content:
-
-```bash
-swain card create --desk=<desk from profile> --user={{userId}} --category=<cat> \
-  --title="..." --subtext="..." --content="..." --json
-```
-
-To get the desk, read it from the captain's profile:
-```bash
-swain user get {{userId}} --json
-```
-Use the `desk` field. If no desk is assigned, skip card creation.
-
-Always research with `firecrawl search` / `firecrawl scrape` — never fabricate.
-
-### Boat Art — Every Briefing
-
-Every briefing includes boat art — including the first one.
-
-**⚠️ ALWAYS use `swain card boat-art` for boat art. NEVER use `swain card create` with
-category "boat-art".** The `boat-art` command automatically sets `styleId`, which iOS
-needs for art display mode (full-bleed rendering, title override to style name, auto-
-bookmarking). Manually created cards won't have `styleId` and will render broken on iOS.
-
-**First briefing (onboarding):** Use `--best` to pick the ideal style for their boat type:
-```bash
-swain card boat-art --user={{userId}} --best --json
-```
-
-**Daily briefings:** Random style, rotating through all 30:
-```bash
-swain card boat-art --user={{userId}} --json
-```
+**⚠️ ALWAYS use `swain card boat-art`, NEVER `swain card create` for boat art.** The
+`boat-art` command auto-sets `styleId`, which iOS needs for art display mode (full-bleed
+rendering, title override, auto-bookmarking). Manual boat-art cards render broken on iOS.
+Read the **swain-boat-art** skill for styles and commands.
 
 ## Memory & Data
 

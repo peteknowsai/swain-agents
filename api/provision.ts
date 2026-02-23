@@ -18,7 +18,7 @@ const POOL_SIZE = 20;
 
 // Skills symlinked into each advisor workspace
 const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
-const ALL_SKILLS = ["swain-onboarding", "swain-advisor", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
+const ALL_SKILLS = ["swain-onboarding", "swain-briefing", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
 const STYLIST_SKILLS = ["swain-stylist", "swain-cli", "swain-library"];
 const STYLIST_TEMPLATES = "/root/clawd/swain-agents/templates/stylist";
 const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl"];
@@ -338,7 +338,7 @@ async function createDailyBriefingCron(input: CaptainInput, agentId: string): Pr
     "--cron", `${minuteOffset} 11 * * *`,
     "--tz", "UTC",
     "--session", "main",
-    "--system-event", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-advisor skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
+    "--system-event", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-briefing skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
     "--wake", "next-heartbeat",
   ]);
 

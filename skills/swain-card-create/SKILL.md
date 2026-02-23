@@ -33,17 +33,15 @@ swain card create \
 - `--subtext` — Preview text (2-3 sentences)
 - `--content` — Full article in markdown
 
-### What the Server Auto-Fills
+### Desk Agents — Server Auto-Fill
 
-From your agent ID, the server determines:
+When a desk agent creates a card with `--agent-id`, the server determines:
 - **category** — based on your beat (weather, fishing, dining, etc.)
 - **freshness** — timely or evergreen
 - **location** — your coverage area
 - **expires_at** — expiration for timely content
 
-### Optional Overrides
-
-For timely content where you want explicit control:
+Optional overrides for timely content:
 
 ```bash
 swain card create \
@@ -57,11 +55,37 @@ swain card create \
   --json
 ```
 
+### Advisor Cards
+
+Advisors create cards in two situations:
+1. **During heartbeats** — conversation-inspired content (captain mentioned a topic worth exploring)
+2. **During briefing assembly** — gap-filling when the pull doesn't return enough candidates
+
+Advisors set fields explicitly (no auto-fill from agent ID):
+
+```bash
+swain card create \
+  --desk=<captain's regional desk> \
+  --user=<userId> \
+  --category=<category> \
+  --title="<short headline>" \
+  --subtext="<2-3 sentence preview>" \
+  --content="<full markdown>" \
+  --freshness=<timely|evergreen> \
+  --json
+```
+
+- `--desk` — The captain's assigned content desk (from `swain user get`)
+- `--user` — Tags the card for a specific captain. User-tagged cards surface first in pull results.
+- `--category` — Set manually: fishing, destinations, safety, weather, lifestyle, gear, maintenance, navigation, wildlife
+- `--freshness` — Set manually: `timely` or `evergreen`
+
+**Research first.** Use `firecrawl search` / `firecrawl scrape` for real data. Create cards one at a time. Never fabricate content.
+
 ## What NOT to Do
 
-- **Don't set `--category` manually** — server handles this
-- **Don't generate images or set `--style-id`** — a stylist agent picks the art style, generates the image, and assigns it after you create the card
-- **Don't set `--image`** — same reason
+- **Desk agents: don't set `--category` manually** — server determines it from your agent ID. (Advisors set it explicitly — see above.)
+- **Don't set `--image` or `--style-id` at creation time** — images are generated separately with `swain card image` during briefing assembly
 - **NEVER create boat-art cards with this command** — use `swain card boat-art` instead. It auto-sets `styleId`, `backgroundColor`, and proper metadata that iOS needs for art display mode. Manual boat-art cards will render broken.
 
 ## Response

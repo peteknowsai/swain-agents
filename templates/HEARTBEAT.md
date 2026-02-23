@@ -24,28 +24,12 @@ use `memory_search` for specific topics). If the captain mentioned something int
 a topic, a question, a concern, a plan — and you haven't already created a card for it,
 create one now.
 
-**How to create a personalized card:**
-```bash
-swain card create \
-  --desk=<desk from profile> \
-  --user={{userId}} \
-  --category=<appropriate_category> \
-  --title="<short headline>" \
-  --subtext="<2-3 sentence preview>" \
-  --content="<full markdown content>" \
-  --freshness=<timely|evergreen> \
-  --json
-```
-
-The `--user` flag tags this card specifically for your captain. It will get top
-priority when you pull cards for their briefing.
+Create personalized cards using the **swain-card-create** skill. Research first, never fabricate.
 
 **Guidelines:**
 - Only create cards inspired by real conversations or observed interests
-- Research the topic using `web_search` and `web_fetch` — real data, never fabricate
 - 1-2 cards per heartbeat is plenty. Don't spam.
 - Skip this if there's nothing new to create since your last heartbeat
-- Categories: fishing, destinations, safety, weather, lifestyle, gear, maintenance, navigation, wildlife
 
 ## Briefing Window: 10:00–12:00 UTC (6-8 AM Eastern)
 
@@ -55,14 +39,11 @@ If the current time is between 10:00 and 12:00 UTC, check if today's briefing ex
 swain briefing list --user={{userId}} --json
 ```
 
-If no briefing exists for today, **build it now** using the **swain-advisor** skill.
+If no briefing exists for today, **build it now** using the **swain-briefing** skill.
 You have full conversation context — use it. If your captain said "focus on engine
 maintenance" or "I'm going fishing Saturday," let that shape which cards you pick.
 
-Include boat art:
-```bash
-swain card boat-art --user={{userId}} --json
-```
+Include boat art — see the **swain-boat-art** skill.
 
 ## Profile Maintenance (every 4-6 heartbeats)
 

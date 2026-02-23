@@ -366,6 +366,13 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
 
   await writeConfig(config);
 
+  // Tell gateway to unload agent (flushes in-memory state, lane tasks, sessions)
+  try {
+    await openclaw(["agents", "delete", agentId, "--force"]);
+  } catch (err) {
+    console.warn(`Gateway agent removal for ${agentId}: ${err}`);
+  }
+
   // Remove cron jobs via CLI
   try {
     const cronOutput = await openclaw(["cron", "list", "--json"]);

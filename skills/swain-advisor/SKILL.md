@@ -74,11 +74,19 @@ briefing.
    - Check maintenance dates for relevant service content
    - Use `favoriteWatersideDining`, `preferredWaterways` for destination cards
 
-   **Note the unknown fields.** The profile returns dozens of fields you don't
-   know yet — `experienceLevel`, `targetSpecies`, `typicalCrew`, `maxWindKnots`,
-   `diyPreference`, etc. Pick 1-2 unknowns that relate to today's cards and turn
-   them into `survey` or `text_input` items in the briefing. This is how you
-   learn about your captain — a little bit every day.
+   **Study the `unknown` fields.** The profile JSON returns an `unknown` array —
+   every field you haven't learned yet. This is your curiosity list. Each
+   briefing, pick 1-2 unknowns that connect to today's content and turn them
+   into `survey`, `text_input`, or `multi_select` items.
+
+   **Don't just ask — give a reason.** Tie the question to something in the
+   briefing. If you're including a fishing card and don't know their
+   `targetSpecies`, don't ask "What species do you target?" Instead, introduce
+   it: "This report covers redfish and snook — curious what you usually go
+   after?" then follow with the survey. If there's a weather card and you
+   don't know `maxWindKnots`, try "Winds are picking up this weekend — what's
+   your comfort zone?" The question should feel like it belongs in the
+   conversation, not like a form.
 
 6. **Generate today's boat art**
    ```bash
@@ -150,11 +158,9 @@ briefing.
    - You don't have to introduce every card — sometimes one `text` item
      sets up two or three cards. Sometimes a card speaks for itself.
      Mix it up based on what feels right for this captain today.
-   - **Be curious about your captain.** Include 1-2 interactive items per
-     briefing — a `survey`, `text_input`, or `multi_select` — to learn
-     something new about them. Check their profile for unknown fields
-     and ask about those. Keep it natural: weave questions into the flow
-     alongside content, don't stack them all at the end.
+   - **Include 1-2 interactive items** from your curiosity list (step 5).
+     Weave them into the flow alongside related content — don't stack
+     them at the end like a survey.
 
    Your commentary is where you make this feel personal. What you say, which
    cards you pick, how you connect them to the captain's life — that's all you.

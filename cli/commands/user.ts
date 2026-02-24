@@ -2,7 +2,7 @@
 
 /**
  * User Commands
- * swain user list|get|onboard-status|upload-boat-image
+ * swain user list|get|update|onboard-status
  */
 
 import {
@@ -13,7 +13,7 @@ import {
   colors
 } from '../lib/worker-client';
 import { parseArgs } from '../lib/args';
-import { readFileSync, existsSync } from 'fs';
+
 
 /**
  * swain user list
@@ -168,86 +168,6 @@ async function onboardStatus(args: string[]): Promise<void> {
 }
 
 /**
- * swain user upload-boat-image <userId> --file=<path> [--json]
- * Upload boat image for a user
- */
-async function uploadBoatImage(args: string[]): Promise<void> {
-  const params = parseArgs(args);
-  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
-  const filePath = params['file'];
-  const imageUrl = params['url'];
-  const jsonOutput = params['json'] === 'true';
-
-  if (!userId || (!filePath && !imageUrl)) {
-    printError('Usage: swain user upload-boat-image <userId> --file=<path> | --url=<imageUrl> [--json]');
-    process.exit(1);
-  }
-
-  const { getBaseUrl } = await import('../lib/worker-client');
-  const baseUrl = await getBaseUrl();
-  const ADMIN_TOKEN = process.env.SWAIN_API_TOKEN;
-
-  let response: Response;
-
-  if (imageUrl) {
-    // Pass URL directly — server stores it as boat_image_url
-    response = await fetch(`${baseUrl}/users/${userId}/boat-image`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(ADMIN_TOKEN ? { 'Authorization': `Bearer ${ADMIN_TOKEN}` } : {}),
-      },
-      body: JSON.stringify({ imageUrl }),
-    });
-  } else {
-    // File upload path
-    if (!existsSync(filePath!)) {
-      printError(`File not found: ${filePath}`);
-      process.exit(1);
-    }
-
-    const buffer = readFileSync(filePath!);
-    const ext = filePath!.split('.').pop()?.toLowerCase() || 'png';
-    const mimeTypes: Record<string, string> = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      webp: 'image/webp',
-    };
-    const mimeType = mimeTypes[ext];
-    if (!mimeType) {
-      printError(`Unsupported file type: .${ext}. Use JPEG, PNG, or WebP`);
-      process.exit(1);
-    }
-
-    const formData = new FormData();
-    formData.append('image', new Blob([buffer], { type: mimeType }), `boat.${ext}`);
-
-    response = await fetch(`${baseUrl}/users/${userId}/boat-image`, {
-      method: 'POST',
-      headers: {
-        ...(ADMIN_TOKEN ? { 'Authorization': `Bearer ${ADMIN_TOKEN}` } : {}),
-      },
-      body: formData,
-    });
-  }
-
-  const result = await response.json() as any;
-
-  if (jsonOutput) {
-    console.log(JSON.stringify(result, null, 2));
-    return;
-  }
-
-  if (result.success) {
-    printSuccess(`Boat image uploaded for ${userId}`);
-    print(`  URL: ${result.imageUrl}`);
-  } else {
-    printError(result.error || 'Upload failed');
-  }
-}
-
-/**
  * swain user update <userId> --field=value [--json]
  * Update user profile fields
  */
@@ -351,7 +271,6 @@ ${colors.bold}COMMANDS${colors.reset}
   get <userId>            Get user details (includes advisor memories)
   update <userId>         Update user profile fields
   onboard-status <id>     Get or set onboarding status
-  upload-boat-image <id>  Upload boat image for a user
 
 ${colors.bold}UPDATE FIELDS${colors.reset}
   ${colors.bold}Basics:${colors.reset}
@@ -390,8 +309,6 @@ ${colors.bold}UPDATE FIELDS${colors.reset}
 ${colors.bold}OPTIONS${colors.reset}
   --limit=<n>             Limit results (for list, default: 200)
   --status=<status>       Set onboarding status (in_progress|completed)
-  --file=<path>           Image file path (for upload-boat-image)
-  --url=<imageUrl>        Image URL (for upload-boat-image, alternative to --file)
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
@@ -402,7 +319,6 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain user update user_abc123 --experienceLevel=beginner --primaryUse="fishing,diving" --json
   swain user onboard-status user_abc123
   swain user onboard-status user_abc123 --status=completed
-  swain user upload-boat-image user_abc123 --file=boat.jpg
 `);
 }
 
@@ -423,9 +339,6 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'onboard-status':
         await onboardStatus(commandArgs);
-        break;
-      case 'upload-boat-image':
-        await uploadBoatImage(commandArgs);
         break;
       case 'help':
       case '--help':

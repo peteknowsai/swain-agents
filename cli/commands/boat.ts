@@ -2,7 +2,7 @@
 
 /**
  * Boat Commands
- * swain boat list|get|create|update|delete
+ * swain boat list|get|create|update|delete|photo
  */
 
 import {
@@ -514,6 +514,155 @@ async function showProfile(args: string[]): Promise<void> {
   print('');
 }
 
+/**
+ * swain boat photo upload|list|delete
+ */
+async function handlePhoto(args: string[]): Promise<void> {
+  const subcommand = args[0];
+  const subArgs = args.slice(1);
+
+  switch (subcommand) {
+    case 'upload':
+      await photoUpload(subArgs);
+      break;
+    case 'list':
+      await photoList(subArgs);
+      break;
+    case 'delete':
+      await photoDelete(subArgs);
+      break;
+    case 'help':
+    case '--help':
+    case '-h':
+    case undefined:
+      showPhotoHelp();
+      break;
+    default:
+      printError(`Unknown photo command: ${subcommand}`);
+      showPhotoHelp();
+      process.exit(1);
+  }
+}
+
+async function photoUpload(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = params['user'];
+  const imageUrl = params['url'];
+  const boatId = params['boat'];
+  const caption = params['caption'];
+  const isPrimary = params['primary'] === 'true';
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId || !imageUrl) {
+    printError('Usage: swain boat photo upload --user=<userId> --url=<imageUrl> [--boat=<boatId>] [--caption=<text>] [--primary] [--json]');
+    process.exit(1);
+  }
+
+  const body: any = { userId, imageUrl, source: 'agent' };
+  if (boatId) body.boatId = boatId;
+  if (caption) body.caption = caption;
+  if (isPrimary) body.isPrimary = true;
+
+  const result = await workerRequest('/boat-photos', { method: 'POST', body });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.success) {
+    printSuccess(`Photo uploaded${isPrimary ? ' (primary)' : ''}: ${result.photoId}`);
+  } else {
+    printError(result.error || 'Upload failed');
+    process.exit(1);
+  }
+}
+
+async function photoList(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = params['user'];
+  const boatId = params['boat'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId && !boatId) {
+    printError('Usage: swain boat photo list --user=<userId> [--boat=<boatId>] [--json]');
+    process.exit(1);
+  }
+
+  const qs = boatId ? `boatId=${boatId}` : `userId=${userId}`;
+  const result = await workerRequest(`/boat-photos?${qs}`);
+  const photos = result.photos || [];
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({ success: true, photos, count: photos.length }, null, 2));
+    return;
+  }
+
+  if (photos.length === 0) {
+    print('No photos found');
+    return;
+  }
+
+  print(`\n${colors.bold}BOAT PHOTOS (${photos.length})${colors.reset}\n`);
+  print(`${'PHOTO ID'.padEnd(18)} ${'PRIMARY'.padEnd(9)} ${'SOURCE'.padEnd(10)} ${'CAPTION'.padEnd(20)} URL`);
+  print(`${'-'.repeat(18)} ${'-'.repeat(9)} ${'-'.repeat(10)} ${'-'.repeat(20)} ${'-'.repeat(30)}`);
+
+  for (const p of photos) {
+    const primary = p.isPrimary ? `${colors.green}★ yes${colors.reset}` : 'no';
+    const caption = (p.caption || '-').slice(0, 19);
+    const url = (p.imageUrl || '-').slice(0, 50);
+    print(`${(p.photoId || '').slice(0, 17).padEnd(18)} ${primary.padEnd(9 + (p.isPrimary ? colors.green.length + colors.reset.length : 0))} ${(p.source || '-').padEnd(10)} ${caption.padEnd(20)} ${url}`);
+  }
+  print('');
+}
+
+async function photoDelete(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const photoId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!photoId) {
+    printError('Usage: swain boat photo delete <photoId> [--json]');
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/boat-photos/${photoId}`, { method: 'DELETE' });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.success) {
+    printSuccess(`Photo ${photoId} deleted`);
+  } else {
+    printError(result.error || 'Delete failed');
+    process.exit(1);
+  }
+}
+
+function showPhotoHelp(): void {
+  print(`
+${colors.bold}swain boat photo${colors.reset} - Boat photo gallery
+
+${colors.bold}COMMANDS${colors.reset}
+  upload --user=<id> --url=<url>  Add a photo from URL
+  list --user=<id>                List photos for a user
+  delete <photoId>                Delete a photo
+
+${colors.bold}OPTIONS${colors.reset}
+  --boat=<boatId>     Target a specific boat (default: user's primary)
+  --caption=<text>    Photo caption
+  --primary           Set as hero image across the app
+  --json              Output as JSON
+
+${colors.bold}EXAMPLES${colors.reset}
+  swain boat photo upload --user=usr_34a9954e --url=https://example.com/boat.jpg --primary --json
+  swain boat photo list --user=usr_34a9954e --json
+  swain boat photo delete photo_abc123 --json
+`);
+}
+
 function showHelp(): void {
   print(`
 ${colors.bold}swain boat${colors.reset} - Boat management
@@ -525,6 +674,7 @@ ${colors.bold}COMMANDS${colors.reset}
   update <boatId> --field=val Update boat fields
   delete <boatId>             Delete a boat
   profile --user=<userId>     Show combined owner+boat profile with completeness
+  photo upload|list|delete    Manage boat photo gallery
 
 ${colors.bold}FIELDS${colors.reset}
   ${colors.bold}Identity:${colors.reset}     --name --makeModel --year --type --hullType --hullId --imageUrl
@@ -576,6 +726,9 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'profile':
         await showProfile(commandArgs);
+        break;
+      case 'photo':
+        await handlePhoto(commandArgs);
         break;
       case 'help':
       case '--help':

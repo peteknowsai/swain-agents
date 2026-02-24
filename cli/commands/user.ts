@@ -37,12 +37,13 @@ async function listUsers(args: string[]): Promise<void> {
   }
 
   print(`\n${colors.bold}USERS (${users.length})${colors.reset}\n`);
-  print(`${'ID'.padEnd(20)} ${'CAPTAIN'.padEnd(18)} ${'BOAT'.padEnd(18)} ${'LOCATION'.padEnd(18)} ${'ADVISOR'}`);
+  print(`${'ID'.padEnd(20)} ${'CAPTAIN'.padEnd(18)} ${'BOAT ID'.padEnd(18)} ${'LOCATION'.padEnd(18)} ${'ADVISOR'}`);
   print(`${'-'.repeat(20)} ${'-'.repeat(18)} ${'-'.repeat(18)} ${'-'.repeat(18)} ${'-'.repeat(20)}`);
 
   for (const user of users) {
     const advisor = user.advisorAgentId ? `${colors.green}${user.advisorAgentId}${colors.reset}` : `${colors.dim}none${colors.reset}`;
-    print(`${(user.id || '').slice(0, 19).padEnd(20)} ${(user.captainName || '-').slice(0, 17).padEnd(18)} ${(user.boatName || '-').slice(0, 17).padEnd(18)} ${(user.marinaLocation || user.location || '-').slice(0, 17).padEnd(18)} ${advisor}`);
+    const boatId = user.primaryBoatId ? user.primaryBoatId.slice(0, 17) : '-';
+    print(`${(user.id || '').slice(0, 19).padEnd(20)} ${(user.captainName || '-').slice(0, 17).padEnd(18)} ${boatId.padEnd(18)} ${(user.marinaLocation || user.location || '-').slice(0, 17).padEnd(18)} ${advisor}`);
   }
   print('');
 }
@@ -60,10 +61,15 @@ async function getUser(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const result = await workerRequest(`/users/${userId}`);
+  const [result, boatsResult] = await Promise.all([
+    workerRequest(`/users/${userId}`),
+    workerRequest(`/boats?userId=${userId}`),
+  ]);
+  const boats = boatsResult.boats || [];
+  const boat = boats.find((b: any) => b.isPrimary) || boats[0] || null;
 
   if (jsonOutput) {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ ...result, boats }, null, 2));
     return;
   }
 
@@ -77,8 +83,8 @@ async function getUser(args: string[]): Promise<void> {
   print(`  ID:           ${u.id}`);
   print(`  Email:        ${u.email || '-'}`);
   print(`  Captain:      ${u.captainName || '-'}`);
-  print(`  Boat:         ${u.boatName || '-'} ${u.boatYear ? `(${u.boatYear})` : ''}`);
-  print(`  Make/Model:   ${u.boatMakeModel || '-'}`);
+  print(`  Boat:         ${boat?.name || '-'} ${boat?.year ? `(${boat.year})` : ''}`);
+  print(`  Make/Model:   ${boat?.makeModel || '-'}`);
   print(`  Location:     ${u.marinaLocation || u.location || '-'}`);
   print(`  Timezone:     ${u.timezone || '-'}`);
   print(`  Phone:        ${u.phone || '-'}`);
@@ -256,13 +262,11 @@ async function updateUser(args: string[]): Promise<void> {
   }
 
   // All updatable fields (camelCase keys match API body)
+  // Boat fields live in the boats table now — use `swain boat update`
   const updatableFields = [
     // Basics
     'captainName', 'phone', 'messagingPhone', 'location', 'marinaLocation',
     'timezone', 'interests', 'favoriteTopics', 'desk',
-    // Legacy boat fields (on user record)
-    'boatName', 'boatMakeModel', 'boatYear', 'boatImageUrl',
-    'boatLength', 'boatType', 'engineType', 'fuelType', 'hasTrailer',
     // Identity & contact
     'homeAddress', 'homeZip', 'homeCity', 'homeState',
     'dateOfBirth', 'householdSize', 'occupation',
@@ -286,11 +290,11 @@ async function updateUser(args: string[]): Promise<void> {
 
   // Numeric fields
   const numericFields = new Set([
-    'boatLength', 'maxWindKnots', 'maxWaveFeet', 'minTempF',
+    'maxWindKnots', 'maxWaveFeet', 'minTempF',
     'householdSize', 'dateOfBirth',
   ]);
   // Boolean fields
-  const booleanFields = new Set(['hasTrailer', 'petOnBoard']);
+  const booleanFields = new Set(['petOnBoard']);
 
   // Build update body from provided flags
   const body: Record<string, any> = {};
@@ -354,9 +358,8 @@ ${colors.bold}UPDATE FIELDS${colors.reset}
   --captainName --phone --messagingPhone --location --marinaLocation
   --timezone --interests --favoriteTopics --desk
 
-  ${colors.bold}Legacy boat (on user record — prefer 'swain boat update'):${colors.reset}
-  --boatName --boatMakeModel --boatYear --boatLength --boatType
-  --engineType --fuelType --hasTrailer
+  ${colors.bold}Boat:${colors.reset}
+  Use 'swain boat update' — boat data lives in the boats table.
 
   ${colors.bold}Identity & contact:${colors.reset}
   --homeAddress --homeZip --homeCity --homeState --dateOfBirth

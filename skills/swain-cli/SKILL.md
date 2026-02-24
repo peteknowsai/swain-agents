@@ -18,6 +18,9 @@ swain boat create --user=<userId> --name=<name> [--makeModel=<mm>] [--year=<y>] 
 swain boat update <boatId> --field=value [--json]
 swain boat delete <boatId> [--json]
 swain boat profile --user=<userId> [--json]
+swain boat photo upload --user=<userId> --url=<url> [--boat=<boatId>] [--caption=<text>] [--primary] [--json]
+swain boat photo list --user=<userId> [--boat=<boatId>] [--json]
+swain boat photo delete <photoId> [--json]
 ```
 
 **Profile** returns combined owner+boat data with completeness score, known/unknown fields, and tier.
@@ -37,7 +40,7 @@ swain user list [--limit=<n>] [--json]
 swain user get <userId> [--json]
 swain user update <userId> --field=value [--json]
 swain user onboard-status <userId> [--status=completed] [--json]
-swain user upload-boat-image <userId> --file=<path> | --url=<url> [--json]
+
 ```
 
 **User update fields:** captainName, phone, messagingPhone, location, marinaLocation,

@@ -155,11 +155,7 @@ A real photo makes the art dramatically better. Ways to get one:
 - **Ask in the first briefing**: Include a text item asking for a photo
 - **They may send it via WhatsApp** — when they do, save it:
   ```bash
-  swain user upload-boat-image {{userId}} --url=<photo_url>
-  ```
-  or if you have the file locally:
-  ```bash
-  swain user upload-boat-image {{userId}} --file=<path>
+  swain boat photo upload --user={{userId}} --url=<photo_url> --primary --json
   ```
 
 Once a photo is on file, all future boat art automatically uses it for image-to-image generation.

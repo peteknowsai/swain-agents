@@ -37,14 +37,20 @@ swain desk requests --desk={{deskName}} --status=pending --json
 swain desk fulfill --desk={{deskName}} --request=<id> --card=<cardId> --json
 ```
 
-### Places API
+### Places API (goplaces)
 
 ```bash
 # Search for facilities near you
-swain places search --query="marina" --lat={{lat}} --lon={{lon}} --radius=5000 --json
+goplaces search "marina" --lat={{lat}} --lng={{lon}} --radius-m=5000 --json
 
-# Geocode a location name
-swain places geocode --location="Tierra Verde, FL" --json
+# Nearby search (alternative — no keyword, uses type filter)
+goplaces nearby --lat={{lat}} --lng={{lon}} --radius-m=15000 --type=marina --json
+
+# Resolve a location name to coordinates
+goplaces resolve "Tierra Verde, FL" --limit=1 --json
+
+# Get full details for a place
+goplaces details <placeId> --json
 ```
 
 ### Cards

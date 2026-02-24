@@ -19,12 +19,73 @@ const POOL_SIZE = 20;
 // Skills symlinked into each advisor workspace
 const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
 const ALL_SKILLS = ["swain-onboarding", "swain-briefing", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
-const STYLIST_SKILLS = ["swain-stylist", "swain-cli", "swain-library"];
-const STYLIST_TEMPLATES = "/root/clawd/swain-agents/templates/stylist";
 const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl"];
 const DESK_TEMPLATES = "/root/clawd/swain-agents/templates/content-desk";
 
+// Convex HTTP endpoint
+const CONVEX_BASE_URL = "https://wandering-sparrow-224.convex.site";
+const CONVEX_TOKEN = process.env.SWAIN_API_TOKEN;
+const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+
+export interface DeskProvisionInput {
+  name: string;
+  region: string;
+  lat: number;
+  lon: number;
+  scope?: string;
+  description?: string;
+  createdByLocation?: string;
+  bounds?: { ne: { lat: number; lon: number }; sw: { lat: number; lon: number } };
+}
+
 // --- Helpers ---
+
+async function convexRequest(method: string, path: string, data?: unknown): Promise<any> {
+  const url = `${CONVEX_BASE_URL}/api${path}`;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(CONVEX_TOKEN ? { Authorization: `Bearer ${CONVEX_TOKEN}` } : {}),
+    },
+    body: data ? JSON.stringify(data) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Convex ${method} ${path} failed [${res.status}]: ${text}`);
+  }
+  return res.json();
+}
+
+async function geocodeBounds(region: string): Promise<{ ne: { lat: number; lon: number }; sw: { lat: number; lon: number } }> {
+  if (!GOOGLE_PLACES_API_KEY) {
+    throw new Error("GOOGLE_PLACES_API_KEY required for geocoding bounds");
+  }
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(region)}&key=${GOOGLE_PLACES_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.results?.[0]?.geometry?.viewport) {
+      const vp = data.results[0].geometry.viewport;
+      return {
+        ne: { lat: vp.northeast.lat, lon: vp.northeast.lng },
+        sw: { lat: vp.southwest.lat, lon: vp.southwest.lng },
+      };
+    }
+  } catch (err) {
+    console.warn(`Geocoding failed for "${region}", using default bounds: ${err}`);
+  }
+  // Fallback: ~25 mile box around center (caller must handle this with lat/lon from input)
+  throw new Error(`Could not geocode "${region}" for bounds`);
+}
+
+function defaultBounds(lat: number, lon: number): { ne: { lat: number; lon: number }; sw: { lat: number; lon: number } } {
+  // ~25 mile box (0.36 degrees lat, ~0.45 degrees lon at mid-latitudes)
+  return {
+    ne: { lat: lat + 0.36, lon: lon + 0.45 },
+    sw: { lat: lat - 0.36, lon: lon - 0.45 },
+  };
+}
 
 function normalizePhone(phone: string): string {
   // Expect E.164 from the frontend (e.g., +526692766911, +14156239773)
@@ -411,61 +472,11 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   console.log(`Advisor ${agentId} deleted (removed from pool, gateway, workspace)`);
 }
 
-// --- Stylist provisioning (one-off system agent) ---
-
-export async function provisionStylist(): Promise<{ agentId: string; workspace: string }> {
-  const agentId = "stylist";
-  const workspace = join(WORKSPACES_ROOT, agentId);
-  const config = await readConfig();
-  if (!config.agents) config.agents = {};
-  if (!config.agents.list) config.agents.list = [];
-
-  // Check if already provisioned
-  if (config.agents.list.find((a: any) => a.id === agentId)) {
-    throw new Error("Stylist agent already provisioned");
-  }
-
-  // 1. Create workspace and copy template files
-  await mkdir(workspace, { recursive: true });
-  for (const file of ["AGENTS.md", "HEARTBEAT.md", "TOOLS.md", "SOUL.md"]) {
-    const content = await readFile(join(STYLIST_TEMPLATES, file), "utf-8");
-    await writeFile(join(workspace, file), content);
-  }
-
-  // 2. Symlink skills
-  const skillsDest = join(workspace, "skills");
-  await mkdir(skillsDest, { recursive: true });
-  for (const skill of STYLIST_SKILLS) {
-    const target = join(skillsDest, skill);
-    try { await rm(target, { recursive: true, force: true }); } catch {}
-    await symlink(join(SKILLS_ROOT, skill), target);
-  }
-
-  // 3. Register in gateway config with 30-min heartbeat
-  config.agents.list.push({
-    id: agentId,
-    name: "stylist",
-    workspace,
-    agentDir: `/root/.openclaw/agents/${agentId}/agent`,
-    model: { primary: "anthropic/claude-sonnet-4-6" },
-    heartbeat: { every: "30m" },
-    subagents: { allowAgents: [] },
-  });
-  await writeConfig(config);
-
-  // 4. Copy auth profile
-  await copyAuthProfile(agentId);
-
-  // 5. Fallback workspace symlink
-  try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
-
-  console.log(`Stylist agent provisioned at ${workspace}`);
-  return { agentId, workspace };
-}
-
 // --- Content desk provisioning ---
 
-export async function provisionContentDesk({ name, region }: { name: string; region: string }): Promise<{ agentId: string; workspace: string }> {
+export async function provisionContentDesk(input: DeskProvisionInput): Promise<{ agentId: string; workspace: string; name: string; deskId?: string }> {
+  const { name, region, lat, lon, scope, description, createdByLocation } = input;
+
   // Validate name slug
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) {
     throw new Error("Desk name must be a lowercase-hyphenated slug (e.g., tampa-bay)");
@@ -484,7 +495,7 @@ export async function provisionContentDesk({ name, region }: { name: string; reg
 
   // 1. Create workspace and render templates
   await mkdir(workspace, { recursive: true });
-  const vars = { deskName: name, region };
+  const vars = { deskName: name, region, lat: String(lat), lon: String(lon), scope: scope ?? "" };
   for (const file of ["AGENTS.md", "HEARTBEAT.md", "TOOLS.md", "SOUL.md"]) {
     const content = await readFile(join(DESK_TEMPLATES, file), "utf-8");
     await writeFile(join(workspace, file), render(content, vars));
@@ -517,17 +528,32 @@ export async function provisionContentDesk({ name, region }: { name: string; reg
   // 5. Fallback workspace symlink
   try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
 
-  // 6. Register in Convex
+  // 6. Create Convex desk record
+  let deskId: string | undefined;
   try {
-    const proc = Bun.spawn([
-      "swain", "agent", "create",
-      `--agent=${agentId}`, "--type=desk",
-      `--name=${name}`, `--region=${region}`,
-      "--json",
-    ], { stdout: "pipe", stderr: "pipe" });
-    const stdout = await new Response(proc.stdout).text();
-    await proc.exited;
-    console.log(`Desk registered in Convex: ${stdout.trim().slice(0, 200)}`);
+    // Resolve bounds: use provided, geocode, or default
+    let bounds = input.bounds;
+    if (!bounds) {
+      try {
+        bounds = await geocodeBounds(region);
+      } catch {
+        bounds = defaultBounds(lat, lon);
+        console.warn(`Using default bounds for "${region}" (geocoding failed)`);
+      }
+    }
+
+    const convexResult = await convexRequest("POST", "/desks", {
+      name,
+      region,
+      description: description ?? "",
+      scope: scope ?? "",
+      agentId,
+      center: { lat, lon },
+      bounds,
+      createdByLocation: createdByLocation ?? region,
+    });
+    deskId = convexResult.id;
+    console.log(`Desk registered in Convex: ${name} (${deskId})`);
   } catch (err) {
     console.error(`Convex registration failed (non-fatal): ${err}`);
   }
@@ -546,7 +572,7 @@ export async function provisionContentDesk({ name, region }: { name: string; reg
   }
 
   console.log(`Content desk ${agentId} provisioned at ${workspace} (region: ${region})`);
-  return { agentId, workspace };
+  return { agentId, workspace, name, deskId };
 }
 
 export async function listDesks(): Promise<unknown[]> {
@@ -611,16 +637,12 @@ export async function deleteDesk(name: string): Promise<void> {
   // Delete fallback symlink
   await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
 
-  // Unregister from Convex
+  // Delete Convex desk record
   try {
-    const proc = Bun.spawn([
-      "swain", "agent", "delete",
-      `--agent=${agentId}`, "--force", "--json",
-    ], { stdout: "pipe", stderr: "pipe" });
-    await proc.exited;
-    console.log(`Desk unregistered from Convex: ${agentId}`);
+    await convexRequest("DELETE", `/desks/${name}`);
+    console.log(`Desk Convex record deleted: ${name}`);
   } catch (err) {
-    console.error(`Convex unregistration failed (non-fatal): ${err}`);
+    console.error(`Convex desk deletion failed (non-fatal): ${err}`);
   }
 
   console.log(`Content desk ${agentId} deleted (removed from gateway, workspace, Convex)`);

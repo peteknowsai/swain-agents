@@ -23,10 +23,10 @@ start producing.
 Search for marinas, boat ramps, yacht clubs, and fuel docks in your area:
 
 ```
-swain places search --query="marina" --lat={{lat}} --lon={{lon}} --radius=25000 --json
-swain places search --query="boat ramp" --lat={{lat}} --lon={{lon}} --radius=25000 --json
-swain places search --query="yacht club" --lat={{lat}} --lon={{lon}} --radius=15000 --json
-swain places search --query="fuel dock" --lat={{lat}} --lon={{lon}} --radius=25000 --json
+goplaces search "marina" --lat={{lat}} --lng={{lon}} --radius-m=25000 --json
+goplaces search "boat ramp" --lat={{lat}} --lng={{lon}} --radius-m=25000 --json
+goplaces search "yacht club" --lat={{lat}} --lng={{lon}} --radius-m=15000 --json
+goplaces search "fuel dock" --lat={{lat}} --lng={{lon}} --radius-m=25000 --json
 ```
 
 ### 2. Research Context

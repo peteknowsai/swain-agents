@@ -37,6 +37,6 @@ swain desk search --lat=N --lon=N [--radius=50] --json
 # Get full desk details
 swain desk get <name> --json
 
-# Geocode a location
-swain places geocode --location="..." --json
+# Resolve a location to coordinates
+goplaces resolve "Tierra Verde, FL" --limit=1 --json
 ```

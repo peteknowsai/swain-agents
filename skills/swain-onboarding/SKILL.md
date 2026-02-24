@@ -204,8 +204,9 @@ Steps:
       i.   Decide on name (slug), region (human-readable), and scope (natural language boundary).
            These are editorial decisions. Pick boundaries that make sense for boaters,
            not administrative boundaries.
-      ii.  THEN geocode to get coordinates:
-           swain places geocode --location='<region>' --json
+      ii.  THEN resolve to get coordinates:
+           goplaces resolve '<region>' --limit=1 --json
+           (use location.lat and location.lng from the result)
       iii. Create the desk:
            swain desk create --name=<slug> --region='<region>' --lat=<lat> --lon=<lon> --scope='<scope>' --description='<description>' --created-by-location='<rawLocationInput>' --json
       iv.  Assign user:

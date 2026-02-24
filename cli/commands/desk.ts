@@ -297,7 +297,7 @@ async function searchDesks(args: string[]): Promise<void> {
 }
 
 /**
- * swain desk request --desk=<name> --topic="..." --category=<cat> [--location=...] [--user=...] [--json]
+ * swain desk request --desk=<name> --topic="..." --category=<cat> [--location=...] [--user=...] [--requested-by=...] [--json]
  * File an editorial signal to a desk
  */
 async function createRequest(args: string[]): Promise<void> {
@@ -308,13 +308,14 @@ async function createRequest(args: string[]): Promise<void> {
   const category = params['category'];
   const location = params['location'];
   const userId = params['user'];
+  const requestedBy = params['requested-by'] || process.env.OPENCLAW_AGENT_ID || 'unknown';
 
   if (!desk || !topic || !category) {
-    printError('Usage: swain desk request --desk=<name> --topic="..." --category=<cat> [--location=...] [--user=...] [--json]');
+    printError('Usage: swain desk request --desk=<name> --topic="..." --category=<cat> [--location=...] [--user=...] [--requested-by=<agentId>] [--json]');
     process.exit(1);
   }
 
-  const body: Record<string, any> = { topic, category };
+  const body: Record<string, any> = { topic, category, requestedBy };
   if (location) body.location = location;
   if (userId) body.userId = userId;
 
@@ -576,6 +577,7 @@ ${colors.bold}REQUEST OPTIONS${colors.reset}
   --category=<cat>        Card category (weather-tides, fishing-reports, etc.)
   --location="..."        Specific microlocation (optional)
   --user=<userId>         Captain who sparked this (optional context)
+  --requested-by=<id>     Advisor agent ID (auto-detected from OPENCLAW_AGENT_ID)
 
 ${colors.bold}FULFILL OPTIONS${colors.reset}
   --desk=<name>           Desk name

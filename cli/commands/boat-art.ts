@@ -64,19 +64,24 @@ async function createBoatArt(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // 1. Fetch user profile
-  const userResult = await workerRequest(`/users/${userId}`);
+  // 1. Fetch user profile + boats in parallel
+  const [userResult, boatsResult] = await Promise.all([
+    workerRequest(`/users/${userId}`),
+    workerRequest(`/boats?userId=${userId}`),
+  ]);
   const user = userResult.user || userResult;
-  if (!user || !user.boatName) {
-    printError(`User ${userId} not found or has no boat name`);
+  const boats = boatsResult.boats || [];
+  const boat = boats.find((b: any) => b.isPrimary) || boats[0] || null;
+  if (!user || !boat?.name) {
+    printError(`User ${userId} not found or has no boat`);
     process.exit(1);
   }
 
-  const boatName = user.boatName;
-  const boatType = user.boatType || undefined;
-  const boatMakeModel = user.boatMakeModel || undefined;
+  const boatName = boat.name;
+  const boatType = boat.type || undefined;
+  const boatMakeModel = boat.makeModel || undefined;
   const boatColor = undefined;
-  const boatImageUrl = user.boatImageUrl || undefined;
+  const boatImageUrl = boat.imageUrl || undefined;
   const hasPhoto = !!boatImageUrl;
 
   // 2. Determine style

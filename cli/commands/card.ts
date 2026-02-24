@@ -740,19 +740,24 @@ async function boatArt(args: string[]): Promise<void> {
     getSamplerStyles,
   } = await import('../lib/image');
 
-  // 1. Fetch user profile
-  const userResult = await workerRequest(`/users/${userId}`);
+  // 1. Fetch user profile + boats in parallel
+  const [userResult, boatsResult] = await Promise.all([
+    workerRequest(`/users/${userId}`),
+    workerRequest(`/boats?userId=${userId}`),
+  ]);
   const user = userResult.user || userResult;
-  if (!user || !user.boatName) {
-    printError(`User ${userId} not found or has no boat name`);
+  const boats = boatsResult.boats || [];
+  const boat = boats.find((b: any) => b.isPrimary) || boats[0] || null;
+  if (!user || !boat?.name) {
+    printError(`User ${userId} not found or has no boat`);
     process.exit(1);
   }
 
-  const boatName = user.boatName;
-  const boatType = user.boatType || undefined;
-  const boatMakeModel = user.boatMakeModel || undefined;
-  const boatColor = undefined; // Not in schema yet — future enhancement
-  const boatImageUrl = user.boatImageUrl || undefined;
+  const boatName = boat.name;
+  const boatType = boat.type || undefined;
+  const boatMakeModel = boat.makeModel || undefined;
+  const boatColor = undefined;
+  const boatImageUrl = boat.imageUrl || undefined;
   const hasPhoto = !!boatImageUrl;
 
   if (!jsonOutput) {

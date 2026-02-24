@@ -8,12 +8,13 @@
  */
 
 import {
+  workerRequest,
   print,
   printSuccess,
   printError,
   colors
 } from '../lib/worker-client';
-import { generate } from '../lib/image';
+import { generate, fetchImageAsBase64 } from '../lib/image';
 
 /**
  * Parse CLI arguments
@@ -89,28 +90,82 @@ async function generateImageCommand(args: string[]): Promise<void> {
 }
 
 /**
+ * swain image upload --url=<imageUrl> [--filename=<name>] [--json]
+ * swain image upload --file=<path> [--filename=<name>] [--json]
+ * Upload an image to Cloudflare via the Convex API. Returns a public CDN URL.
+ */
+async function uploadImageCommand(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const source = params['url'] || params['file'];
+  const filenameOverride = params['filename'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!source) {
+    printError('Usage: swain image upload --url=<imageUrl> [--filename=<name>] [--json]');
+    process.exit(1);
+  }
+
+  let base64: string;
+  let filename: string | undefined = filenameOverride;
+  try {
+    const fetched = await fetchImageAsBase64(source);
+    base64 = fetched.base64;
+    if (!filename) filename = fetched.filename;
+  } catch (err: any) {
+    if (jsonOutput) {
+      console.log(JSON.stringify({ success: false, error: `Failed to fetch image: ${err.message}` }));
+    } else {
+      printError(`Failed to fetch image: ${err.message}`);
+    }
+    process.exit(1);
+  }
+
+  const body: any = { image: base64 };
+  if (filename) body.filename = filename;
+
+  const result = await workerRequest('/images/upload', { method: 'POST', body });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.imageId) {
+    printSuccess(`Image uploaded: ${result.imageUrl}`);
+    print(`  ID: ${result.imageId}`);
+  } else {
+    printError(result.error || 'Upload failed');
+    process.exit(1);
+  }
+}
+
+/**
  * Show help
  */
 function showHelp(): void {
   print(`
-${colors.bold}swain image${colors.reset} - Image generation
+${colors.bold}swain image${colors.reset} - Image generation & upload
 
 ${colors.bold}Commands:${colors.reset}
-  generate "prompt"   Generate image (Replicate → Cloudflare Images)
+  generate "prompt"          Generate image (Replicate → Cloudflare Images)
+  upload --url=<url>         Upload an existing image to Cloudflare
 
 ${colors.bold}Options:${colors.reset}
   --style=<id>        Style ID for cataloging (NOT sent to model)
+  --filename=<name>   Override filename (upload only)
   --json              Output as JSON
 
 ${colors.bold}Examples:${colors.reset}
   swain image generate "sheepshead near dock pilings, soft watercolor wash"
   swain image generate "fishing scene at sunset" --style=golden-hour --json
+  swain image upload --url=http://localhost:8765/photo.jpg --json
+  swain image upload --file=/tmp/screenshot.png --json
 
 ${colors.bold}Notes:${colors.reset}
-  - Uses Replicate API (Nano Banana Pro) → uploads to Cloudflare Images
+  - generate: Uses Replicate API → Cloudflare Images. 10-30 seconds.
+  - upload: Fetches from any URL or local file, uploads to Cloudflare via Convex API.
   - Your prompt is the creative vision — aspect ratio, bleed, no-text are added automatically
   - Pass --style=<id> to catalog which style was used (metadata only)
-  - Typical generation time: 10-30 seconds
 `);
 }
 
@@ -125,6 +180,9 @@ export async function run(args: string[]): Promise<void> {
     switch (command) {
       case 'generate':
         await generateImageCommand(commandArgs);
+        break;
+      case 'upload':
+        await uploadImageCommand(commandArgs);
         break;
       case '--help':
       case '-h':

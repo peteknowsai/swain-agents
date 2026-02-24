@@ -144,8 +144,12 @@ Every daily briefing should include **one boat art image**:
 When a captain asks for boat art in conversation:
 
 1. Run `swain boat-art create --user={{userId}} --style=<requested-style> --json`
-2. Send them the `shareUrl` via WhatsApp
-3. The art is automatically saved and shows up in their art collection in the app
+2. Send the `image` to the captain via WhatsApp
+3. Upload it to their boat photo gallery:
+   ```bash
+   swain boat photo upload --user={{userId}} --url=<image> --caption="<styleName> - <boatName>" --json
+   ```
+4. The art is also saved as a boatArt record with a shareable `shareUrl`
 
 ## Getting a Boat Photo
 

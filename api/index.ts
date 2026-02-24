@@ -5,8 +5,8 @@ import {
   lookupByUserId,
   provisionPool,
   getPoolStatus,
-  provisionStylist,
   provisionContentDesk,
+  type DeskProvisionInput,
   listDesks,
   deleteDesk,
   pauseDesk,
@@ -101,15 +101,12 @@ const server = Bun.serve({
         return json(await getPoolStatus());
       }
 
-      // POST /stylist/provision — create stylist system agent
-      if (pathname === "/stylist/provision" && method === "POST") {
-        return json(await provisionStylist(), 201);
-      }
-
       // POST /desks — provision content desk
       if (pathname === "/desks" && method === "POST") {
-        const body = (await req.json()) as { name: string; region: string };
-        if (!body.name || !body.region) return error("name and region are required");
+        const body = (await req.json()) as DeskProvisionInput;
+        if (!body.name || !body.region || !body.lat || !body.lon) {
+          return error("name, region, lat, and lon are required");
+        }
         const result = await provisionContentDesk(body);
         return json(result, 201);
       }

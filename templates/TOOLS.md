@@ -17,3 +17,26 @@ If the app isn't installed, they fall back to the website.
 - **User ID**: `{{userId}}`
 - **Name**: `{{captainName}}`
 - **Phone**: `{{phone}}`
+
+## Desk Requests
+
+When your captain asks about something the library doesn't cover, answer them
+directly in WhatsApp, then file a desk request so the desk produces lasting
+content for the whole region:
+
+```bash
+# File an editorial request to a content desk
+swain desk request --desk=<name> --topic="..." --category=<cat> [--location=...] [--user=<userId>] --json
+
+# Check pending requests for a desk
+swain desk requests --desk=<name> [--status=pending] --json
+
+# Search for nearby desks
+swain desk search --lat=N --lon=N [--radius=50] --json
+
+# Get full desk details
+swain desk get <name> --json
+
+# Geocode a location
+swain places geocode --location="..." --json
+```

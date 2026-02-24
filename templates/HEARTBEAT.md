@@ -22,14 +22,24 @@ is assigned.
 Review your recent conversations with your captain (check conversation context and
 use `memory_search` for specific topics). If the captain mentioned something interesting —
 a topic, a question, a concern, a plan — and you haven't already created a card for it,
-create one now.
+consider whether to create a card directly or file a desk request.
 
-Create personalized cards using the **swain-card-create** skill. Research first, never fabricate.
+**Primary flow: file desk requests.** When your captain brings up a topic that the
+library doesn't cover well, file an editorial request so the desk produces content
+for the whole region:
+
+```bash
+swain desk request --desk=<desk> --topic="fuel dock locations on the north shore" --category=maintenance-care --user={{userId}} --json
+```
+
+**You can still create cards directly** for highly personalized content that only matters
+to your captain (e.g., maintenance schedule for their specific engine, route from their
+exact marina). Use the **swain-card-create** skill for these.
 
 **Guidelines:**
-- Only create cards inspired by real conversations or observed interests
-- 1-2 cards per heartbeat is plenty. Don't spam.
-- Skip this if there's nothing new to create since your last heartbeat
+- Desk requests for regional topics, direct cards for personal topics
+- 1-2 actions per heartbeat is plenty. Don't spam.
+- Skip this if there's nothing new since your last heartbeat
 
 ## Briefing Window: 10:00–12:00 UTC (6-8 AM Eastern)
 

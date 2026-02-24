@@ -23,6 +23,7 @@ import { run as runOnboarding } from './commands/onboarding';
 import { run as runUser } from './commands/user';
 import { run as runAdvisor } from './commands/advisor';
 import { run as runDesk } from './commands/desk';
+import { run as runPlaces } from './commands/places';
 
 import { print, colors } from './lib/worker-client';
 
@@ -47,7 +48,8 @@ ${colors.bold}COMMANDS${colors.reset}
   briefing                User briefings (list, get, assemble, validate)
   user                    User management (list, get, update, onboard-status, upload-boat-image)
   advisor                 Advisor agents (list, delete)
-  desk                    Content desks (list, create, delete)
+  desk                    Content desks (list, get, create, update, delete, search)
+  places                  Google Places API (geocode, search)
 
   style                   Image styles (list, get, update)
   onboarding              Onboarding templates (list, seed)
@@ -130,6 +132,9 @@ async function main(): Promise<void> {
       break;
     case 'desk':
       await runDesk(subArgs);
+      break;
+    case 'places':
+      await runPlaces(subArgs);
       break;
     default:
       print(`${colors.red}Unknown command: ${command}${colors.reset}`);

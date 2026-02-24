@@ -107,12 +107,13 @@ briefing.
    If you still can't reach 8 after creating cards on the fly, include what you have —
    but this should be rare.
 
-8. **Flag content gaps** — If your captain cares about something and the library
-   doesn't have it, tell Mr. Content:
+8. **File desk requests** — If your captain cares about something and the library
+   doesn't have it, file a desk request so the content desk starts covering it:
+   ```bash
+   swain desk request --desk=<captain's desk> --topic="fuel dock locations and hours" --category=maintenance-care --user={{userId}} --json
    ```
-   sessions_send(sessionKey="agent:mr-content:main", message="My captain [name] is into [topic] around [location] but I can't find anything in the library on it. Would be great to get some content on this.")
-   ```
-   Mr. Content coordinates the content desks — he'll route it to the right one.
+   This tells the desk "captains in your region care about this topic." The desk
+   picks it up on its next heartbeat and produces lasting content for everyone.
 
 9. **Read full card content** for each selected card:
    ```bash

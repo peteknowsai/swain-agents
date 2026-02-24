@@ -7,7 +7,7 @@
 #
 #   heyswain              → menu → TUI
 #   heyswain swain        → TUI with Swain
-#   heyswain commodore    → TUI with Commodore
+#   heyswain cto          → TUI with CTO
 
 set -euo pipefail
 
@@ -15,28 +15,14 @@ VPS="root@76.13.106.143"
 
 # Display names → VPS agent IDs
 declare -A AGENT_IDS=(
-  [cto]="swain-cto"
-  [commodore]="commodore"
-  [mr-content]="mr-content"
   [swain]="main"
-  [tampa-bay-desk]="tampa-bay-desk"
-  [sw-florida-desk]="sw-florida-desk"
-  [se-florida-desk]="se-florida-desk"
-  [ne-florida-desk]="ne-florida-desk"
-  [crystal-coast-desk]="crystal-coast-desk"
+  [cto]="swain-cto"
 )
 declare -A AGENTS=(
-  [cto]="Swain CTO (swain dev)"
-  [commodore]="Advisor Commander (swain ops)"
-  [mr-content]="Editor-in-Chief (swain content)"
   [swain]="Swain — Fleet lead (manages all agents)"
-  [tampa-bay-desk]="Tampa Bay regional desk"
-  [sw-florida-desk]="SW Florida regional desk"
-  [se-florida-desk]="SE Florida regional desk"
-  [ne-florida-desk]="NE Florida regional desk"
-  [crystal-coast-desk]="Crystal Coast regional desk"
+  [cto]="Swain CTO (swain dev)"
 )
-AGENT_ORDER=(swain cto commodore mr-content tampa-bay-desk sw-florida-desk se-florida-desk ne-florida-desk crystal-coast-desk)
+AGENT_ORDER=(swain cto)
 
 pick_agent() {
   if command -v fzf &>/dev/null; then

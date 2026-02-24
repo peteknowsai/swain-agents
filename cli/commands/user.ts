@@ -206,6 +206,8 @@ async function updateUser(args: string[]): Promise<void> {
     'favoriteWatersideDining', 'petOnBoard', 'priorBoatsOwned',
     // Onboarding
     'onboardingStep', 'onboardingStatus',
+    // Desk & location context
+    'microlocation', 'mobility', 'watercraftContext', 'rawLocationInput',
   ];
 
   // Numeric fields
@@ -305,6 +307,9 @@ ${colors.bold}UPDATE FIELDS${colors.reset}
 
   ${colors.bold}Onboarding:${colors.reset}
   --onboardingStep --onboardingStatus
+
+  ${colors.bold}Desk & location:${colors.reset}
+  --microlocation --mobility --watercraftContext --rawLocationInput
 
 ${colors.bold}OPTIONS${colors.reset}
   --limit=<n>             Limit results (for list, default: 200)

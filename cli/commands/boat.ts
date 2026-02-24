@@ -13,6 +13,7 @@ import {
   colors
 } from '../lib/worker-client';
 import { parseArgs } from '../lib/args';
+import { fetchImageAsBase64 } from '../lib/image';
 
 // All boat fields that can be set via CLI flags
 const BOAT_FIELDS = [
@@ -547,31 +548,47 @@ async function handlePhoto(args: string[]): Promise<void> {
 async function photoUpload(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const userId = params['user'];
-  const imageUrl = params['url'];
+  const source = params['url'] || params['file'];
   const boatId = params['boat'];
   const caption = params['caption'];
   const isPrimary = params['primary'] === 'true';
   const jsonOutput = params['json'] === 'true';
 
-  if (!userId || !imageUrl) {
+  if (!userId || !source) {
     printError('Usage: swain boat photo upload --user=<userId> --url=<imageUrl> [--boat=<boatId>] [--caption=<text>] [--primary] [--json]');
     process.exit(1);
   }
 
-  const body: any = { userId, imageUrl, source: 'agent' };
+  // Fetch image and base64-encode it for server-side Cloudflare upload
+  let base64: string;
+  let filename: string | undefined;
+  try {
+    ({ base64, filename } = await fetchImageAsBase64(source));
+  } catch (err: any) {
+    if (jsonOutput) {
+      console.log(JSON.stringify({ success: false, error: `Failed to fetch image: ${err.message}` }));
+    } else {
+      printError(`Failed to fetch image: ${err.message}`);
+    }
+    process.exit(1);
+  }
+
+  const body: any = { userId, image: base64 };
   if (boatId) body.boatId = boatId;
   if (caption) body.caption = caption;
   if (isPrimary) body.isPrimary = true;
+  if (filename) body.filename = filename;
 
-  const result = await workerRequest('/boat-photos', { method: 'POST', body });
+  const result = await workerRequest('/boat-photos/upload', { method: 'POST', body });
 
   if (jsonOutput) {
     console.log(JSON.stringify(result, null, 2));
     return;
   }
 
-  if (result.success) {
+  if (result.photoId) {
     printSuccess(`Photo uploaded${isPrimary ? ' (primary)' : ''}: ${result.photoId}`);
+    print(`  URL: ${result.imageUrl}`);
   } else {
     printError(result.error || 'Upload failed');
     process.exit(1);

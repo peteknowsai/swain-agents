@@ -11,6 +11,39 @@
 
 import { generateImage, type ReplicateImageResult } from './replicate-image';
 
+// ── Image fetching ───────────────────────────────────────────────
+
+/**
+ * Fetch an image from a URL or local file path and return as base64.
+ * Handles http(s) URLs, file:// URLs, and bare file paths.
+ */
+export async function fetchImageAsBase64(source: string): Promise<{ base64: string; filename?: string }> {
+  // Local file path (bare path or file:// URL)
+  if (source.startsWith('/') || source.startsWith('file://')) {
+    const filePath = source.startsWith('file://') ? source.slice(7) : source;
+    const file = Bun.file(filePath);
+    if (!await file.exists()) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    const buffer = await file.arrayBuffer();
+    return {
+      base64: Buffer.from(buffer).toString('base64'),
+      filename: filePath.split('/').pop(),
+    };
+  }
+
+  // Remote URL
+  const response = await fetch(source);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+  const buffer = await response.arrayBuffer();
+  return {
+    base64: Buffer.from(buffer).toString('base64'),
+    filename: source.split('/').pop()?.split('?')[0],
+  };
+}
+
 // ── Prompt suffixes ────────────────────────────────────────────────
 
 export const PROMPT_NO_TEXT = 'Do not include any text, labels, or captions in the image.';

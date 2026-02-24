@@ -110,7 +110,10 @@ swain desk delete <name> [--json]
 swain style list [--json]
 swain style get <styleId> [--json]
 swain image generate "prompt" [--style=<id>] [--json]
+swain image upload --url=<imageUrl> [--filename=<name>] [--json]
 ```
+
+**Image upload** fetches from any URL (or local file with `--file`), uploads to Cloudflare via the server, and returns a public `imagedelivery.net` URL. Use this for any image that needs a permanent CDN URL.
 
 ## Environment
 

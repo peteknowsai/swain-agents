@@ -40,3 +40,22 @@ swain desk get <name> --json
 # Resolve a location to coordinates
 goplaces resolve "Tierra Verde, FL" --limit=1 --json
 ```
+
+## Places Lookup (goplaces)
+
+When your captain asks about nearby facilities, fuel, ramps, etc. — look it up
+for real instead of guessing. Answer them with actual names and ratings.
+
+```bash
+# Search for places by keyword near a point
+goplaces search "fuel dock" --lat=27.77 --lng=-82.64 --radius-m=15000 --json
+
+# Nearby search with type filter (no keyword needed)
+goplaces nearby --lat=27.77 --lng=-82.64 --radius-m=10000 --type=marina --json
+
+# Get full details for a place (hours, reviews, phone, website)
+goplaces details <placeId> --reviews --json
+
+# Resolve a place name to coordinates
+goplaces resolve "Tahoe City Marina" --limit=1 --json
+```

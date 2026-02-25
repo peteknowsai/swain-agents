@@ -8,23 +8,27 @@ import {
   renderTemplate,
   render,
 } from "./templates";
+import {
+  WORKSPACES_ROOT,
+  AUTH_SOURCE,
+  SKILLS_ROOT,
+  ALL_SKILLS,
+  DESK_SKILLS,
+  DESK_TEMPLATES,
+  OPENCLAW_CONFIG,
+  readConfig,
+  writeConfig,
+  openclaw,
+  convexRequest,
+  loadRegistry,
+  saveRegistry,
+  lookupByUserId as registryLookup,
+  poolAgentId,
+  type AgentRegistry,
+  type AgentEntry,
+} from "./shared";
 
-const WORKSPACES_ROOT = "/root/workspaces";
-const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
-const POOL_STATE_FILE = "/root/swain-agent-api/pool-state.json";
-const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
-const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
 const POOL_SIZE = 20;
-
-// Skills symlinked into each advisor workspace
-const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
-const ALL_SKILLS = ["swain-onboarding", "swain-briefing", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
-const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl"];
-const DESK_TEMPLATES = "/root/clawd/swain-agents/templates/content-desk";
-
-// Convex HTTP endpoint
-const CONVEX_BASE_URL = "https://wandering-sparrow-224.convex.site";
-const CONVEX_TOKEN = process.env.SWAIN_API_TOKEN;
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 export interface DeskProvisionInput {
@@ -38,24 +42,7 @@ export interface DeskProvisionInput {
   bounds?: { ne: { lat: number; lon: number }; sw: { lat: number; lon: number } };
 }
 
-// --- Helpers ---
-
-async function convexRequest(method: string, path: string, data?: unknown): Promise<any> {
-  const url = `${CONVEX_BASE_URL}/api${path}`;
-  const res = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(CONVEX_TOKEN ? { Authorization: `Bearer ${CONVEX_TOKEN}` } : {}),
-    },
-    body: data ? JSON.stringify(data) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Convex ${method} ${path} failed [${res.status}]: ${text}`);
-  }
-  return res.json();
-}
+// --- Local helpers (not shared) ---
 
 async function geocodeBounds(region: string): Promise<{ ne: { lat: number; lon: number }; sw: { lat: number; lon: number } }> {
   if (!GOOGLE_PLACES_API_KEY) {
@@ -75,12 +62,10 @@ async function geocodeBounds(region: string): Promise<{ ne: { lat: number; lon: 
   } catch (err) {
     console.warn(`Geocoding failed for "${region}", using default bounds: ${err}`);
   }
-  // Fallback: ~25 mile box around center (caller must handle this with lat/lon from input)
   throw new Error(`Could not geocode "${region}" for bounds`);
 }
 
 function defaultBounds(lat: number, lon: number): { ne: { lat: number; lon: number }; sw: { lat: number; lon: number } } {
-  // ~25 mile box (0.36 degrees lat, ~0.45 degrees lon at mid-latitudes)
   return {
     ne: { lat: lat + 0.36, lon: lon + 0.45 },
     sw: { lat: lat - 0.36, lon: lon - 0.45 },
@@ -88,20 +73,12 @@ function defaultBounds(lat: number, lon: number): { ne: { lat: number; lon: numb
 }
 
 function normalizePhone(phone: string): string {
-  // Expect E.164 from the frontend (e.g., +526692766911, +14156239773)
-  // Just ensure the + prefix is present
   const digits = phone.replace(/\D/g, "");
   return phone.startsWith("+") ? phone : `+${digits}`;
 }
 
-/**
- * Convert E.164 phone to WhatsApp's internal format.
- * Mexico: +52 + 10 digits → +521 + 10 digits (WhatsApp kept the old mobile prefix)
- * Everyone else: pass through as-is.
- */
 function toWhatsAppPhone(e164Phone: string): string {
   const phone = e164Phone.startsWith("+") ? e164Phone : `+${e164Phone}`;
-  // Mexican mobiles: +52XXXXXXXXXX (13 chars) → +521XXXXXXXXXX
   if (/^\+52\d{10}$/.test(phone)) {
     return `+521${phone.slice(3)}`;
   }
@@ -110,52 +87,6 @@ function toWhatsAppPhone(e164Phone: string): string {
 
 function phoneToBindingPeerId(e164Phone: string): string {
   return toWhatsAppPhone(e164Phone);
-}
-
-function poolAgentId(index: number): string {
-  return `advisor-pool-${String(index).padStart(2, "0")}`;
-}
-
-type Registry = Record<string, string>;
-
-async function loadRegistry(): Promise<Registry> {
-  try { return JSON.parse(await readFile(REGISTRY_FILE, "utf-8")); }
-  catch { return {}; }
-}
-
-async function saveRegistry(reg: Registry): Promise<void> {
-  await writeFile(REGISTRY_FILE, JSON.stringify(reg, null, 2));
-}
-
-interface PoolAgent {
-  agentId: string;
-  index: number;
-  status: "available" | "assigned";
-  userId?: string;
-  captainName?: string;
-  assignedAt?: string;
-}
-
-interface PoolState {
-  version: number;
-  agents: PoolAgent[];
-}
-
-async function loadPoolState(): Promise<PoolState> {
-  try { return JSON.parse(await readFile(POOL_STATE_FILE, "utf-8")); }
-  catch { return { version: 1, agents: [] }; }
-}
-
-async function savePoolState(state: PoolState): Promise<void> {
-  await writeFile(POOL_STATE_FILE, JSON.stringify(state, null, 2));
-}
-
-async function readConfig(): Promise<any> {
-  return JSON.parse(await readFile(OPENCLAW_CONFIG, "utf-8"));
-}
-
-async function writeConfig(config: any): Promise<void> {
-  await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
 }
 
 async function copyAuthProfile(agentId: string): Promise<void> {
@@ -174,17 +105,6 @@ async function setupAdvisorSkills(workspaceDir: string): Promise<void> {
   }
 }
 
-async function openclaw(args: string[]): Promise<string> {
-  const proc = Bun.spawn(["openclaw", ...args], { stdout: "pipe", stderr: "pipe" });
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    throw new Error(`openclaw ${args.join(" ")} failed (exit ${exitCode}): ${stderr}`);
-  }
-  return stdout.trim();
-}
-
 function generateMemorySeed(input: CaptainInput): string {
   const lines: string[] = [`# MEMORY.md — Captain ${input.name}`, "", "## Captain"];
   lines.push(`- **Name:** ${input.name}`);
@@ -200,26 +120,26 @@ function generateMemorySeed(input: CaptainInput): string {
 
 // --- Pool provisioning (create blank agents) ---
 
-export async function provisionPool(): Promise<{ created: number; existing: number }> {
-  const state = await loadPoolState();
-  const config = await readConfig();
-  if (!config.agents) config.agents = {};
-  if (!config.agents.list) config.agents.list = [];
+async function provisionPoolAgents(
+  registry: AgentRegistry,
+  config: any,
+  startIndex: number,
+  count: number,
+): Promise<{ created: number; existing: number }> {
   let created = 0;
   let existing = 0;
 
-  for (let i = 1; i <= POOL_SIZE; i++) {
+  for (let i = startIndex; i < startIndex + count; i++) {
     const agentId = poolAgentId(i);
     const workspace = join(WORKSPACES_ROOT, agentId);
 
-    if (state.agents.find((a: PoolAgent) => a.agentId === agentId)) {
+    if (registry.agents[agentId]) {
       existing++;
       continue;
     }
 
     await mkdir(workspace, { recursive: true });
 
-    // Write placeholder templates (placeholders stay as-is until assignment)
     for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
       const rendered = await renderTemplate(file, {
         userId: "{{userId}}", phone: "{{phone}}", jid: "{{jid}}", captainName: "{{captainName}}",
@@ -233,7 +153,6 @@ export async function provisionPool(): Promise<{ created: number; existing: numb
     await writeFile(join(workspace, "MEMORY.md"), "# MEMORY.md\n\nNo captain assigned.\n");
     await mkdir(join(workspace, "memory"), { recursive: true });
 
-    // Add to gateway config if missing
     if (!config.agents.list.find((a: any) => a.id === agentId)) {
       config.agents.list.push({
         id: agentId, name: agentId, workspace,
@@ -244,57 +163,126 @@ export async function provisionPool(): Promise<{ created: number; existing: numb
     }
 
     await copyAuthProfile(agentId);
-
-    // Fallback workspace symlink
     try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
 
-    state.agents.push({ agentId, index: i, status: "available" });
+    registry.agents[agentId] = {
+      type: "advisor",
+      status: "available",
+      createdAt: new Date().toISOString(),
+      heartbeatInterval: "1h",
+      poolIndex: i,
+    };
     created++;
     console.log(`Pool agent ${agentId} created`);
-  }
-
-  if (created > 0) {
-    await writeConfig(config);
-    console.log(`Gateway config updated with ${created} new pool agents`);
-  }
-  await savePoolState(state);
-
-  // Prime new agents — boot their main session so it's warm for assignment
-  if (created > 0) {
-    await Bun.sleep(2000); // let gateway hot-reload the new agent configs
-    const newAgents = state.agents.filter((a: PoolAgent) => a.status === "available");
-    for (const agent of newAgents) {
-      try {
-        await openclaw([
-          "agent",
-          "--agent", agent.agentId,
-          "--message", "You are a Swain advisor agent. You'll be assigned a captain soon. Read your workspace files to understand your role, then stand by.",
-        ]);
-        console.log(`Primed ${agent.agentId}`);
-      } catch (err) {
-        console.error(`Failed to prime ${agent.agentId} (non-fatal): ${err}`);
-      }
-    }
   }
 
   return { created, existing };
 }
 
+export async function provisionPool(): Promise<{ created: number; existing: number }> {
+  const registry = await loadRegistry();
+  const config = await readConfig();
+  if (!config.agents) config.agents = {};
+  if (!config.agents.list) config.agents.list = [];
+
+  const result = await provisionPoolAgents(registry, config, 1, POOL_SIZE);
+
+  if (result.created > 0) {
+    await writeConfig(config);
+    registry.pool.size = Object.values(registry.agents).filter(a => a.type === "advisor").length;
+    await saveRegistry(registry);
+    console.log(`Gateway config updated with ${result.created} new pool agents`);
+
+    // Prime new agents
+    await Bun.sleep(2000);
+    for (const [agentId, entry] of Object.entries(registry.agents)) {
+      if (entry.type === "advisor" && entry.status === "available") {
+        try {
+          await openclaw([
+            "agent", "--agent", agentId,
+            "--message", "You are a Swain advisor agent. You'll be assigned a captain soon. Read your workspace files to understand your role, then stand by.",
+          ]);
+          console.log(`Primed ${agentId}`);
+        } catch (err) {
+          console.error(`Failed to prime ${agentId} (non-fatal): ${err}`);
+        }
+      }
+    }
+  } else {
+    await saveRegistry(registry);
+  }
+
+  return result;
+}
+
+// --- Expand pool ---
+
+export async function expandPool(count: number = 20): Promise<{ created: number; nextIndex: number; totalAvailable: number }> {
+  const registry = await loadRegistry();
+  const config = await readConfig();
+  if (!config.agents) config.agents = {};
+  if (!config.agents.list) config.agents.list = [];
+
+  // Find max poolIndex across all advisor entries
+  let maxIndex = 0;
+  for (const entry of Object.values(registry.agents)) {
+    if (entry.type === "advisor" && entry.poolIndex !== undefined && entry.poolIndex > maxIndex) {
+      maxIndex = entry.poolIndex;
+    }
+  }
+  const startIndex = maxIndex + 1;
+
+  const result = await provisionPoolAgents(registry, config, startIndex, count);
+
+  if (result.created > 0) {
+    await writeConfig(config);
+    registry.pool.size = Object.values(registry.agents).filter(a => a.type === "advisor").length;
+    await saveRegistry(registry);
+
+    // Prime new agents
+    await Bun.sleep(2000);
+    for (let i = startIndex; i < startIndex + count; i++) {
+      const agentId = poolAgentId(i);
+      const entry = registry.agents[agentId];
+      if (entry?.status === "available") {
+        try {
+          await openclaw([
+            "agent", "--agent", agentId,
+            "--message", "You are a Swain advisor agent. You'll be assigned a captain soon. Read your workspace files to understand your role, then stand by.",
+          ]);
+          console.log(`Primed ${agentId}`);
+        } catch (err) {
+          console.error(`Failed to prime ${agentId} (non-fatal): ${err}`);
+        }
+      }
+    }
+  } else {
+    await saveRegistry(registry);
+  }
+
+  const totalAvailable = Object.values(registry.agents).filter(a => a.type === "advisor" && a.status === "available").length;
+  return { created: result.created, nextIndex: startIndex + count, totalAvailable };
+}
+
 // --- Assign advisor from pool ---
 
 export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: string; status: string; workspace: string }> {
-  const state = await loadPoolState();
+  const registry = await loadRegistry();
   const phone = input.phone ? normalizePhone(input.phone) : "";
 
-  const available = state.agents.find((a: PoolAgent) => a.status === "available");
-  if (!available) throw new Error("No available agents in pool. Run provisionPool() to add more.");
+  // Find first available pool agent
+  const available = Object.entries(registry.agents)
+    .filter(([_, e]) => e.type === "advisor" && e.status === "available")
+    .sort((a, b) => (a[1].poolIndex ?? 0) - (b[1].poolIndex ?? 0))[0];
 
-  const agentId = available.agentId;
+  if (!available) throw new Error("No available agents in pool. Run provisionPool() or expandPool() to add more.");
+
+  const [agentId, entry] = available;
   const workspace = join(WORKSPACES_ROOT, agentId);
   const waPhone = phone ? toWhatsAppPhone(phone) : "";
   const jid = waPhone ? waPhone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
 
-  // 1. Personalize workspace (use WhatsApp-format phone in templates)
+  // 1. Personalize workspace
   for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
     const rendered = await renderTemplate(file, { userId: input.userId, phone: waPhone, jid, captainName: input.name });
     await writeFile(join(workspace, file), rendered);
@@ -323,7 +311,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     }
   }
 
-  // 3. WhatsApp routing (config write only — no gateway restart)
+  // 3. WhatsApp routing
   if (waPhone) {
     const config = await readConfig();
     if (!config.channels) config.channels = {};
@@ -344,18 +332,16 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     await writeConfig(config);
   }
 
-  // 4. Update pool state + registry
-  available.status = "assigned";
-  available.userId = input.userId;
-  available.captainName = input.name;
-  available.assignedAt = new Date().toISOString();
-  await savePoolState(state);
+  // 4. Update registry
+  entry.status = "active";
+  entry.userId = input.userId;
+  entry.captainName = input.name;
+  entry.timezone = input.timezone;
+  entry.phone = phone || undefined;
+  entry.assignedAt = new Date().toISOString();
+  await saveRegistry(registry);
 
-  const reg = await loadRegistry();
-  reg[input.userId] = agentId;
-  await saveRegistry(reg);
-
-  // 5. Enable heartbeat now that agent is assigned
+  // 5. Enable heartbeat
   {
     const config = await readConfig();
     const agentConfig = config.agents?.list?.find((a: any) => a.id === agentId);
@@ -373,10 +359,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     try { await createBriefingWatchdog(input, agentId); }
     catch (err) { console.error(`Briefing watchdog cron failed (non-fatal): ${err}`); }
 
-    // Wait for config hot-reload to process binding/allowFrom changes
     await Bun.sleep(2000);
-
-    // Fire-and-forget — agent handles onboarding in its own time
     triggerIntro(agentId, input, waPhone);
   }
 
@@ -385,8 +368,6 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
 }
 
 // --- Intro: fire-and-forget via main session ---
-// Spawns `openclaw agent --agent --message` detached. The agent handles onboarding
-// in its own time; we don't block the API response waiting for it.
 
 function triggerIntro(agentId: string, input: CaptainInput, phone: string): void {
   const proc = Bun.spawn([
@@ -395,7 +376,6 @@ function triggerIntro(agentId: string, input: CaptainInput, phone: string): void
     "--message", `You've been assigned as ${input.name}'s advisor. Read the swain-onboarding skill for Phase 1 instructions and send your intro message on WhatsApp now. Captain info: name="${input.name}", boat="${input.boatName || "boat"}", marina="${input.marina || "unknown"}", phone="${phone}", userId="${input.userId}".`,
   ], { stdout: "pipe", stderr: "pipe" });
 
-  // Log outcome when it eventually finishes, but don't block on it
   proc.exited.then(async (exitCode) => {
     if (exitCode === 0) {
       const stdout = await new Response(proc.stdout).text();
@@ -409,11 +389,11 @@ function triggerIntro(agentId: string, input: CaptainInput, phone: string): void
   });
 }
 
-// --- Daily briefing cron via CLI ---
+// --- Daily briefing cron ---
 
 async function createDailyBriefingCron(input: CaptainInput, agentId: string): Promise<void> {
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const minuteOffset = hash % 20; // spread :00–:19
+  const minuteOffset = hash % 20;
   const tz = input.timezone || "America/New_York";
 
   await openclaw([
@@ -433,7 +413,6 @@ async function createBriefingWatchdog(input: CaptainInput, agentId: string): Pro
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const minuteOffset = hash % 20;
   const tz = input.timezone || "America/New_York";
-  // Watchdog fires 30 min after primary; wrap into next hour if needed
   const watchdogMinute = minuteOffset + 30 >= 60 ? minuteOffset - 30 : minuteOffset + 30;
   const watchdogHour = minuteOffset + 30 >= 60 ? 7 : 6;
 
@@ -450,12 +429,12 @@ async function createBriefingWatchdog(input: CaptainInput, agentId: string): Pro
   console.log(`Briefing watchdog cron created for ${agentId}: ${watchdogMinute} ${watchdogHour} * * * ${tz}`);
 }
 
-// --- Delete advisor (full removal from pool) ---
+// --- Delete advisor ---
 
 export async function deleteAdvisor(agentId: string): Promise<void> {
   if (!agentId.startsWith("advisor-")) throw new Error("Can only delete advisor agents");
 
-  const state = await loadPoolState();
+  const registry = await loadRegistry();
   const config = await readConfig();
   const workspace = join(WORKSPACES_ROOT, agentId);
 
@@ -471,14 +450,14 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
 
   await writeConfig(config);
 
-  // Tell gateway to unload agent (flushes in-memory state, lane tasks, sessions)
+  // Tell gateway to unload agent
   try {
     await openclaw(["agents", "delete", agentId, "--force"]);
   } catch (err) {
     console.warn(`Gateway agent removal for ${agentId}: ${err}`);
   }
 
-  // Remove cron jobs via CLI
+  // Remove cron jobs
   try {
     const cronOutput = await openclaw(["cron", "list", "--json"]);
     const cronData = JSON.parse(cronOutput);
@@ -502,18 +481,12 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
   // Delete fallback symlink
   await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
 
-  // Remove from pool state
-  state.agents = state.agents.filter((a: PoolAgent) => a.agentId !== agentId);
-  await savePoolState(state);
-
   // Remove from registry
-  const reg = await loadRegistry();
-  for (const [uid, aid] of Object.entries(reg)) {
-    if (aid === agentId) delete reg[uid];
-  }
-  await saveRegistry(reg);
+  delete registry.agents[agentId];
+  registry.pool.size = Object.values(registry.agents).filter(a => a.type === "advisor").length;
+  await saveRegistry(registry);
 
-  console.log(`Advisor ${agentId} deleted (removed from pool, gateway, workspace)`);
+  console.log(`Advisor ${agentId} deleted (removed from registry, gateway, workspace)`);
 }
 
 // --- Content desk provisioning ---
@@ -521,7 +494,6 @@ export async function deleteAdvisor(agentId: string): Promise<void> {
 export async function provisionContentDesk(input: DeskProvisionInput): Promise<{ agentId: string; workspace: string; name: string; deskId?: string }> {
   const { name, region, lat, lon, scope, description, createdByLocation } = input;
 
-  // Validate name slug
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) {
     throw new Error("Desk name must be a lowercase-hyphenated slug (e.g., tampa-bay)");
   }
@@ -532,7 +504,6 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
   if (!config.agents) config.agents = {};
   if (!config.agents.list) config.agents.list = [];
 
-  // Check for duplicates
   if (config.agents.list.find((a: any) => a.id === agentId)) {
     throw new Error(`Desk agent ${agentId} already exists`);
   }
@@ -572,10 +543,20 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
   // 5. Fallback workspace symlink
   try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
 
-  // 6. Create Convex desk record
+  // 6. Register in unified registry
+  const registry = await loadRegistry();
+  registry.agents[agentId] = {
+    type: "desk",
+    status: "active",
+    createdAt: new Date().toISOString(),
+    heartbeatInterval: "4h",
+    region,
+  };
+  await saveRegistry(registry);
+
+  // 7. Create Convex desk record
   let deskId: string | undefined;
   try {
-    // Resolve bounds: use provided, geocode, or default
     let bounds = input.bounds;
     if (!bounds) {
       try {
@@ -587,8 +568,7 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     }
 
     const convexResult = await convexRequest("POST", "/desks", {
-      name,
-      region,
+      name, region,
       description: description ?? "",
       scope: scope ?? "",
       center: { lat, lon },
@@ -601,12 +581,11 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     console.error(`Convex registration failed (non-fatal): ${err}`);
   }
 
-  // 7. Prime the agent
+  // 8. Prime the agent
   await Bun.sleep(2000);
   try {
     await openclaw([
-      "agent",
-      "--agent", agentId,
+      "agent", "--agent", agentId,
       "--message", `You are a content desk for ${region}. Read your workspace files (AGENTS.md, HEARTBEAT.md, TOOLS.md, SOUL.md) to understand your role, then read the swain-content-desk skill. Stand by for your first heartbeat.`,
     ]);
     console.log(`Primed ${agentId}`);
@@ -680,6 +659,11 @@ export async function deleteDesk(name: string): Promise<void> {
   // Delete fallback symlink
   await rm(join("/root/.openclaw", `workspace-${agentId}`), { recursive: true, force: true });
 
+  // Remove from registry
+  const registry = await loadRegistry();
+  delete registry.agents[agentId];
+  await saveRegistry(registry);
+
   // Delete Convex desk record
   try {
     await convexRequest("DELETE", `/desks/${name}`);
@@ -694,8 +678,8 @@ export async function deleteDesk(name: string): Promise<void> {
 // --- Queries ---
 
 export async function lookupByUserId(userId: string): Promise<string | null> {
-  const reg = await loadRegistry();
-  return reg[userId] || null;
+  const registry = await loadRegistry();
+  return registryLookup(registry, userId);
 }
 
 export async function listAdvisors(): Promise<unknown[]> {
@@ -703,6 +687,38 @@ export async function listAdvisors(): Promise<unknown[]> {
   return (config.agents?.list ?? []).filter((a: any) => (a.id || "").startsWith("advisor-"));
 }
 
-export async function getPoolStatus(): Promise<PoolState> {
-  return loadPoolState();
+export async function getPoolStatus(): Promise<{
+  size: number;
+  available: number;
+  assigned: number;
+  agents: Array<{
+    agentId: string;
+    status: string;
+    poolIndex?: number;
+    captainName?: string;
+    userId?: string;
+    assignedAt?: string;
+  }>;
+}> {
+  const registry = await loadRegistry();
+  const advisors = Object.entries(registry.agents)
+    .filter(([_, e]) => e.type === "advisor")
+    .sort((a, b) => (a[1].poolIndex ?? 0) - (b[1].poolIndex ?? 0));
+
+  const available = advisors.filter(([_, e]) => e.status === "available").length;
+  const assigned = advisors.filter(([_, e]) => e.status !== "available").length;
+
+  return {
+    size: advisors.length,
+    available,
+    assigned,
+    agents: advisors.map(([agentId, e]) => ({
+      agentId,
+      status: e.status,
+      poolIndex: e.poolIndex,
+      captainName: e.captainName,
+      userId: e.userId,
+      assignedAt: e.assignedAt,
+    })),
+  };
 }

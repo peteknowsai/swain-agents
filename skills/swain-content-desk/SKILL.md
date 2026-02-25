@@ -80,7 +80,7 @@ For every content card you just created:
 
 5. **Generate:**
    ```bash
-   swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
+   swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
    ```
 
 ### 6. Mark requests fulfilled

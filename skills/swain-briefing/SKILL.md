@@ -143,7 +143,7 @@ briefing.
        Match the style and content mood.
     4. **Generate:**
        ```bash
-       swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
+       swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
        ```
 
     **For cards that have images but no `backgroundColor`:**

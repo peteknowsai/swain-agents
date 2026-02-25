@@ -581,6 +581,31 @@ async function photoUpload(args: string[]): Promise<void> {
 
   const result = await workerRequest('/boat-photos/upload', { method: 'POST', body });
 
+  // When --primary, also set imageUrl on the boat record so boat-art uses it
+  if (isPrimary && result.imageUrl) {
+    let targetBoatId = boatId || result.boatId;
+    if (!targetBoatId) {
+      // Look up primary boat for this user
+      try {
+        const boatsResult = await workerRequest(`/boats?userId=${userId}`);
+        const boats = boatsResult.boats || [];
+        const primary = boats.find((b: any) => b.isPrimary) || boats[0];
+        if (primary) targetBoatId = primary.boatId;
+      } catch {}
+    }
+    if (targetBoatId) {
+      try {
+        await workerRequest(`/boats/${targetBoatId}`, {
+          method: 'PATCH',
+          body: { imageUrl: result.imageUrl },
+        });
+      } catch (err: any) {
+        // Non-fatal — photo is uploaded, just the boat record sync failed
+        if (!jsonOutput) print(`${colors.dim}Warning: photo uploaded but failed to set boat imageUrl: ${err.message}${colors.reset}`);
+      }
+    }
+  }
+
   if (jsonOutput) {
     console.log(JSON.stringify(result, null, 2));
     return;

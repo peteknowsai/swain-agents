@@ -81,7 +81,7 @@ async function createBoatArt(args: string[]): Promise<void> {
   const boatType = boat.type || undefined;
   const boatMakeModel = boat.makeModel || undefined;
   const boatColor = undefined;
-  const boatImageUrl = boat.imageUrl || undefined;
+  const boatImageUrl = boat.primaryPhotoUrl || boat.imageUrl || undefined;
   const hasPhoto = !!boatImageUrl;
 
   // 2. Determine style

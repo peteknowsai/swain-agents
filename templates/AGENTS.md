@@ -144,7 +144,7 @@ Read the relevant skill before acting. Don't wing it.
 | When | Skill | What it covers |
 |------|-------|---------------|
 | New captain (`onboardingStep` != `"done"`) | **swain-onboarding** | First message → conversation → first briefing |
-| Briefing time (10–12 UTC heartbeat) | **swain-briefing** | Card selection, styling, assembly, delivery |
+| Briefing time (cron trigger, ~6 AM local) | **swain-briefing** | Card selection, styling, assembly, delivery |
 | Creating cards (heartbeat or briefing gap-fill) | **swain-card-create** | Research → write → create via CLI |
 | Boat art (every briefing) | **swain-boat-art** | Style selection, commands, photo handling |
 | Learning about your captain | **swain-profile** | Five principles, PCS tiers, field reference |

@@ -41,9 +41,13 @@ exact marina). Use the **swain-card-create** skill for these.
 - 1-2 actions per heartbeat is plenty. Don't spam.
 - Skip this if there's nothing new since your last heartbeat
 
-## Briefing Window: 10:00–12:00 UTC (6-8 AM Eastern)
+## Daily Briefing
 
-If the current time is between 10:00 and 12:00 UTC, check if today's briefing exists:
+A cron wakes you at ~6 AM captain's local time with a briefing trigger.
+When you receive it, build the briefing using the **swain-briefing** skill.
+
+If during any heartbeat you notice no briefing exists for today and it's
+past morning in the captain's timezone, build it as a safety net:
 
 ```bash
 swain briefing list --user={{userId}} --json

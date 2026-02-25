@@ -5,6 +5,7 @@ import {
   lookupByUserId,
   provisionPool,
   getPoolStatus,
+  expandPool,
   provisionContentDesk,
   type DeskProvisionInput,
   listDesks,
@@ -13,6 +14,16 @@ import {
   unpauseDesk,
 } from "./provision";
 import { type CaptainInput } from "./templates";
+import {
+  listAgents,
+  getAgent,
+  pauseAgent,
+  resumeAgent,
+  deleteAgent,
+  listAgentFiles,
+  readAgentFile,
+  listAgentCrons,
+} from "./agents";
 
 const PORT = 3847;
 const TOKEN = process.env.SWAIN_AGENT_API_TOKEN;
@@ -69,6 +80,81 @@ const server = Bun.serve({
     if (!auth(req)) return error("Unauthorized", 401);
 
     try {
+      // ========== Unified /agents routes ==========
+
+      // GET /agents/:agentId/files/* — read a workspace file (must match before /files)
+      const filesContentMatch = pathname.match(/^\/agents\/([^/]+)\/files\/(.+)$/);
+      if (filesContentMatch && method === "GET") {
+        const [, agentId, filename] = filesContentMatch;
+        const result = await readAgentFile(agentId, filename);
+        return json(result);
+      }
+
+      // GET /agents/:agentId/files — list workspace files
+      const filesListMatch = matchRoute(pathname, "/agents/:agentId/files");
+      if (filesListMatch && method === "GET") {
+        const result = await listAgentFiles(filesListMatch.agentId);
+        return json(result);
+      }
+
+      // GET /agents/:agentId/crons — list cron jobs
+      const cronsMatch = matchRoute(pathname, "/agents/:agentId/crons");
+      if (cronsMatch && method === "GET") {
+        const result = await listAgentCrons(cronsMatch.agentId);
+        return json(result);
+      }
+
+      // PATCH /agents/:agentId — pause/resume
+      const agentPatchMatch = matchRoute(pathname, "/agents/:agentId");
+      if (agentPatchMatch && method === "PATCH") {
+        const body = await req.json() as { action: string };
+        if (body.action === "pause") {
+          const result = await pauseAgent(agentPatchMatch.agentId);
+          return json(result);
+        }
+        if (body.action === "resume") {
+          const result = await resumeAgent(agentPatchMatch.agentId);
+          return json(result);
+        }
+        return error("Invalid action. Use 'pause' or 'resume'.");
+      }
+
+      // DELETE /agents/:agentId — unified delete
+      const agentDeleteMatch = matchRoute(pathname, "/agents/:agentId");
+      if (agentDeleteMatch && method === "DELETE") {
+        await deleteAgent(agentDeleteMatch.agentId);
+        return json({ status: "deleted", agentId: agentDeleteMatch.agentId });
+      }
+
+      // GET /agents/:agentId — agent detail
+      const agentDetailMatch = matchRoute(pathname, "/agents/:agentId");
+      if (agentDetailMatch && method === "GET") {
+        const result = await getAgent(agentDetailMatch.agentId);
+        return json(result);
+      }
+
+      // GET /agents — list all agents
+      if (pathname === "/agents" && method === "GET") {
+        const type = url.searchParams.get("type") as "advisor" | "desk" | null;
+        const status = url.searchParams.get("status") as "available" | "active" | "paused" | null;
+        const agents = await listAgents({
+          type: type || undefined,
+          status: status || undefined,
+        });
+        return json({ agents });
+      }
+
+      // ========== Pool routes ==========
+
+      // POST /pool/expand — add more pool agents
+      if (pathname === "/pool/expand" && method === "POST") {
+        const body = await req.json().catch(() => ({})) as { count?: number };
+        const result = await expandPool(body.count || 20);
+        return json(result);
+      }
+
+      // ========== Legacy routes (backward compat) ==========
+
       // POST /advisors — assign from pool
       if (pathname === "/advisors" && method === "POST") {
         const body = (await req.json()) as CaptainInput;
@@ -104,7 +190,7 @@ const server = Bun.serve({
       // POST /desks — provision content desk
       if (pathname === "/desks" && method === "POST") {
         const body = (await req.json()) as DeskProvisionInput;
-        if (!body.name || !body.region || !body.lat || !body.lon) {
+        if (!body.name || !body.region || body.lat == null || body.lon == null) {
           return error("name, region, lat, and lon are required");
         }
         const result = await provisionContentDesk(body);
@@ -140,8 +226,11 @@ const server = Bun.serve({
       return error("Not found", 404);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      const status = message.includes("already paused") || message.includes("is not paused")
+        ? 409
+        : message.includes("not found") ? 404 : 500;
       console.error(`[${method} ${pathname}] Error:`, message);
-      return error(message, 500);
+      return error(message, status);
     }
   },
 });

@@ -364,26 +364,37 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     // Wait for config hot-reload to process binding/allowFrom changes
     await Bun.sleep(2000);
 
-    // Synchronous intro via main session (blocks until agent completes turn)
-    try { await triggerIntro(agentId, input, waPhone); }
-    catch (err) { console.error(`Intro trigger failed (non-fatal): ${err}`); }
+    // Fire-and-forget — agent handles onboarding in its own time
+    triggerIntro(agentId, input, waPhone);
   }
 
   console.log(`Advisor ${agentId} assigned to ${input.name} (${input.userId})`);
   return { agentId, status: "assigned", workspace };
 }
 
-// --- Intro: synchronous via main session ---
-// Uses `openclaw agent --agent --message` to run intro in the agent's main session.
-// Main session has full tool access (message tool, etc). Blocks until complete.
+// --- Intro: fire-and-forget via main session ---
+// Spawns `openclaw agent --agent --message` detached. The agent handles onboarding
+// in its own time; we don't block the API response waiting for it.
 
-async function triggerIntro(agentId: string, input: CaptainInput, phone: string): Promise<void> {
-  const output = await openclaw([
-    "agent",
+function triggerIntro(agentId: string, input: CaptainInput, phone: string): void {
+  const proc = Bun.spawn([
+    "openclaw", "agent",
     "--agent", agentId,
     "--message", `You've been assigned as ${input.name}'s advisor. Read the swain-onboarding skill for Phase 1 instructions and send your intro message on WhatsApp now. Captain info: name="${input.name}", boat="${input.boatName || "boat"}", marina="${input.marina || "unknown"}", phone="${phone}", userId="${input.userId}".`,
-  ]);
-  console.log(`Intro triggered for ${agentId}: ${output.slice(0, 200)}`);
+  ], { stdout: "pipe", stderr: "pipe" });
+
+  // Log outcome when it eventually finishes, but don't block on it
+  proc.exited.then(async (exitCode) => {
+    if (exitCode === 0) {
+      const stdout = await new Response(proc.stdout).text();
+      console.log(`Intro completed for ${agentId}: ${stdout.trim().slice(0, 200)}`);
+    } else {
+      const stderr = await new Response(proc.stderr).text();
+      console.error(`Intro failed for ${agentId} (exit ${exitCode}): ${stderr.trim().slice(0, 200)}`);
+    }
+  }).catch((err) => {
+    console.error(`Intro process error for ${agentId}: ${err}`);
+  });
 }
 
 // --- Daily briefing cron via CLI ---

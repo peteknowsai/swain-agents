@@ -239,7 +239,6 @@ export async function provisionPool(): Promise<{ created: number; existing: numb
         id: agentId, name: agentId, workspace,
         agentDir: `/root/.openclaw/agents/${agentId}/agent`,
         model: { primary: "anthropic/claude-sonnet-4-6" },
-        heartbeat: { every: "1h" },
         subagents: { allowAgents: ["*"] },
       });
     }
@@ -356,10 +355,23 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   reg[input.userId] = agentId;
   await saveRegistry(reg);
 
-  // 5. Create daily briefing cron + trigger intro
+  // 5. Enable heartbeat now that agent is assigned
+  {
+    const config = await readConfig();
+    const agentConfig = config.agents?.list?.find((a: any) => a.id === agentId);
+    if (agentConfig) {
+      agentConfig.heartbeat = { every: "1h" };
+      await writeConfig(config);
+    }
+  }
+
+  // 6. Create daily briefing crons + trigger intro
   if (waPhone) {
     try { await createDailyBriefingCron(input, agentId); }
     catch (err) { console.error(`Daily briefing cron failed (non-fatal): ${err}`); }
+
+    try { await createBriefingWatchdog(input, agentId); }
+    catch (err) { console.error(`Briefing watchdog cron failed (non-fatal): ${err}`); }
 
     // Wait for config hot-reload to process binding/allowFrom changes
     await Bun.sleep(2000);
@@ -401,20 +413,41 @@ function triggerIntro(agentId: string, input: CaptainInput, phone: string): void
 
 async function createDailyBriefingCron(input: CaptainInput, agentId: string): Promise<void> {
   const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const minuteOffset = hash % 20; // spread 11:00–11:19 UTC
+  const minuteOffset = hash % 20; // spread :00–:19
+  const tz = input.timezone || "America/New_York";
 
   await openclaw([
     "cron", "add",
     "--agent", agentId,
     "--name", `Daily briefing - ${input.name}`,
-    "--cron", `${minuteOffset} 11 * * *`,
-    "--tz", "UTC",
+    "--cron", `${minuteOffset} 6 * * *`,
+    "--tz", tz,
     "--session", "main",
     "--system-event", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-briefing skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
-    "--wake", "next-heartbeat",
   ]);
 
-  console.log(`Daily briefing cron created for ${agentId}: ${minuteOffset} 11 * * * UTC`);
+  console.log(`Daily briefing cron created for ${agentId}: ${minuteOffset} 6 * * * ${tz}`);
+}
+
+async function createBriefingWatchdog(input: CaptainInput, agentId: string): Promise<void> {
+  const hash = agentId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const minuteOffset = hash % 20;
+  const tz = input.timezone || "America/New_York";
+  // Watchdog fires 30 min after primary; wrap into next hour if needed
+  const watchdogMinute = minuteOffset + 30 >= 60 ? minuteOffset - 30 : minuteOffset + 30;
+  const watchdogHour = minuteOffset + 30 >= 60 ? 7 : 6;
+
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `Briefing watchdog - ${input.name}`,
+    "--cron", `${watchdogMinute} ${watchdogHour} * * *`,
+    "--tz", tz,
+    "--session", "main",
+    "--system-event", `Briefing watchdog: check if today's briefing exists. Run swain briefing list --user=${input.userId} --json. If no briefing for today, build it now using the swain-briefing skill. If it already exists, reply HEARTBEAT_OK.`,
+  ]);
+
+  console.log(`Briefing watchdog cron created for ${agentId}: ${watchdogMinute} ${watchdogHour} * * * ${tz}`);
 }
 
 // --- Delete advisor (full removal from pool) ---

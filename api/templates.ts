@@ -16,6 +16,7 @@ export interface CaptainInput {
   interests?: string;
   boatImageUrl?: string;
   location?: string;
+  timezone?: string;
 }
 
 /** Generate a URL-safe slug from captain name + userId prefix */

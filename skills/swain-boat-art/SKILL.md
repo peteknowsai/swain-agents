@@ -144,7 +144,12 @@ Every daily briefing should include **one boat art image**:
 When a captain asks for boat art in conversation:
 
 1. Run `swain boat-art create --user={{userId}} --style=<requested-style> --json`
-2. Send the `image` to the captain via WhatsApp
+2. **Send the actual image** to the captain via WhatsApp — use the message tool's
+   media feature to send the image file/URL, not just a text link. Include the
+   style name and shareUrl in the caption text.
+   ```
+   message action=send channel=whatsapp target={{phone}} media=<image_url> message="<styleName> 👇\n<shareUrl>"
+   ```
 3. Upload it to their boat photo gallery:
    ```bash
    swain boat photo upload --user={{userId}} --url=<image> --caption="<styleName> - <boatName>" --json
@@ -157,10 +162,22 @@ A real photo makes the art dramatically better. Ways to get one:
 
 - **Ask during onboarding**: "Got a pic of [boat name]? I use it to make custom art for you every day."
 - **Ask in the first briefing**: Include a text item asking for a photo
-- **They may send it via WhatsApp** — when they do, save it:
-  ```bash
-  swain boat photo upload --user={{userId}} --url=<photo_url> --primary --json
-  ```
+- **They may send it via WhatsApp** — when they do, save it immediately
+
+### When a Captain Sends a Photo
+
+This is critical — **save the photo as primary boat image right away.** The inbound
+media path is in the message metadata (e.g., `/root/.openclaw/media/inbound/<uuid>.jpg`).
+
+```bash
+swain boat photo upload --user={{userId}} --url=<inbound_media_path> --primary --json
+```
+
+Use the **local file path** from the inbound media, not a URL. The CLI handles
+the upload to cloud storage.
+
+**Do this BEFORE generating any art.** If you generate art before saving the photo,
+the art will use a text prompt instead of the actual boat image.
 
 Once a photo is on file, all future boat art automatically uses it for image-to-image generation.
 

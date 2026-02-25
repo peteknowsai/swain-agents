@@ -558,7 +558,6 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
       region,
       description: description ?? "",
       scope: scope ?? "",
-      agentId,
       center: { lat, lon },
       bounds,
       createdByLocation: createdByLocation ?? region,

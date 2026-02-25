@@ -1,7 +1,7 @@
 /**
  * replicate-image.ts
  *
- * Generate images via Replicate API (google/nano-banana)
+ * Generate images via Replicate API (google/nano-banana-pro, or nano-banana with --fast)
  * and upload to Cloudflare Images.
  *
  * Env vars required:
@@ -11,6 +11,8 @@
  */
 
 const REPLICATE_MODEL_URL =
+  "https://api.replicate.com/v1/models/google/nano-banana-pro/predictions";
+const REPLICATE_MODEL_URL_FAST =
   "https://api.replicate.com/v1/models/google/nano-banana/predictions";
 
 const CF_DELIVERY_BASE =
@@ -72,7 +74,7 @@ async function runReplicate(
   }
 
   // Create prediction
-  const modelUrl = REPLICATE_MODEL_URL;
+  const modelUrl = fast ? REPLICATE_MODEL_URL_FAST : REPLICATE_MODEL_URL;
   const createRes = await fetch(modelUrl, {
     method: "POST",
     headers: {

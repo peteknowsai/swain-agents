@@ -1,67 +1,55 @@
 # Heartbeat — {{deskName}}
 
-Runs every 4 hours. Follow this sequence exactly.
+Runs every 4 hours.
 
-## Step 1: Am I New?
+## First: Check Your State
 
 ```
 swain desk get {{deskName}} --json
 ```
 
-If `microlocations` is empty and you have zero cards, you are on your first heartbeat.
-Go to **First Heartbeat** below. Otherwise, go to **Regular Heartbeat**.
+If `microlocations` is empty and you have zero cards, this is your **first heartbeat**.
+Otherwise it's a **regular heartbeat**.
 
 ---
 
-## First Heartbeat (Self-Population)
+## First Heartbeat
 
-You just woke up for the first time. Your job: discover your coverage area and
-start producing.
+You just woke up. Your job: learn your waters and start producing content.
 
-### 1. Discover Facilities
+Read your SOUL.md and TOOLS.md — they tell you your region and scope. You know
+these waters. Think about what's in your coverage area:
 
-Search for marinas, boat ramps, yacht clubs, and fuel docks in your area:
+- What are the major ports, harbors, marinas?
+- What bodies of water, channels, passes?
+- What are the key towns and anchorages boaters care about?
+- What makes this area distinct for boating?
 
+Use `goplaces resolve` to get coordinates for key locations across your scope,
+then search for facilities at each:
+
+```bash
+goplaces resolve "<location>" --limit=1 --json
+goplaces search "marina" --lat=<lat> --lng=<lon> --radius-m=15000 --json
 ```
-goplaces search "marina" --lat={{lat}} --lng={{lon}} --radius-m=25000 --json
-goplaces search "boat ramp" --lat={{lat}} --lng={{lon}} --radius-m=25000 --json
-goplaces search "yacht club" --lat={{lat}} --lng={{lon}} --radius-m=15000 --json
-goplaces search "fuel dock" --lat={{lat}} --lng={{lon}} --radius-m=25000 --json
-```
 
-### 2. Research Context
+Don't just search around one point. Your scope might span a long coastline or
+multiple bodies of water — search at several key locations to cover the full area.
 
-Use firecrawl to research:
-- Local boating regulations and no-wake zones
-- Tide and weather patterns
-- Seasonal events and fishing reports
-- Notable anchorages and cruising routes
+Use `firecrawl` to research conditions, regulations, and what's happening in
+your waters right now.
 
-### 3. Build Your Knowledge Base
-
-From your research, compile:
-- **Microlocations**: harbors, islands, towns, inlets, bays within your scope
-- **Marinas**: full-service, dry storage, fuel, ramps, yacht clubs with details
-- **Content topics**: refine or expand the default 7 categories based on what's relevant
-
-Push everything to Convex:
+Then push what you found:
 
 ```
 swain desk update {{deskName}} --microlocations='[...]' --marinas='[...]' --topics='[...]' --status=active --json
 ```
 
-### 4. Produce Initial Cards
-
-Create up to **5 cards** on your first heartbeat (elevated limit). Prioritize:
-1. Current weather/tides overview
-2. Top 3 marinas guide
-3. Local regulations summary
-4. Fishing report or seasonal activity
-5. Navigation/anchorage guide
+Produce up to **5 cards** on your first heartbeat. Prioritize whatever is most
+useful to a boater in your area right now — conditions, key facilities, local
+knowledge, regulations, seasonal info.
 
 Use `swain-card-create` skill for each card.
-
-### 5. Complete
 
 ```
 HEARTBEAT_OK
@@ -77,8 +65,7 @@ HEARTBEAT_OK
 swain desk requests --desk={{deskName}} --status=pending --json
 ```
 
-These are signals from advisors about what captains in your region are asking about.
-Factor them into your gap analysis — they tell you what matters right now.
+These are signals from advisors — topics captains in your region are asking about.
 
 ### 2. Gap Analysis
 
@@ -86,20 +73,12 @@ Factor them into your gap analysis — they tell you what matters right now.
 swain card coverage --desk={{deskName}} --json
 ```
 
-Check for:
-- Topics from pending requests — captains are actively asking about these
-- Categories with zero cards
-- Timely cards older than 48 hours (weather, tides, fishing)
-- Microlocations with no coverage
-- Seasonal events coming up
+Look for gaps: stale timely content, uncovered microlocations, categories with
+nothing, topics from pending requests.
 
 ### 3. Produce Cards
 
-Create up to **3 cards** per regular heartbeat (requests + gap fills combined).
-
-### 4. Complete
-
-Log what you did and output:
+Up to **3 cards** per regular heartbeat (requests + gap fills combined).
 
 ```
 HEARTBEAT_OK

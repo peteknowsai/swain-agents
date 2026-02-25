@@ -228,14 +228,17 @@ Steps:
       swain user update {{userId}} --desk=<deskName> --microlocation=<specific_spot> --json
 
    d. If no existing desk fits — create one:
-      i.   Decide on name (slug), region (human-readable), and scope (natural language boundary).
-           These are editorial decisions. Pick boundaries that make sense for boaters,
-           not administrative boundaries.
-      ii.  THEN resolve to get coordinates:
-           goplaces resolve '<region>' --limit=1 --json
-           (use location.lat and location.lng from the result)
+      i.   Decide on name (slug), region (human-readable), and scope (natural language
+           description of the coverage area). These are editorial decisions — pick
+           boundaries that make sense for boaters, not administrative boundaries.
+      ii.  Resolve the center of the coverage area to get coordinates:
+           goplaces resolve '<center of region>' --limit=1 --json
       iii. Create the desk:
            swain desk create --name=<slug> --region='<region>' --lat=<lat> --lon=<lon> --scope='<scope>' --description='<description>' --created-by-location='<rawLocationInput>' --json
+           The scope is the most important field — it's the plain-English description
+           the desk agent uses to understand its coverage area. Be specific about
+           the geographic extent (e.g., "Barcelona coast east through Gulf of Lion
+           to French Riviera and Monaco" not just "Western Mediterranean").
       iv.  Assign user:
            swain user update {{userId}} --desk=<slug> --microlocation=<specific_spot> --json
 

@@ -2,20 +2,20 @@
 
 Runs every 4 hours.
 
-## First: Check Your State
+## Check Your State
 
 ```
 swain desk get {{deskName}} --json
 ```
 
-If `microlocations` is empty and you have zero cards, this is your **first heartbeat**.
-Otherwise it's a **regular heartbeat**.
+Look at `microlocations`, `marinas`, `status`, and count your existing cards.
 
 ---
 
-## First Heartbeat
+## Self-Population (if microlocations is empty)
 
-You just woke up. Your job: learn your waters and start producing content.
+If `microlocations` is empty, you need to discover your region. This runs on first
+heartbeat and re-runs on any heartbeat where data is missing (recovery).
 
 Read your SOUL.md and TOOLS.md — they tell you your region and scope. You know
 these waters. Think about what's in your coverage area:
@@ -39,21 +39,32 @@ multiple bodies of water — search at several key locations to cover the full a
 Use `firecrawl` to research conditions, regulations, and what's happening in
 your waters right now.
 
-Then push what you found:
+Push what you found:
 
 ```
-swain desk update {{deskName}} --microlocations='[...]' --marinas='[...]' --topics='[...]' --status=active --json
+swain desk update {{deskName}} --microlocations='[...]' --marinas='[...]' --topics='[...]' --json
 ```
 
-Produce up to **5 cards** on your first heartbeat. Prioritize whatever is most
-useful to a boater in your area right now — conditions, key facilities, local
-knowledge, regulations, seasonal info.
+### Activate
 
-Use `swain-card-create` skill for each card.
+If `status` is `"provisioning"`, set it to `"active"` now:
 
 ```
-HEARTBEAT_OK
+swain desk update {{deskName}} --status=active --json
 ```
+
+Do this immediately after pushing discoveries, before creating cards.
+
+---
+
+## Card Production
+
+**If microlocations exist but you have fewer than 5 cards**, produce cards to
+fill the gap (up to 5 total). This covers first heartbeat AND recovery if an
+earlier run was interrupted.
+
+**If this is a regular heartbeat** (microlocations exist, 5+ cards), follow the
+normal beat reporting workflow below.
 
 ---
 
@@ -79,6 +90,8 @@ nothing, topics from pending requests.
 ### 3. Produce Cards
 
 Up to **3 cards** per regular heartbeat (requests + gap fills combined).
+
+Use the `swain-content-desk` skill for each card.
 
 ```
 HEARTBEAT_OK

@@ -500,11 +500,9 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
 
   const agentId = `${name}-desk`;
   const workspace = join(WORKSPACES_ROOT, agentId);
+  // Check if agent already exists in gateway
   const config = await readConfig();
-  if (!config.agents) config.agents = {};
-  if (!config.agents.list) config.agents.list = [];
-
-  if (config.agents.list.find((a: any) => a.id === agentId)) {
+  if (config.agents?.list?.find((a: any) => a.id === agentId)) {
     throw new Error(`Desk agent ${agentId} already exists`);
   }
 
@@ -525,25 +523,34 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     await symlink(join(SKILLS_ROOT, skill), target);
   }
 
-  // 3. Register in gateway config
-  config.agents.list.push({
-    id: agentId,
-    name: agentId,
-    workspace,
-    agentDir: `/root/.openclaw/agents/${agentId}/agent`,
-    model: { primary: "anthropic/claude-sonnet-4-6" },
-    heartbeat: { every: "4h" },
-    subagents: { allowAgents: [] },
-  });
-  await writeConfig(config);
+  // 3. Register in gateway via CLI (hot-add to running gateway)
+  await openclaw([
+    "agents", "add", agentId,
+    "--workspace", workspace,
+    "--model", "anthropic/claude-sonnet-4-6",
+    "--non-interactive",
+    "--json",
+  ]);
 
-  // 4. Copy auth profile
+  // 4. Create heartbeat cron (reliable, no restart needed)
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `desk-heartbeat-${name}`,
+    "--every", "4h",
+    "--session", "main",
+    "--system-event", `Desk heartbeat for ${name}`,
+    "--wake", "now",
+    "--json",
+  ]);
+
+  // 5. Copy auth profile
   await copyAuthProfile(agentId);
 
-  // 5. Fallback workspace symlink
+  // 6. Fallback workspace symlink
   try { await symlink(workspace, join("/root/.openclaw", `workspace-${agentId}`)); } catch {}
 
-  // 6. Register in unified registry
+  // 7. Register in unified registry
   const registry = await loadRegistry();
   registry.agents[agentId] = {
     type: "desk",
@@ -554,7 +561,7 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
   };
   await saveRegistry(registry);
 
-  // 7. Create Convex desk record
+  // 8. Create Convex desk record
   let deskId: string | undefined;
   try {
     let bounds = input.bounds;
@@ -581,7 +588,7 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     console.error(`Convex registration failed (non-fatal): ${err}`);
   }
 
-  // 8. Prime the agent
+  // 9. Prime the agent
   await Bun.sleep(2000);
   try {
     await openclaw([
@@ -634,6 +641,13 @@ export async function deleteDesk(name: string): Promise<void> {
     config.agents.list = config.agents.list.filter((a: any) => a.id !== agentId);
   }
   await writeConfig(config);
+
+  // Tell gateway to unload agent
+  try {
+    await openclaw(["agents", "delete", agentId, "--force"]);
+  } catch (err) {
+    console.warn(`Gateway agent removal for ${agentId}: ${err}`);
+  }
 
   // Remove cron jobs
   try {

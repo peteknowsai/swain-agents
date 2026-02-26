@@ -10,6 +10,7 @@
  */
 
 import { generateImage, type ReplicateImageResult } from './replicate-image';
+import { ensureCardContrast } from './color';
 
 // ── Image fetching ───────────────────────────────────────────────
 
@@ -72,13 +73,13 @@ export const ART_STYLES = [
   {
     id: "clean-line",
     name: "Clean Line Illustration",
-    bgColor: "#ffffff",
+    bgColor: "#2d3748",
     prompt: "clean line illustration, precise ink outlines, flat color fills, white background, technical yet artistic, marine illustration style, sharp vector-like edges, minimal shading",
   },
   {
     id: "colored-pencil",
     name: "Colored Pencil",
-    bgColor: "#f5e6d3",
+    bgColor: "#6b4c2a",
     prompt: "colored pencil drawing on white paper, visible pencil strokes and paper texture, warm natural colors, detailed hatching and layering, illustration quality, soft blended tones",
   },
   {
@@ -91,7 +92,7 @@ export const ART_STYLES = [
   {
     id: "watercolor",
     name: "Watercolor",
-    bgColor: "#4a6fa5",
+    bgColor: "#456898",
     prompt: "watercolor painting on white paper, transparent washes, wet-on-wet color bleeds, visible paper texture, soft edges with selective sharp details, clean white background showing through",
   },
   {
@@ -104,19 +105,19 @@ export const ART_STYLES = [
   {
     id: "pop-art",
     name: "Pop Art",
-    bgColor: "#e63946",
+    bgColor: "#b51d29",
     prompt: "pop art style, bold flat colors, thick black outlines, Ben-Day dots pattern, high contrast, Lichtenstein-inspired, graphic and punchy, limited bright color palette",
   },
   {
     id: "comic-book",
     name: "Comic Book",
-    bgColor: "#fca311",
+    bgColor: "#8b5a00",
     prompt: "comic book illustration, bold black ink outlines, halftone dot shading, dynamic action perspective, bright saturated comic colors, cel-shaded, speech-bubble-era aesthetic",
   },
   {
     id: "retro-poster",
     name: "Retro Travel Poster",
-    bgColor: "#c2703e",
+    bgColor: "#a35a2e",
     prompt: "vintage travel poster illustration, flat bold shapes, limited color palette of 4-5 colors, screen print aesthetic, 1950s tourism poster style, geometric simplification, strong graphic composition",
   },
   {
@@ -135,32 +136,32 @@ export const ART_STYLES = [
   {
     id: "screen-print",
     name: "Screen Print",
-    bgColor: "#f2e8d5",
+    bgColor: "#6b5332",
     prompt: "vintage screen print, 2-3 color separation, slight misregistration, heavy ink on cotton texture, retro americana feel, bold simplified shapes, distressed worn edges",
   },
   {
     id: "risograph",
     name: "Risograph",
-    bgColor: "#fef9ef",
+    bgColor: "#5c4d1e",
     prompt: "risograph print style, bold overlapping color layers, slight misregistration, grainy ink texture, limited to 3 spot colors, modern indie poster aesthetic, visible halftone grain",
   },
   // ── Nautical / Maritime ──
   {
     id: "nautical-tattoo",
     name: "Nautical Tattoo",
-    bgColor: "#fdf6e3",
+    bgColor: "#5c4a1a",
     prompt: "traditional sailor tattoo style, bold black outlines, limited flat color fills, old school americana tattoo aesthetic, clean bold lines on skin-tone background, classic maritime iconography",
   },
   {
     id: "nautical-engraving",
     name: "Nautical Engraving",
-    bgColor: "#f5f0e8",
+    bgColor: "#4a4235",
     prompt: "detailed nautical engraving, fine crosshatch shading, copper plate etching style, Victorian-era maritime illustration, precise fine lines, museum quality technical drawing",
   },
   {
     id: "vintage-chart",
     name: "Vintage Chart",
-    bgColor: "#e8dcc8",
+    bgColor: "#5c5038",
     prompt: "aged nautical chart illustration, hand-drawn cartography style, sepia and faded ink tones, compass rose decorative elements, old parchment paper texture, antique maritime map aesthetic",
   },
   // ── Coastal / Lifestyle ──
@@ -173,13 +174,13 @@ export const ART_STYLES = [
   {
     id: "vintage-florida",
     name: "Vintage Florida",
-    bgColor: "#f4a460",
+    bgColor: "#8b4513",
     prompt: "vintage 1960s Florida postcard illustration, sun-bleached pastel colors, retro tourism art, faded warm tones, hand-lettered feel, nostalgic coastal Americana, old motel sign aesthetic",
   },
   {
     id: "surf-art",
     name: "Surf Art",
-    bgColor: "#f7f3e9",
+    bgColor: "#5c5030",
     prompt: "1970s surf culture illustration, clean single-weight line art, flat earthy color palette, Rick Griffin inspired, retro beach poster style, laid-back coastal aesthetic, vintage board short print",
   },
   // ── Craft / Handmade ──
@@ -192,20 +193,20 @@ export const ART_STYLES = [
   {
     id: "paper-cutout",
     name: "Paper Cutout",
-    bgColor: "#ffffff",
+    bgColor: "#5b4a3f",
     prompt: "layered paper cut art, visible paper layers with subtle shadows between, clean cut edges, limited color palette, dimensional depth from overlapping shapes, modern craft aesthetic",
   },
   // ── Modern / Digital ──
   {
     id: "flat-vector",
     name: "Flat Vector",
-    bgColor: "#ffffff",
+    bgColor: "#2d3748",
     prompt: "clean flat vector illustration, modern minimal design, no gradients or shadows, bold geometric shapes, contemporary app icon aesthetic, crisp edges, Silicon Valley illustration style",
   },
   {
     id: "cartoon",
     name: "Cartoon",
-    bgColor: "#87ceeb",
+    bgColor: "#1a6e8e",
     prompt: "bright cartoon illustration, exaggerated fun proportions, thick cheerful outlines, saturated happy colors, animated movie quality, playful and approachable, Pixar-inspired rendering",
   },
   {
@@ -218,7 +219,7 @@ export const ART_STYLES = [
   {
     id: "mono-navy",
     name: "Navy Mono",
-    bgColor: "#ffffff",
+    bgColor: "#1b3a5c",
     prompt: "single navy blue color illustration on white, clean precise lines, nautical blue ink drawing, detailed but single color, classic maritime illustration, timeless and elegant",
   },
   {
@@ -230,7 +231,7 @@ export const ART_STYLES = [
   {
     id: "sepia-sketch",
     name: "Sepia Sketch",
-    bgColor: "#f5f0e8",
+    bgColor: "#4a4235",
     prompt: "detailed sepia pencil sketch, warm brown tones on cream paper, fine detailed shading, architectural rendering quality, vintage photograph feel, nostalgic and refined, old master drawing style",
   },
   // ── Premium / Specialty ──
@@ -393,7 +394,7 @@ export function getSamplerStyles(): (typeof ART_STYLES)[number][] {
 
 export function getStyleDefaultBgColor(styleId: string): string {
   const style = ART_STYLES.find(s => s.id === styleId);
-  return style?.bgColor || "#2d3748";
+  return ensureCardContrast(style?.bgColor || "#2d3748").hex;
 }
 
 /**

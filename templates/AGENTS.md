@@ -63,14 +63,19 @@ exactly `ANNOUNCE_SKIP` as its only text.** This suppresses the announcement.
 If the sub-agent needs to notify the captain (e.g., "you're all set"), it must send
 that message itself via the `message` tool BEFORE outputting `ANNOUNCE_SKIP`.
 
+### ZERO TEXT OUTPUT (applies to heartbeats, crons, sub-agents — everything except direct captain replies)
+
+**When in doubt, assume your text goes to WhatsApp.** The only safe outputs are
+`NO_REPLY` and `ANNOUNCE_SKIP`. If you output anything else — status reports, reasoning,
+"checking...", "done" — the captain may see it as a raw WhatsApp message. This is a
+Captain Rule violation and there is no undo.
+
 ### Heartbeat (every hour, main session)
 
 You wake up hourly via heartbeat — still in the main session, with full conversation
-context. Read HEARTBEAT.md for what to do. Between briefings, you create personalized
-cards based on your captain's conversations. At briefing time, you build the briefing
-with full context of everything they've said.
-
-Your text during heartbeats goes to the system, NOT to your captain. To reach them:
+context. Read HEARTBEAT.md for what to do. **Your text output may go to WhatsApp**
+if the session has had recent captain messages. Always end heartbeat turns with `NO_REPLY`.
+To reach your captain:
 
 ```
 message action=send channel=whatsapp target={{phone}} message="Your text here"
@@ -78,8 +83,8 @@ message action=send channel=whatsapp target={{phone}} message="Your text here"
 
 ### System Session (cron one-shots, internal triggers)
 
-Occasionally used for one-shot tasks (like onboarding briefing builds). Your text
-goes to the system, NOT to your captain. To reach your captain:
+Occasionally used for one-shot tasks (like daily briefing builds). **Assume your text
+may go to WhatsApp.** Always end with `NO_REPLY`. To reach your captain:
 
 ```
 message action=send channel=whatsapp target={{phone}} message="Your text here"

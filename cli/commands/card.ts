@@ -14,6 +14,20 @@ import {
   colors
 } from '../lib/worker-client';
 import { generate, PROMPT_FULL_BLEED, PROMPT_CARD_CONTEXT, ART_STYLES } from '../lib/image';
+import { ensureCardContrast } from '../lib/color';
+
+/**
+ * Run a --bg-color value through contrast enforcement.
+ * Logs a warning (to stderr) when the color gets darkened.
+ */
+function safeBgColor(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const { hex, darkened } = ensureCardContrast(raw);
+  if (darkened) {
+    console.error(`${colors.dim}bg-color ${raw} too light — darkened to ${hex}${colors.reset}`);
+  }
+  return hex;
+}
 
 /**
  * Get today's date in Eastern Time (YYYY-MM-DD format)
@@ -418,7 +432,7 @@ async function createCard(args: string[]): Promise<void> {
     title,
     subtext,
     contentMarkdown: content,
-    backgroundColor: params['bg-color'] || undefined,
+    backgroundColor: safeBgColor(params['bg-color']),
     styleId: params['style-id'] || undefined,
     category: params['category'] || undefined,
     cardDate: params['date'] || getTodayDate(),
@@ -477,7 +491,7 @@ async function updateCard(args: string[]): Promise<void> {
     }
     body.image = imageUrl;
   }
-  if (params['bg-color']) body.backgroundColor = params['bg-color'];
+  if (params['bg-color']) body.backgroundColor = safeBgColor(params['bg-color']);
   if (params['style-id']) body.styleId = params['style-id'];
   if (params['category']) body.category = params['category'];
   if (params['content']) body.contentMarkdown = params['content'];
@@ -691,7 +705,7 @@ async function generateImage(args: string[]): Promise<void> {
   const result = await generate(combinedPrompt, { suffix, fast });
   const imageUrl = result.url;
   const patchBody: Record<string, any> = { image: imageUrl };
-  if (params['bg-color']) patchBody.backgroundColor = params['bg-color'];
+  if (params['bg-color']) patchBody.backgroundColor = safeBgColor(params['bg-color']);
   if (styleId) patchBody.styleId = styleId;
 
   await workerRequest(`/cards/${cardId}`, {

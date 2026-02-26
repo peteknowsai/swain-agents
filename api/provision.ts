@@ -270,6 +270,16 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   const registry = await loadRegistry();
   const phone = input.phone ? normalizePhone(input.phone) : "";
 
+  // Phone uniqueness: reject if phone already assigned to an active agent
+  if (phone) {
+    const conflict = Object.entries(registry.agents).find(
+      ([_, e]) => e.type === "advisor" && e.status === "active" && e.phone === phone
+    );
+    if (conflict) {
+      throw new Error(`Phone ${phone} already assigned to ${conflict[0]} (${conflict[1].captainName})`);
+    }
+  }
+
   // Find first available pool agent
   const available = Object.entries(registry.agents)
     .filter(([_, e]) => e.type === "advisor" && e.status === "available")
@@ -281,6 +291,18 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   const workspace = join(WORKSPACES_ROOT, agentId);
   const waPhone = phone ? toWhatsAppPhone(phone) : "";
   const jid = waPhone ? waPhone.replace(/^\+/, "") + "@s.whatsapp.net" : "";
+
+  // Binding uniqueness: reject if WhatsApp binding already exists for this phone
+  if (waPhone) {
+    const config = await readConfig();
+    const peerId = phoneToBindingPeerId(waPhone);
+    const existing = config.bindings?.find(
+      (b: any) => b.match?.peer?.id === peerId && b.match?.channel === "whatsapp"
+    );
+    if (existing) {
+      throw new Error(`Phone ${waPhone} already bound to agent ${existing.agentId}`);
+    }
+  }
 
   // 1. Personalize workspace
   for (const file of ["AGENTS.md", "TOOLS.md", "HEARTBEAT.md"]) {
@@ -403,7 +425,7 @@ async function createDailyBriefingCron(input: CaptainInput, agentId: string): Pr
     "--cron", `${minuteOffset} 6 * * *`,
     "--tz", tz,
     "--session", "main",
-    "--system-event", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-briefing skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply HEARTBEAT_OK.`,
+    "--system-event", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-briefing skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply NO_REPLY.`,
   ]);
 
   console.log(`Daily briefing cron created for ${agentId}: ${minuteOffset} 6 * * * ${tz}`);
@@ -423,7 +445,7 @@ async function createBriefingWatchdog(input: CaptainInput, agentId: string): Pro
     "--cron", `${watchdogMinute} ${watchdogHour} * * *`,
     "--tz", tz,
     "--session", "main",
-    "--system-event", `Briefing watchdog: check if today's briefing exists. Run swain briefing list --user=${input.userId} --json. If no briefing for today, build it now using the swain-briefing skill. If it already exists, reply HEARTBEAT_OK.`,
+    "--system-event", `Briefing watchdog: check if today's briefing exists. Run swain briefing list --user=${input.userId} --json. If no briefing for today, build it now using the swain-briefing skill. If it already exists, reply NO_REPLY.`,
   ]);
 
   console.log(`Briefing watchdog cron created for ${agentId}: ${watchdogMinute} ${watchdogHour} * * * ${tz}`);

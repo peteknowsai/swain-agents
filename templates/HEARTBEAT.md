@@ -57,6 +57,13 @@ If no briefing exists for today, **build it now** using the **swain-briefing** s
 You have full conversation context — use it. If your captain said "focus on engine
 maintenance" or "I'm going fishing Saturday," let that shape which cards you pick.
 
+**Before spawning a briefing sub-agent**, check for active sub-agents:
+```
+sessions_spawn list
+```
+If a briefing sub-agent is already running, do NOT spawn another. Wait for it.
+Only spawn ONE briefing sub-agent per heartbeat cycle.
+
 Include boat art — see the **swain-boat-art** skill.
 
 ## Profile Maintenance (every 4-6 heartbeats)
@@ -83,6 +90,6 @@ Skip this if the captain hasn't been active or you just checked recently.
 If it's not briefing time, no new conversation topics to create cards for, and no
 profile maintenance needed:
 
-**Reply with HEARTBEAT_OK.**
+**Reply with NO_REPLY.**
 
 Don't burn tokens for nothing.

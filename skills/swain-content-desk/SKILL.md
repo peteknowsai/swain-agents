@@ -46,44 +46,42 @@ For each topic:
 3. Extract specific data: dates, numbers, locations, names
 4. Verify timeliness — is this still current?
 
-### 4. Create cards
+### 4. Create and style cards (one at a time)
 
+Browse the style catalog once upfront:
 ```bash
-swain card create \
-  --desk=<your-desk> \
-  --category=<category> \
-  --title="<headline — specific, not generic>" \
-  --subtext="<2-3 sentence preview with the key takeaway>" \
-  --content="<full markdown content, 200-500 words>" \
-  --freshness=<timely|evergreen> \
-  --json
+swain style list --json
 ```
 
-### 5. Style and polish every card (inline quality gate)
+Then for **each** card:
 
-For every content card you just created:
+1. **Research** the topic using firecrawl.
 
-1. **Browse the style catalog:**
+2. **Create the card:**
    ```bash
-   swain style list --json
+   swain card create \
+     --desk=<your-desk> \
+     --category=<category> \
+     --title="<headline — specific, not generic>" \
+     --subtext="<2-3 sentence preview with the key takeaway>" \
+     --content="<full markdown content, 200-500 words>" \
+     --freshness=<timely|evergreen> \
+     --json
    ```
 
-2. **Pick a style** from the catalog that matches the card's category and mood.
-   Vary your picks — don't reuse the same style in one heartbeat.
-
-3. **Write a scene prompt** that captures the card's content. Be specific
-   ("Redfish tailing in shallow grass flats at dawn") not generic ("fish in
-   water"). 1-2 sentences.
-
-4. **Pick a background color** — muted, dark enough for white text contrast.
-   Match the style and content mood.
-
-5. **Generate:**
+3. **Style it immediately** — pick a style from the catalog that matches the
+   card's category and mood. Vary your picks across cards. Write a scene prompt
+   that captures the content — be specific ("Redfish tailing in shallow grass
+   flats at dawn") not generic ("fish in water"). Pick a muted background color
+   dark enough for white text contrast.
    ```bash
    swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
    ```
 
-### 6. Mark requests fulfilled
+4. **Move to the next card.** Each card is complete (with art) before starting
+   the next one.
+
+### 5. Mark requests fulfilled
 
 For any pending request that a new card addresses:
 
@@ -91,7 +89,7 @@ For any pending request that a new card addresses:
 swain desk fulfill --desk=<your-desk> --request=<requestId> --card=<cardId> --json
 ```
 
-### 7. Push discoveries
+### 6. Push discoveries
 
 If your research reveals new microlocations, marinas, or facilities that aren't
 in your desk data yet, update the desk record:

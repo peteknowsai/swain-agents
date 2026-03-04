@@ -2,7 +2,7 @@
 
 /**
  * Card Commands
- * swain card list|get|create|check|update|audit|archive|unarchive|image|boat-art
+ * swain card list|get|create|check|verify|update|audit|archive|unarchive|image|boat-art
  */
 
 import {
@@ -236,6 +236,64 @@ async function getCard(args: string[]): Promise<void> {
     print(card.content.slice(0, 500) + (card.content.length > 500 ? '...' : ''));
   }
   print('');
+}
+
+/**
+ * swain card verify <cardId> [<cardId> ...]
+ * Verify that cards have both image and backgroundColor set.
+ * Returns pass/fail per card — designed for agent loops.
+ */
+async function verifyCards(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const jsonOutput = params['json'] === 'true';
+
+  // Collect card IDs from positional args (anything not starting with --)
+  const cardIds = args.filter(a => !a.startsWith('--') && a.startsWith('card_'));
+
+  if (cardIds.length === 0) {
+    printError('Usage: swain card verify <cardId> [<cardId> ...] [--json]');
+    process.exit(1);
+  }
+
+  const results: { id: string; pass: boolean; missing: string[] }[] = [];
+
+  for (const cardId of cardIds) {
+    const res = await workerRequest(`/cards/${cardId}`);
+    const card = res.card;
+    if (!card) {
+      results.push({ id: cardId, pass: false, missing: ['card not found'] });
+      continue;
+    }
+    const missing: string[] = [];
+    if (!card.image || card.image.includes('placehold') || card.image.includes('placeholder')) {
+      missing.push('image');
+    }
+    if (!card.backgroundColor) {
+      missing.push('backgroundColor');
+    }
+    results.push({ id: cardId, pass: missing.length === 0, missing });
+  }
+
+  const allPass = results.every(r => r.pass);
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({ success: true, allPass, cards: results }, null, 2));
+    return;
+  }
+
+  print('');
+  for (const r of results) {
+    if (r.pass) {
+      printSuccess(`${r.id} — PASS`);
+    } else {
+      printError(`${r.id} — FAIL (missing: ${r.missing.join(', ')})`);
+    }
+  }
+  print('');
+
+  if (!allPass) {
+    process.exit(1);
+  }
 }
 
 /**
@@ -887,6 +945,12 @@ ${colors.bold}OPTIONS (check)${colors.reset}
   --date=<YYYY-MM-DD>     Date to check (defaults to today in Eastern Time)
   --json                  Output as JSON
 
+${colors.bold}OPTIONS (verify)${colors.reset}
+  <cardId> [<cardId> ...] One or more card IDs to verify
+  --json                  Output as JSON
+  Checks that each card has both image and backgroundColor.
+  Exits with code 1 if any card fails. Designed for agent loops.
+
 ${colors.bold}OPTIONS (create)${colors.reset}
   --desk=<name>           Desk name (required, or set SWAIN_DESK env var)
   --marina=<string>       Marina/location within desk territory
@@ -949,6 +1013,7 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain card get card_abc123
 
   swain card check --desk=tampa-bay --date=2026-02-09 --json
+  swain card verify card_abc123 card_def456 --json
   swain card coverage --desk=tampa-bay --json
 
   swain card create \\
@@ -1005,6 +1070,9 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'coverage':
         await coverageReport(commandArgs);
+        break;
+      case 'verify':
+        await verifyCards(commandArgs);
         break;
       case 'image':
       case 'regen-image':

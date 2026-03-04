@@ -78,10 +78,39 @@ Then for **each** card:
    swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<scene description>" --json
    ```
 
-4. **Move to the next card.** Each card is complete (with art) before starting
-   the next one.
+4. **Verify the card** before moving on:
+   ```bash
+   swain card verify <cardId> --json
+   ```
+   This checks that the card has both `image` and `backgroundColor`. If it fails:
+   - Check the verify output to see what's missing
+   - Fix it (re-run `swain card image` with `--bg-color`, or `swain card update --bg-color=<hex>`)
+   - Run verify again
+   - **Max 3 attempts per card.** If it still fails after 3 tries, log a warning
+     and move on — the card will be unstyled but at least exists.
 
-### 5. Mark requests fulfilled
+5. **Move to the next card.** Each card must pass verify before starting the next one.
+
+### 5. Final verification gate
+
+After creating all cards, run a batch verify on every card ID from this session:
+
+```bash
+swain card verify <cardId1> <cardId2> <cardId3> --json
+```
+
+If `allPass` is `false`, go back and fix the failing cards (up to 2 more
+attempts total). If cards still fail after retries, send a message to your
+operator:
+
+```
+message action=send channel=whatsapp target=operator message="⚠️ [your-desk] heartbeat: X card(s) missing image/backgroundColor after retries — card IDs: <ids>"
+```
+
+**Do not skip this step.** Every card you produce must have art and a background
+color. Unstyled cards look broken to captains.
+
+### 6. Mark requests fulfilled
 
 For any pending request that a new card addresses:
 
@@ -89,7 +118,7 @@ For any pending request that a new card addresses:
 swain desk fulfill --desk=<your-desk> --request=<requestId> --card=<cardId> --json
 ```
 
-### 6. Push discoveries
+### 7. Push discoveries
 
 If your research reveals new microlocations, marinas, or facilities that aren't
 in your desk data yet, update the desk record:

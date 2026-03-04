@@ -1,41 +1,20 @@
-# wacli — WhatsApp CLI
+---
+name: wacli
+description: "DEPRECATED — Use the `message` tool instead. wacli is the old WhatsApp CLI that has been replaced by the unified message tool."
+metadata: { "openclaw": { "emoji": "📱" } }
+---
 
-Send WhatsApp messages using the `wacli` CLI.
+# wacli — DEPRECATED
 
-## Sending Text Messages
+**Do not use wacli.** It has been replaced by the `message` tool, which is available in all agent workspaces.
 
-```bash
-wacli send text --to <phone>@s.whatsapp.net --message "Your message here" --json
+## Use This Instead
+
+```
+message action=send channel=whatsapp target={{phone}} message="Your message here"
 ```
 
-**Phone format:** Strip the `+` from E.164, add `@s.whatsapp.net`:
-- `+12025550123` → `12025550123@s.whatsapp.net`
-- `+12025550199` → `12025550199@s.whatsapp.net`
-
-**Always use `--json`** for parseable output:
-```json
-{"success":true,"data":{"id":"3EB0...","sent":true,"to":"12025550123@s.whatsapp.net"},"error":null}
-```
-
-## Sending Files / Images
-
-```bash
-# Image with caption
-wacli send file --to 12025550123@s.whatsapp.net --file /path/to/image.jpg --caption "Check this out" --json
-
-# File with custom display name
-wacli send file --to 12025550123@s.whatsapp.net --file /tmp/report.pdf --filename "Report.pdf" --json
-```
-
-## Sending to Groups
-
-Use the group JID (ends in `@g.us`):
-```bash
-wacli send text --to 120363422658195199@g.us --message "Hey everyone" --json
-```
-
-## Key Points
-
-- wacli sends do NOT end your agent turn — use it freely mid-turn
-- Always use `--json` so you can check `success` in the response
-- Phone numbers: strip the `+`, append `@s.whatsapp.net`
+The `message` tool:
+- Takes phone numbers in E.164 format directly (e.g., `+12025550123`) — no `@s.whatsapp.net` suffix needed
+- Is documented in your workspace's TOOLS.md
+- Does not require a separate binary

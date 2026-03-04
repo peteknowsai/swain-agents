@@ -1,6 +1,6 @@
 ---
 name: swain-library
-description: Browse and understand the card library for content selection.
+description: "Card library strategy — how to browse, select, and prioritize content cards for briefings. Use this skill whenever you're choosing cards for a captain, deciding between timely and evergreen content, or figuring out what to include in a briefing."
 metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["swain"] } } }
 ---
 
@@ -8,23 +8,12 @@ metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["swain"] } } }
 
 The card library is the pool of all available content cards. Cards are created by beat reporter agents and curated for specific locations.
 
-## Library vs Pull
+## Browsing Cards
 
 Two commands, different purposes:
 
-- **`swain card library`** — Full browse of the card pool. Use when you want to understand what's available, check category distribution, or explore content.
-- **`swain card pull`** — Curated selection for briefing assembly. Pre-filtered by relevance, respects `--exclude-served` to skip cards the captain has already seen. Use when building a briefing.
-
-## Browsing
-
-```bash
-swain card library --user=<userId> --json
-```
-
-Returns:
-- **freshCards** - Cards this user has never seen. Prioritize these.
-- **resurfacedCards** - Cards previously served to this user. Only use if especially relevant.
-- **stats** - Counts of total, fresh, and resurfaced cards.
+- **`swain card pull --user=<userId> --json`** — Personalized, ranked selection for a specific user. Respects `--exclude-served` to skip cards already delivered. User-tagged cards surface first. Use this for briefings.
+- **`swain card list [--desk=<desk>] --json`** — Raw catalog query. Browse by desk or category. Use when exploring what's available or checking coverage, not for briefing assembly.
 
 ## Card Properties
 
@@ -34,7 +23,7 @@ Each card has:
 - `subtext` - Preview text (2-3 sentences)
 - `content_markdown` - Full article in markdown
 - `image` - Image URL
-- `background_color` / `backgroundColor` - Card background color
+- `backgroundColor` - Card background color (hex)
 - `category` - Content category (e.g., `weather-tides`, `activities-events`)
 - `freshness` - Either `timely` (expires) or `evergreen` (always relevant)
 - `expires_at` - Unix timestamp when timely content expires (null for evergreen)

@@ -17,7 +17,9 @@ Some commands overlap. Here's when to use what:
 - **`boat profile`** vs **`user get` + `boat get`**: Use `boat profile` when you need the full picture (completeness score, known/unknown fields, tier). Use the individual commands when you only need one piece.
 - **`card pull`** vs **`card list`**: `pull` is personalized — it ranks cards for a specific user, respects served history, and surfaces user-tagged cards first. `list` is a raw catalog query by desk or category. For briefings, always use `pull`.
 - **`card create`** vs **`card image`**: `create` makes the card record. `image` generates art for an existing card. They're separate steps — create first, style second.
+- **`card image`** vs **`card regen-image`**: Same command, different name. `regen-image` is an alias for `image` — use either.
 - **`briefing validate`** vs **`briefing assemble`**: `validate` is a dry run — checks your items array without creating anything. Use it if you're unsure about format. `assemble` validates AND creates.
+- **`desk search`** vs **`desk list`**: `search` is geo-spatial — finds desks near a lat/lon. `list` returns all desks.
 
 ## Field Ownership
 
@@ -60,13 +62,27 @@ swain boat photo delete <photoId> --json
 ```bash
 swain card pull --user=<userId> [--exclude-served] [--category=<cat>] [--limit=<n>] --json
 swain card list [--desk=<desk>] [--category=<cat>] [--limit=<n>] --json
+swain card list-today --json
 swain card get <cardId> --json
-swain card library --user=<userId> --json
 swain card create --desk=<desk> --title=<text> --subtext=<text> --content=<md> [options] --json
+swain card update <cardId> [--title=<text>] [--subtext=<text>] [--content=<md>] [--image=<url>] [--bg-color=<hex>] [--style-id=<id>] [--category=<cat>] [--desk=<name>] [--freshness=<type>] [--expires-at=<date>] --json
 swain card image <cardId> --prompt="..." [--style=<id>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--bg-color=<hex>] --json
-swain card boat-art --user=<userId> [--best] [--style=<id>] [--sampler] --json
+swain card verify <cardId> [<cardId> ...] --json
+swain card check --desk=<name> [--date=YYYY-MM-DD] --json
+swain card archive <cardId> --json
+swain card unarchive <cardId> --json
+swain card audit [--agent=<id>] [--location=<loc>] --json
 swain card coverage [--desk=<desk>] --json
+swain card boat-art --user=<userId> [--best] [--style=<id>] [--sampler] --json
 ```
+
+- **pull** ranks cards for a specific user. Use for briefings.
+- **list-today** shows all cards created today. Useful for checking your own output.
+- **update** patches any subset of card fields. Only sends what you pass.
+- **verify** checks that cards have both `image` and `backgroundColor` set. Returns `allPass: true/false`. Use before briefing assembly.
+- **check** tests if a card exists for a desk on a given date. Defaults to today.
+- **archive / unarchive** soft-archives or restores a card.
+- **audit** finds cards with issues: missing location, missing style, expired-but-active, missing image.
 
 ### Boat Art (generate + save)
 ```bash
@@ -99,9 +115,24 @@ swain advisor delete <agentId> --json
 ### Desks
 ```bash
 swain desk list --json
-swain desk create --name=<slug> --region=<description> --json
+swain desk get <name> --json
+swain desk create --name=<slug> --region=<description> [--lat=N] [--lon=N] [--scope="..."] --json
+swain desk update <name> [--status=<s>] [--microlocations='[...]'] [--marinas='[...]'] [--topics='[...]'] [--scope="..."] --json
 swain desk delete <name> --json
+swain desk pause <name> --json
+swain desk unpause <name> --json
+swain desk search --lat=N --lon=N [--radius=50] --json
+swain desk request --desk=<name> --topic="..." --category=<cat> [--user=<userId>] --json
+swain desk requests --desk=<name> [--status=pending] --json
+swain desk fulfill --desk=<name> --request=<id> --card=<cardId> --json
 ```
+
+- **get** returns full desk metadata: region, scope, coordinates, bounds, microlocations, marinas, topics, card/user counts.
+- **pause / unpause** suspends or restores a desk's heartbeat without deleting it.
+- **search** finds desks near coordinates within a radius (default 50 miles).
+- **request** files an editorial signal — tells a desk "captains care about this topic."
+- **requests** lists pending editorial requests for a desk.
+- **fulfill** marks a request as fulfilled by linking it to a card.
 
 ### Styles & Images
 ```bash

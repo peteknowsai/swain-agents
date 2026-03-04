@@ -60,7 +60,7 @@ swain card list [--desk=<desk>] [--category=<cat>] [--limit=<n>] [--json]
 swain card get <cardId> [--json]
 swain card library --user=<userId> [--json]
 swain card create --desk=<desk> --title=<text> --subtext=<text> --content=<md> [options] [--json]
-swain card image <cardId> --prompt="..." [--style=<id>] [--bg-color=<hex>] [--json]
+swain card image <cardId> --prompt="..." [--style=<id>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--bg-color=<hex>] [--json]
 swain card boat-art --user=<userId> [--best] [--style=<id>] [--sampler] [--json]
 swain card coverage [--desk=<desk>] [--json]
 ```
@@ -109,7 +109,7 @@ swain desk delete <name> [--json]
 ```bash
 swain style list [--json]
 swain style get <styleId> [--json]
-swain image generate "prompt" [--style=<id>] [--json]
+swain image generate "prompt" [--style=<id>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--json]
 swain image upload --url=<imageUrl> [--filename=<name>] [--json]
 ```
 

@@ -273,7 +273,7 @@ Steps:
       dawn') not generic ('fish in water').
    c. Pick a background color — muted, dark enough for white text contrast.
    d. Generate:
-      swain card image <cardId> --fast --style=<styleId> --bg-color=<hex> \
+      swain card image <cardId> --style=<styleId> --bg-color=<hex> \
         --prompt='<scene description>' --json
 
    For cards that have images but no backgroundColor: view the image, pick a

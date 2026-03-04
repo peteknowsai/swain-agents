@@ -1,7 +1,7 @@
 /**
  * replicate-image.ts
  *
- * Generate images via Replicate API (google/nano-banana-pro, or nano-banana with --fast)
+ * Generate images via Replicate API (google/nano-banana-2)
  * and upload to Cloudflare Images.
  *
  * Env vars required:
@@ -11,9 +11,7 @@
  */
 
 const REPLICATE_MODEL_URL =
-  "https://api.replicate.com/v1/models/google/nano-banana-pro/predictions";
-const REPLICATE_MODEL_URL_FAST =
-  "https://api.replicate.com/v1/models/google/nano-banana/predictions";
+  "https://api.replicate.com/v1/models/google/nano-banana-2/predictions";
 
 const CF_DELIVERY_BASE =
   "https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA";
@@ -53,6 +51,19 @@ function checkEnv(): {
 }
 
 /**
+ * Extract the image URL from a Replicate prediction output.
+ * NB2 may return { images: [{ url }] } or a flat array/string.
+ */
+function extractOutputUrl(output: any): string {
+  const url = output?.images?.[0]?.url
+    ?? (Array.isArray(output) ? output[0] : output);
+  if (!url || typeof url !== 'string') {
+    throw new Error(`Unexpected Replicate output shape: ${JSON.stringify(output)}`);
+  }
+  return url;
+}
+
+/**
  * Create a prediction on Replicate and poll until complete.
  * Returns the output image URL from Replicate (temporary).
  */
@@ -60,22 +71,22 @@ async function runReplicate(
   prompt: string,
   replicateToken: string,
   imageInputUrl?: string,
-  fast?: boolean,
-  aspectRatio?: string
+  aspectRatio?: string,
+  resolution?: string
 ): Promise<{ outputUrl: string; predictionId: string }> {
   // Build input — image-to-image when a source image is provided
   const input: Record<string, any> = {
     prompt,
     aspect_ratio: imageInputUrl ? "match_input_image" : (aspectRatio || "4:3"),
     output_format: "jpg",
+    resolution: resolution || "1K",
   };
   if (imageInputUrl) {
     input.image_input = [imageInputUrl];
   }
 
   // Create prediction
-  const modelUrl = fast ? REPLICATE_MODEL_URL_FAST : REPLICATE_MODEL_URL;
-  const createRes = await fetch(modelUrl, {
+  const createRes = await fetch(REPLICATE_MODEL_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${replicateToken}`,
@@ -96,9 +107,7 @@ async function runReplicate(
 
   // If the "Prefer: wait" header worked, we may already have output
   if (prediction.status === "succeeded" && prediction.output) {
-    const outputUrl = Array.isArray(prediction.output)
-      ? prediction.output[0]
-      : prediction.output;
+    const outputUrl = extractOutputUrl(prediction.output);
     return { outputUrl, predictionId: prediction.id };
   }
 
@@ -133,9 +142,7 @@ async function runReplicate(
     prediction = await pollRes.json();
 
     if (prediction.status === "succeeded" && prediction.output) {
-      const outputUrl = Array.isArray(prediction.output)
-        ? prediction.output[0]
-        : prediction.output;
+      const outputUrl = extractOutputUrl(prediction.output);
       return { outputUrl, predictionId: prediction.id };
     }
 
@@ -219,7 +226,7 @@ async function uploadToCloudflare(
  */
 export async function generateImage(
   prompt: string,
-  opts?: { imageInputUrl?: string; fast?: boolean; aspectRatio?: string }
+  opts?: { imageInputUrl?: string; aspectRatio?: string; resolution?: string }
 ): Promise<ReplicateImageResult> {
   const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
 
@@ -228,8 +235,8 @@ export async function generateImage(
     prompt,
     replicateToken,
     opts?.imageInputUrl,
-    opts?.fast,
-    opts?.aspectRatio
+    opts?.aspectRatio,
+    opts?.resolution
   );
 
   // Step 2: Download and upload to Cloudflare Images

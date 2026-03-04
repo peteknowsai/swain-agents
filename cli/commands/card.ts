@@ -673,7 +673,8 @@ async function generateImage(args: string[]): Promise<void> {
 
   const agentPrompt = params['prompt'] || `${card.title}. ${card.subtext}`;
   const styleId = params['style'] || card.styleId || null;
-  const fast = params['fast'] === 'true';
+  const aspectRatio = params['aspect-ratio'];
+  const resolution = params['resolution'];
 
   // Build full prompt: agent prompt + style prompt
   let stylePrompt: string | null = null;
@@ -697,12 +698,12 @@ async function generateImage(args: string[]): Promise<void> {
   const suffix = stylePrompt ? PROMPT_FULL_BLEED : PROMPT_CARD_CONTEXT;
 
   if (!jsonOutput) {
-    print(`${colors.dim}Generating image for "${card.title}"${fast ? ' (fast)' : ''}...${colors.reset}`);
+    print(`${colors.dim}Generating image for "${card.title}"...${colors.reset}`);
     print(`${colors.dim}Prompt: ${combinedPrompt.slice(0, 80)}${combinedPrompt.length > 80 ? '...' : ''}${colors.reset}`);
   }
 
   // 2. Generate image via unified image library
-  const result = await generate(combinedPrompt, { suffix, fast });
+  const result = await generate(combinedPrompt, { suffix, aspectRatio, resolution });
   const imageUrl = result.url;
   const patchBody: Record<string, any> = { image: imageUrl };
   if (params['bg-color']) patchBody.backgroundColor = safeBgColor(params['bg-color']);
@@ -935,11 +936,12 @@ ${colors.bold}OPTIONS (boat-art)${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}OPTIONS (image)${colors.reset}
-  --prompt=<text>         Custom image prompt (default: title + subtext)
-  --style=<id>            Style ID (prompt appended automatically)
-  --fast                  Use fast model (nano-banana) instead of quality (nano-banana-pro)
-  --bg-color=<hex>        Set background color along with image
-  --json                  Output as JSON
+  --prompt=<text>             Custom image prompt (default: title + subtext)
+  --style=<id>                Style ID (prompt appended automatically)
+  --aspect-ratio=<ratio>      Aspect ratio (e.g., 4:3, 16:9, 1:1)
+  --resolution=<res>          Resolution: 0.5K, 1K, 2K, 4K (default: 1K)
+  --bg-color=<hex>            Set background color along with image
+  --json                      Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
   swain card list --desk=tampa-bay

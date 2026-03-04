@@ -34,6 +34,7 @@ jobs:
         working-directory: cli
         run: |
           bun install --frozen-lockfile
+          bun run generate-skills
           bun build swain.ts --compile --outfile bin/${{ matrix.asset }} \
             --target=${{ matrix.target }} \
             --define "process.env.BUILD_SHA='${GITHUB_SHA::7}'" \
@@ -86,6 +87,9 @@ jobs:
               "https://github.com/peteknowsai/swain-agents/releases/download/${TAG}/swain-linux-x64"
             chmod +x /usr/local/bin/swain
             swain --version
+
+            # Unpack embedded skills to ~/.swain/skills/
+            swain setup
 
             # Restart API (picks up any template/skill changes)
             systemctl restart swain-agent-api

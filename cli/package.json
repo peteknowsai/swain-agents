@@ -3,7 +3,8 @@
   "version": "0.5.0",
   "type": "module",
   "scripts": {
-    "build": "bun build swain.ts --compile --outfile bin/swain --define \"process.env.BUILD_SHA='$(git rev-parse --short HEAD)'\" --define \"process.env.CLI_VERSION='$(jq -r .version package.json)'\"",
+    "generate-skills": "bun run lib/skills-gen.ts",
+    "build": "bun run generate-skills && bun build swain.ts --compile --outfile bin/swain --define \"process.env.BUILD_SHA='$(git rev-parse --short HEAD)'\" --define \"process.env.CLI_VERSION='$(jq -r .version package.json)'\"",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -9,7 +9,7 @@ export const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
 export const CONVEX_BASE_URL = "https://wandering-sparrow-224.convex.site";
 export const CONVEX_TOKEN = process.env.SWAIN_API_TOKEN;
 
-export const SKILLS_ROOT = "/root/clawd/swain-agents/skills";
+export const SKILLS_ROOT = process.env.SKILLS_ROOT || "/root/.swain/skills";
 export const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 export const ALL_SKILLS = ["swain-onboarding", "swain-briefing", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
 export const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl"];

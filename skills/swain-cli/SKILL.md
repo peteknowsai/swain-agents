@@ -105,6 +105,20 @@ swain desk create --name=<slug> --region=<description> [--json]
 swain desk delete <name> [--json]
 ```
 
+### Setup & Skills
+```bash
+swain setup [--dir=<path>] [--json]
+swain skill list [--json]
+swain skill show <name> [--json]
+swain update check [--json]
+```
+
+**Setup** detects the environment (OpenClaw workspace vs standalone) and unpacks embedded skills to the appropriate directory. Use `--dir` to override.
+
+**Skill** commands provide read-only access to the skills bundled into the CLI binary.
+
+**Update check** queries GitHub Releases for the latest version.
+
 ### Styles & Images
 ```bash
 swain style list [--json]

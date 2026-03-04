@@ -52,3 +52,7 @@ chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 
 echo "Installed swain to ${INSTALL_DIR}/${BINARY_NAME}"
 "${INSTALL_DIR}/${BINARY_NAME}" --version
+
+# Unpack embedded skills
+echo "Setting up skills..."
+"${INSTALL_DIR}/${BINARY_NAME}" setup

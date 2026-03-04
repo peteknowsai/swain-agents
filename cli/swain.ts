@@ -23,6 +23,9 @@ import { run as runOnboarding } from './commands/onboarding';
 import { run as runUser } from './commands/user';
 import { run as runAdvisor } from './commands/advisor';
 import { run as runDesk } from './commands/desk';
+import { run as runSetup } from './commands/setup';
+import { run as runUpdate } from './commands/update';
+import { run as runSkill } from './commands/skill';
 
 import { print, colors } from './lib/worker-client';
 import { checkForUpdate } from './lib/update-check';
@@ -49,6 +52,10 @@ ${colors.bold}COMMANDS${colors.reset}
   user                    User management (list, get, update, onboard-status, upload-boat-image)
   advisor                 Advisor agents (list, delete)
   desk                    Content desks (list, get, create, update, delete, search)
+
+  setup                   Detect environment and install embedded skills
+  update                  Version management (check)
+  skill                   List/show embedded skills
 
   style                   Image styles (list, get, update)
   onboarding              Onboarding templates (list, seed)
@@ -130,6 +137,15 @@ async function main(): Promise<void> {
       break;
     case 'desk':
       await runDesk(subArgs);
+      break;
+    case 'setup':
+      await runSetup(subArgs);
+      break;
+    case 'update':
+      await runUpdate(subArgs);
+      break;
+    case 'skill':
+      await runSkill(subArgs);
       break;
     default:
       print(`${colors.red}Unknown command: ${command}${colors.reset}`);

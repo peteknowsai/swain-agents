@@ -6,14 +6,18 @@ set -euo pipefail
 echo "==> OpenClaw Gateway Setup"
 
 # --- Install openclaw ---
-echo "==> Installing openclaw (latest)"
-sudo npm i -g openclaw@latest
+OPENCLAW_VERSION="2026.3.2"
+echo "==> Installing openclaw@${OPENCLAW_VERSION}"
+sudo npm i -g "openclaw@${OPENCLAW_VERSION}"
 
 # --- Configure openclaw ---
 echo "==> Configuring openclaw gateway"
 openclaw config set gateway.mode local
 openclaw config set gateway.port 18789
 openclaw config set gateway.bind loopback
+
+# Ensure agents have full tool access (v2026.3.0+ defaults to "messaging" profile)
+openclaw config set tools.profile full
 
 # --- Install systemd service ---
 echo "==> Installing systemd service"

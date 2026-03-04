@@ -10,10 +10,9 @@
 
 // Environment URLs — Convex HTTP actions
 const PROD_URL = 'https://wandering-sparrow-224.convex.site';
-const DEV_URL = 'https://calm-basilisk-210.convex.site';
 const ENV_URLS: Record<string, string> = {
-  local: DEV_URL,
-  dev: DEV_URL,
+  local: process.env.SWAIN_API_URL || PROD_URL,
+  dev: process.env.SWAIN_API_URL || PROD_URL,
   prod: process.env.SWAIN_API_URL || PROD_URL,
   production: process.env.SWAIN_API_URL || PROD_URL,
 };

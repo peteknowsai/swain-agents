@@ -24,7 +24,7 @@ bun run dev            # bun --watch run index.ts
 
 **Two services, one shared backend:**
 
-- **`cli/`** — The `swain` CLI that agents use to interact with the Convex backend. Compiles to a standalone binary via `bun build --compile`. Calls Convex HTTP actions at `https://wandering-sparrow-224.convex.site` (prod) or `https://calm-basilisk-210.convex.site` (dev). All commands go through `lib/worker-client.ts` which handles auth, retries, and environment detection.
+- **`cli/`** — The `swain` CLI that agents use to interact with the Convex backend. Compiles to a standalone binary via `bun build --compile`. Calls Convex HTTP actions at `https://wandering-sparrow-224.convex.site` (prod). Dev override via `SWAIN_API_URL` env var. All commands go through `lib/worker-client.ts` which handles auth, retries, and environment detection.
 
 - **`api/`** — Advisor provisioning API (Bun server, port 3847). Runs on the VPS. Three endpoints: `POST /advisors` (provision), `GET /advisors` (list/lookup), `DELETE /advisors/:agentId`. Provisioning creates an OpenClaw workspace at `/root/workspaces/`, registers the agent with `openclaw agents add`, copies auth profiles, and seeds Honcho memory.
 
@@ -36,13 +36,13 @@ bun run dev            # bun --watch run index.ts
 
 ## VPS Deployment
 
-The VPS at `76.13.106.143` runs two things:
+The VPS (hostname in `$VPS_HOST`) runs two things:
 1. **OpenClaw gateway** — agent runtime (systemd: `openclaw.service`)
 2. **Swain Agent API** — this repo's `api/` (systemd: `swain-agent-api.service`, working dir: `/root/clawd/swain-agents/api`)
 
 The repo is cloned on the VPS at `/root/clawd/swain-agents/`. Deploying is:
 ```bash
-ssh root@76.13.106.143 "cd /root/clawd/swain-agents && git pull"
+ssh root@$VPS_HOST "cd /root/clawd/swain-agents && git pull"
 ```
 
 For `api/` changes, GitHub Actions auto-deploys on push to main (pulls and restarts the service).

@@ -120,7 +120,7 @@ swain image upload --url=<imageUrl> [--filename=<name>] [--json]
 - `SWAIN_API_URL` — Override API URL
 - `SWAIN_API_TOKEN` — Admin token for authenticated access
 - Prod: `https://wandering-sparrow-224.convex.site`
-- Dev: `https://calm-basilisk-210.convex.site`
+- Dev: Override with `SWAIN_API_URL`
 
 ## JSON Output
 

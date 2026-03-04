@@ -1,0 +1,93 @@
+name: Release Swain CLI
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: bun-linux-x64
+            asset: swain-linux-x64
+          - target: bun-darwin-arm64
+            asset: swain-darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Validate tag matches package.json
+        run: |
+          PKG_VERSION=$(jq -r .version cli/package.json)
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Build
+        working-directory: cli
+        run: |
+          bun install --frozen-lockfile
+          bun build swain.ts --compile --outfile bin/${{ matrix.asset }} \
+            --target=${{ matrix.target }} \
+            --define "process.env.BUILD_SHA='${GITHUB_SHA::7}'" \
+            --define "process.env.CLI_VERSION='$(jq -r .version package.json)'"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: cli/bin/${{ matrix.asset }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            artifacts/swain-linux-x64/swain-linux-x64 \
+            artifacts/swain-darwin-arm64/swain-darwin-arm64
+
+  deploy-vps:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy CLI to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            export PATH=/root/.bun/bin:$PATH
+            cd /root/clawd/swain-agents && git pull
+
+            # Download release binary
+            TAG="${GITHUB_REF_NAME:-${{ github.ref_name }}}"
+            curl -fsSL -o /usr/local/bin/swain \
+              "https://github.com/peteknowsai/swain-agents/releases/download/${TAG}/swain-linux-x64"
+            chmod +x /usr/local/bin/swain
+            swain --version
+
+            # Restart API (picks up any template/skill changes)
+            systemctl restart swain-agent-api
+            sleep 2
+            systemctl is-active swain-agent-api

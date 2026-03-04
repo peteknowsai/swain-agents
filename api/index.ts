@@ -72,9 +72,7 @@ const server = Bun.serve({
 
     // Health (no auth)
     if (pathname === "/health" && method === "GET") {
-      let agentCount = 0;
-      try { agentCount = (await listAdvisors()).length; } catch {}
-      return json({ status: "ok", service: "swain-agent-api", agentCount, uptime: process.uptime() });
+      return json({ status: "ok", service: "swain-agent-api", uptime: process.uptime() });
     }
 
     if (!auth(req)) return error("Unauthorized", 401);

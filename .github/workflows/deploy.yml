@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'api/**'
-      - 'cli/**'
       - 'skills/**'
       - 'templates/**'
 
@@ -16,20 +15,14 @@ jobs:
       - name: Deploy API
         uses: appleboy/ssh-action@v1
         with:
-          host: 76.13.106.143
+          host: ${{ secrets.VPS_HOST }}
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             export PATH=/root/.bun/bin:$PATH
             cd /root/clawd/swain-agents && git pull
 
-            # Rebuild CLI binary
-            cd cli && bun install --frozen-lockfile && bun run build
-            cp bin/swain /usr/local/bin/swain
-            swain --version
-
             # Restart API
-            cd ..
             systemctl restart swain-agent-api
             sleep 2
             systemctl is-active swain-agent-api

@@ -38,7 +38,7 @@ function parseArgs(args: string[]): Record<string, string> {
 }
 
 /**
- * swain image generate "prompt" [--style=<styleId>] [--json]
+ * swain image generate "prompt" [--style=<styleId>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--json]
  * Synchronous image generation via Replicate → Cloudflare Images.
  * The --style flag is stored as metadata (cataloging) but NOT sent to the model.
  * The prompt is wrapped with technical boilerplate (aspect ratio, bleed, no-text).
@@ -47,12 +47,14 @@ async function generateImageCommand(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const jsonOutput = params['json'] === 'true';
   const styleId = params['style'];
+  const aspectRatio = params['aspect-ratio'];
+  const resolution = params['resolution'];
 
   // Find prompt (first non-flag argument)
   const prompt = args.find(arg => !arg.startsWith('--'));
 
   if (!prompt) {
-    printError('Usage: swain image generate "prompt" [--style=<styleId>] [--json]');
+    printError('Usage: swain image generate "prompt" [--style=<styleId>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--json]');
     process.exit(1);
   }
 
@@ -62,7 +64,7 @@ async function generateImageCommand(args: string[]): Promise<void> {
       if (styleId) print(`  Style (catalog): ${styleId}`);
     }
 
-    const result = await generate(prompt);
+    const result = await generate(prompt, { aspectRatio, resolution });
 
     if (jsonOutput) {
       console.log(JSON.stringify({
@@ -151,13 +153,16 @@ ${colors.bold}Commands:${colors.reset}
   upload --url=<url>         Upload an existing image to Cloudflare
 
 ${colors.bold}Options:${colors.reset}
-  --style=<id>        Style ID for cataloging (NOT sent to model)
-  --filename=<name>   Override filename (upload only)
-  --json              Output as JSON
+  --style=<id>              Style ID for cataloging (NOT sent to model)
+  --aspect-ratio=<ratio>    Aspect ratio (e.g., 4:3, 16:9, 1:1; default: 4:3)
+  --resolution=<res>        Resolution: 0.5K, 1K, 2K, 4K (default: 1K)
+  --filename=<name>         Override filename (upload only)
+  --json                    Output as JSON
 
 ${colors.bold}Examples:${colors.reset}
   swain image generate "sheepshead near dock pilings, soft watercolor wash"
   swain image generate "fishing scene at sunset" --style=golden-hour --json
+  swain image generate "marina at dawn" --aspect-ratio=16:9 --resolution=2K --json
   swain image upload --url=http://localhost:8765/photo.jpg --json
   swain image upload --file=/tmp/screenshot.png --json
 

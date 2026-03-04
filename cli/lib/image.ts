@@ -56,11 +56,11 @@ export const PROMPT_CARD_CONTEXT = 'This image accompanies a story card - the he
 export async function generate(prompt: string, opts?: {
   imageInputUrl?: string;
   suffix?: string;  // defaults to PROMPT_FULL_BLEED
-  fast?: boolean;   // use nano-banana (fast) instead of nano-banana-pro (quality)
   aspectRatio?: string;
+  resolution?: string;  // "0.5K" | "1K" | "2K" | "4K", default "1K"
 }): Promise<ReplicateImageResult> {
   const fullPrompt = `${prompt.trim()}. ${opts?.suffix ?? PROMPT_FULL_BLEED}`;
-  return generateImage(fullPrompt, { imageInputUrl: opts?.imageInputUrl, fast: opts?.fast, aspectRatio: opts?.aspectRatio });
+  return generateImage(fullPrompt, { imageInputUrl: opts?.imageInputUrl, aspectRatio: opts?.aspectRatio, resolution: opts?.resolution });
 }
 
 // ── Boat art styles ────────────────────────────────────────────────

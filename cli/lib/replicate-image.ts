@@ -13,8 +13,8 @@
 const REPLICATE_MODEL_URL =
   "https://api.replicate.com/v1/models/google/nano-banana-2/predictions";
 
-const CF_DELIVERY_BASE =
-  "https://imagedelivery.net/7NA-8FN5mTUANBxov63ekA";
+const CF_DELIVERY_HASH = process.env.CLOUDFLARE_DELIVERY_HASH || "7NA-8FN5mTUANBxov63ekA";
+const CF_DELIVERY_BASE = `https://imagedelivery.net/${CF_DELIVERY_HASH}`;
 
 export interface ReplicateImageResult {
   url: string;        // Cloudflare delivery URL
@@ -37,8 +37,12 @@ function checkEnv(): {
     );
   }
 
-  const cfAccountId =
-    process.env.CLOUDFLARE_ACCOUNT_ID || "5a6fef07a998d84ec047ef43d0543342";
+  const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!cfAccountId) {
+    throw new Error(
+      "CLOUDFLARE_ACCOUNT_ID is not set. This is required for uploading images to Cloudflare."
+    );
+  }
 
   const cfImagesToken = process.env.CLOUDFLARE_IMAGES_API_TOKEN;
   if (!cfImagesToken) {

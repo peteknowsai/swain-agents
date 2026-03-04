@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-VPS="root@76.13.106.143"
+VPS="root@${SWAIN_VPS_HOST:-76.13.106.143}"
 
 # Display names → VPS agent IDs
 declare -A AGENT_IDS=(

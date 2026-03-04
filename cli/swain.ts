@@ -25,8 +25,9 @@ import { run as runAdvisor } from './commands/advisor';
 import { run as runDesk } from './commands/desk';
 
 import { print, colors } from './lib/worker-client';
+import { checkForUpdate } from './lib/update-check';
 
-const VERSION = `0.5.0+${process.env.BUILD_SHA || 'dev'}`;
+const VERSION = `${process.env.CLI_VERSION || '0.0.0-dev'}+${process.env.BUILD_SHA || 'dev'}`;
 
 function showVersion(): void {
   print(`swain v${VERSION}`);
@@ -61,7 +62,6 @@ ${colors.bold}GLOBAL OPTIONS${colors.reset}
 
 ${colors.bold}ENVIRONMENTS${colors.reset}
   prod (default):  https://wandering-sparrow-224.convex.site
-  dev/local:       https://calm-basilisk-210.convex.site
   Override with SWAIN_API_URL or --env=local|prod
 
 ${colors.bold}ENVIRONMENT VARIABLES${colors.reset}
@@ -138,7 +138,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(`${colors.red}Error:${colors.reset} ${err.message}`);
-  process.exit(1);
-});
+main()
+  .then(() => checkForUpdate(VERSION))
+  .catch((err) => {
+    console.error(`${colors.red}Error:${colors.reset} ${err.message}`);
+    process.exit(1);
+  });

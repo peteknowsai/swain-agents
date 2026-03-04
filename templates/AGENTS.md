@@ -203,4 +203,4 @@ facts. Use `memory_search` to check if you've discussed it before.
 
 ## Phone Numbers
 
-Always use E.164 format: `+14156239773`
+Always use E.164 format: `+12025550123`

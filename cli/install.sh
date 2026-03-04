@@ -1,25 +1,25 @@
 #!/bin/bash
-# Install Skip CLI from GitHub Releases
+# Install Swain CLI from GitHub Releases
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/peteknowsai/heyskip-agents/main/cli/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/peteknowsai/swain-agents/main/cli/install.sh | bash
 #
-# Requires GITHUB_TOKEN for private repo access.
-# Set SKIP_VERSION to install a specific version (default: latest).
+# Set SWAIN_VERSION to install a specific version (default: latest).
+# Set INSTALL_DIR to change install location (default: /usr/local/bin).
 
 set -euo pipefail
 
-REPO="peteknowsai/heyskip-agents"
+REPO="peteknowsai/swain-agents"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
-BINARY_NAME="skip"
+BINARY_NAME="swain"
 
 # Detect platform
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
 
 case "${OS}-${ARCH}" in
-  linux-x86_64)  ASSET="skip-linux-x64" ;;
-  darwin-arm64)  ASSET="skip-darwin-arm64" ;;
+  linux-x86_64)  ASSET="swain-linux-x64" ;;
+  darwin-arm64)  ASSET="swain-darwin-arm64" ;;
   *)
     echo "Unsupported platform: ${OS}-${ARCH}"
     echo "Supported: linux-x86_64, darwin-arm64"
@@ -27,45 +27,28 @@ case "${OS}-${ARCH}" in
     ;;
 esac
 
-# Check for GitHub token (required for private repo)
-if [ -z "${GITHUB_TOKEN:-}" ]; then
-  echo "Error: GITHUB_TOKEN is required (repo is private)"
-  echo "  export GITHUB_TOKEN=ghp_..."
-  exit 1
-fi
-
-AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
-
 # Get release URL
-if [ -n "${SKIP_VERSION:-}" ]; then
-  RELEASE_URL="https://api.github.com/repos/${REPO}/releases/tags/${SKIP_VERSION}"
+if [ -n "${SWAIN_VERSION:-}" ]; then
+  RELEASE_URL="https://api.github.com/repos/${REPO}/releases/tags/${SWAIN_VERSION}"
 else
   RELEASE_URL="https://api.github.com/repos/${REPO}/releases/latest"
 fi
 
 echo "Fetching release info..."
-RELEASE_JSON=$(curl -fsSL -H "${AUTH_HEADER}" "${RELEASE_URL}")
-DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | grep -o "\"browser_download_url\": \"[^\"]*${ASSET}\"" | cut -d'"' -f4)
+RELEASE_JSON=$(curl -fsSL "${RELEASE_URL}")
+VERSION=$(echo "${RELEASE_JSON}" | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4)
 
-if [ -z "${DOWNLOAD_URL}" ]; then
-  echo "Error: Could not find ${ASSET} in release"
+if [ -z "${VERSION}" ]; then
+  echo "Error: Could not determine release version"
   exit 1
 fi
 
-VERSION=$(echo "${RELEASE_JSON}" | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4)
-echo "Installing skip ${VERSION} (${ASSET})..."
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET}"
+echo "Installing swain ${VERSION} (${ASSET})..."
 
-# Download binary (private repo needs Accept header for asset redirect)
-ASSET_ID=$(echo "${RELEASE_JSON}" | grep -B2 "${ASSET}" | grep -o '"id": [0-9]*' | head -1 | grep -o '[0-9]*')
-ASSET_URL="https://api.github.com/repos/${REPO}/releases/assets/${ASSET_ID}"
-
-curl -fsSL \
-  -H "${AUTH_HEADER}" \
-  -H "Accept: application/octet-stream" \
-  "${ASSET_URL}" \
-  -o "${INSTALL_DIR}/${BINARY_NAME}"
-
+# Download binary
+curl -fsSL -o "${INSTALL_DIR}/${BINARY_NAME}" "${DOWNLOAD_URL}"
 chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 
-echo "Installed skip to ${INSTALL_DIR}/${BINARY_NAME}"
-skip --version
+echo "Installed swain to ${INSTALL_DIR}/${BINARY_NAME}"
+"${INSTALL_DIR}/${BINARY_NAME}" --version

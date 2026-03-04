@@ -9,22 +9,22 @@ wacli send text --to <phone>@s.whatsapp.net --message "Your message here" --json
 ```
 
 **Phone format:** Strip the `+` from E.164, add `@s.whatsapp.net`:
-- `+14156239773` → `14156239773@s.whatsapp.net`
-- `+5216692766911` → `5216692766911@s.whatsapp.net`
+- `+12025550123` → `12025550123@s.whatsapp.net`
+- `+12025550199` → `12025550199@s.whatsapp.net`
 
 **Always use `--json`** for parseable output:
 ```json
-{"success":true,"data":{"id":"3EB0...","sent":true,"to":"14156239773@s.whatsapp.net"},"error":null}
+{"success":true,"data":{"id":"3EB0...","sent":true,"to":"12025550123@s.whatsapp.net"},"error":null}
 ```
 
 ## Sending Files / Images
 
 ```bash
 # Image with caption
-wacli send file --to 14156239773@s.whatsapp.net --file /path/to/image.jpg --caption "Check this out" --json
+wacli send file --to 12025550123@s.whatsapp.net --file /path/to/image.jpg --caption "Check this out" --json
 
 # File with custom display name
-wacli send file --to 14156239773@s.whatsapp.net --file /tmp/report.pdf --filename "Report.pdf" --json
+wacli send file --to 12025550123@s.whatsapp.net --file /tmp/report.pdf --filename "Report.pdf" --json
 ```
 
 ## Sending to Groups

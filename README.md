@@ -17,6 +17,14 @@ scripts/         # Utility scripts (health checks, etc.)
 
 ## VPS
 
-Agents run on an OpenClaw gateway at `76.13.106.143`. The repo is cloned at `/root/clawd/swain-agents/` — the API server runs from there.
+Agents run on an OpenClaw gateway on the VPS. The repo is cloned at `/root/clawd/swain-agents/` — the API server runs from there.
 
 Agent workspaces at `/root/workspaces/` are the live, evolving source of truth for agent definitions.
+
+## Installing the CLI
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/peteknowsai/swain-agents/main/cli/install.sh | bash
+```
+
+Pin a version: `SWAIN_VERSION=v0.5.0 curl -fsSL ... | bash`

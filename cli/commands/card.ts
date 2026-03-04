@@ -726,7 +726,7 @@ async function generateImage(args: string[]): Promise<void> {
  * swain card boat-art --user=<userId> [--style=<styleId>] [--sampler] [--json]
  *
  * Generate boat art card(s) for a user.
- *   --sampler    Generate a 6-style sampler (onboarding)
+ *   --sampler    Generate a 2-style sampler (onboarding)
  *   --style=X    Generate one image in a specific style
  *   (no flags)   Generate one image in a random style
  *

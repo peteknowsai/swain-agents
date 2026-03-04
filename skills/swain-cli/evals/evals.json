@@ -1,0 +1,94 @@
+{
+  "skill_name": "swain-cli",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The captain just told me his boat has 450 engine hours and he docks at Clearwater Marina. His userId is user_bobby_b08861b8 and his boat ID is boat_3fa2e1. Update his profile with both pieces of info.",
+      "expected_output": "Agent should produce a `swain boat update boat_3fa2e1 --engineHours=450 --json` command for engine hours (boat-level field) and a `swain user update user_bobby_b08861b8 --marinaLocation=\"Clearwater Marina\" --json` command for marina (user-level field). Both must include --json. Agent should NOT put marinaLocation on the boat update or engineHours on the user update.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "boat-update-command",
+          "text": "Uses `swain boat update` (not user update) for engineHours",
+          "type": "manual"
+        },
+        {
+          "id": "user-update-command",
+          "text": "Uses `swain user update` (not boat update) for marinaLocation",
+          "type": "manual"
+        },
+        {
+          "id": "json-flag-present",
+          "text": "All swain commands include the --json flag",
+          "type": "manual"
+        },
+        {
+          "id": "correct-field-names",
+          "text": "Uses exact field names: engineHours (not engine_hours) and marinaLocation (not marina or dock)",
+          "type": "manual"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to build a morning briefing for user_bobby_b08861b8. Pull relevant cards, check what they got yesterday, and assemble a briefing with a greeting, 2 cards, and a closing. The user's phone is +15551234567.",
+      "expected_output": "Agent should: 1) call `swain briefing previous` to check yesterday, 2) call `swain card pull` with --exclude-served, 3) assemble with `swain briefing assemble` using correct JSON item format (greeting, card refs with IDs, closing). Items array should be valid JSON with correct types.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "checks-previous",
+          "text": "Calls `swain briefing previous --user=user_bobby_b08861b8 --json` before pulling cards",
+          "type": "manual"
+        },
+        {
+          "id": "pulls-cards",
+          "text": "Calls `swain card pull --user=user_bobby_b08861b8 --exclude-served --json`",
+          "type": "manual"
+        },
+        {
+          "id": "valid-assemble",
+          "text": "Calls `swain briefing assemble` with a JSON items array containing greeting, card, and closing types",
+          "type": "manual"
+        },
+        {
+          "id": "correct-item-format",
+          "text": "Card items use {\"type\": \"card\", \"id\": \"...\"} format, not inline content",
+          "type": "manual"
+        },
+        {
+          "id": "json-flags",
+          "text": "All swain commands include --json flag",
+          "type": "manual"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Check what version of swain I'm running, list all the skills that are bundled with it, and show me the full content of the swain-briefing skill.",
+      "expected_output": "Agent should run: 1) `swain update check --json` for version info, 2) `swain skill list --json` for bundled skills, 3) `swain skill show swain-briefing --json` for full content. All with --json.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "update-check",
+          "text": "Calls `swain update check --json` (not `swain --version`)",
+          "type": "manual"
+        },
+        {
+          "id": "skill-list",
+          "text": "Calls `swain skill list --json`",
+          "type": "manual"
+        },
+        {
+          "id": "skill-show",
+          "text": "Calls `swain skill show swain-briefing --json`",
+          "type": "manual"
+        },
+        {
+          "id": "json-flags",
+          "text": "All commands include --json flag",
+          "type": "manual"
+        }
+      ]
+    }
+  ]
+}

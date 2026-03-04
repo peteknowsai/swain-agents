@@ -153,6 +153,17 @@ briefing.
     swain card update <cardId> --bg-color=#... --json
     ```
 
+    **Verify all cards before assembly:**
+    ```bash
+    swain card verify <cardId1> <cardId2> ... --json
+    ```
+    Every card in the briefing must pass (`allPass: true` — has both `image` and
+    `backgroundColor`). If any fail, fix them and re-verify. Up to 3 total
+    attempts. If cards still fail after retries, drop them from the briefing
+    and pick replacements from the pull results, or create a new card.
+
+    **Do not proceed to assembly with unstyled cards.**
+
 11. **Build briefing items** as a JSON array:
    - Always start with a `greeting` and end with a `closing`
    - In between: `text` commentary, `card` references, and `boat_art`

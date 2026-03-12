@@ -138,7 +138,7 @@ async function batchFlyers(args: string[]): Promise<void> {
 
   const result = await workerRequest('/flyers/batch', {
     method: 'POST',
-    body: { userId, date, flyers },
+    body: { userId, batchDate: date, flyers },
   });
 
   if (jsonOutput) {

@@ -26,6 +26,7 @@ import { run as runDesk } from './commands/desk';
 import { run as runSetup } from './commands/setup';
 import { run as runUpdate } from './commands/update';
 import { run as runSkill } from './commands/skill';
+import { run as runFlyer } from './commands/flyer';
 
 import { print, colors } from './lib/worker-client';
 import { checkForUpdate } from './lib/update-check';
@@ -52,6 +53,7 @@ ${colors.bold}COMMANDS${colors.reset}
   user                    User management (list, get, update, onboard-status, upload-boat-image)
   advisor                 Advisor agents (list, delete)
   desk                    Content desks (list, get, create, update, delete, search)
+  flyer                   Flyer batches (batch, list, run-start, run-update)
 
   setup                   Detect environment and install embedded skills
   update                  Version management (check)
@@ -137,6 +139,9 @@ async function main(): Promise<void> {
       break;
     case 'desk':
       await runDesk(subArgs);
+      break;
+    case 'flyer':
+      await runFlyer(subArgs);
       break;
     case 'setup':
       await runSetup(subArgs);

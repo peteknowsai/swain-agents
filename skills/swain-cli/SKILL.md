@@ -134,15 +134,30 @@ swain desk fulfill --desk=<name> --request=<id> --card=<cardId> --json
 - **requests** lists pending editorial requests for a desk.
 - **fulfill** marks a request as fulfilled by linking it to a card.
 
+### Flyers
+```bash
+swain flyer batch --user=<userId> --date=<YYYY-MM-DD> --flyers='<json>' [--dry-run] --json
+swain flyer list [--user=<userId>] [--status=<status>] [--date=<YYYY-MM-DD>] [--limit=<n>] --json
+swain flyer run-start --user=<userId> --date=<YYYY-MM-DD> --agent=<agentId> [--meta='<json>'] --json
+swain flyer run-update <runId> --status=<completed|failed> [--flyer-count=<n>] [--error="<msg>"] --json
+```
+
+- **batch** creates flyers for a user. `--flyers` is a JSON array of `{ imageUrl, meta: { title, category, ... } }`. Max 50. Array order = display order. Use `--dry-run` to validate locally without submitting.
+- **list** queries existing flyers. Filter by user, status, date.
+- **run-start** logs the beginning of a generation run for observability.
+- **run-update** marks a run completed or failed.
+
 ### Styles & Images
 ```bash
 swain style list --json
 swain style get <styleId> --json
-swain image generate "prompt" [--style=<id>] [--aspect-ratio=<ratio>] [--resolution=<res>] --json
+swain image generate "prompt" [--style=<id>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--mode=flyer] --json
 swain image upload --url=<imageUrl> [--filename=<name>] --json
 ```
 
 **Image upload** fetches from any URL (or local file with `--file`), uploads to Cloudflare via the server, and returns a public `imagedelivery.net` URL. Use this for any image that needs a permanent CDN URL.
+
+**`--mode=flyer`** switches from photo-style generation to designed promotional graphics. Use for flyers — produces bold headlines, color blocks, and layout elements instead of "no text" photography.
 
 ### Setup & Skills
 ```bash

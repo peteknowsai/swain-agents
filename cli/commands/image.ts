@@ -14,7 +14,9 @@ import {
   printError,
   colors
 } from '../lib/worker-client';
-import { generate, fetchImageAsBase64 } from '../lib/image';
+import { generate, fetchImageAsBase64, PROMPT_FULL_BLEED } from '../lib/image';
+
+const PROMPT_FLYER = 'Include bold promotional text, headlines, and graphic design elements. This is a flyer — make it look like a designed promotional piece with visual hierarchy, not a photograph.';
 
 /**
  * Parse CLI arguments
@@ -49,22 +51,26 @@ async function generateImageCommand(args: string[]): Promise<void> {
   const styleId = params['style'];
   const aspectRatio = params['aspect-ratio'];
   const resolution = params['resolution'];
+  const mode = params['mode'];
 
   // Find prompt (first non-flag argument)
   const prompt = args.find(arg => !arg.startsWith('--'));
 
   if (!prompt) {
-    printError('Usage: swain image generate "prompt" [--style=<styleId>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--json]');
+    printError('Usage: swain image generate "prompt" [--style=<styleId>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--mode=flyer] [--json]');
     process.exit(1);
   }
 
+  // Select suffix based on mode
+  const suffix = mode === 'flyer' ? PROMPT_FLYER : undefined;
+
   try {
     if (!jsonOutput) {
-      print('Generating image via Replicate...');
+      print(`Generating ${mode === 'flyer' ? 'flyer ' : ''}image via Replicate...`);
       if (styleId) print(`  Style (catalog): ${styleId}`);
     }
 
-    const result = await generate(prompt, { aspectRatio, resolution });
+    const result = await generate(prompt, { aspectRatio, resolution, suffix });
 
     if (jsonOutput) {
       console.log(JSON.stringify({
@@ -156,6 +162,7 @@ ${colors.bold}Options:${colors.reset}
   --style=<id>              Style ID for cataloging (NOT sent to model)
   --aspect-ratio=<ratio>    Aspect ratio (e.g., 4:3, 16:9, 1:1; default: 4:3)
   --resolution=<res>        Resolution: 0.5K, 1K, 2K, 4K (default: 1K)
+  --mode=flyer              Generate a flyer (promotional graphic with text/layout)
   --filename=<name>         Override filename (upload only)
   --json                    Output as JSON
 
@@ -163,6 +170,7 @@ ${colors.bold}Examples:${colors.reset}
   swain image generate "sheepshead near dock pilings, soft watercolor wash"
   swain image generate "fishing scene at sunset" --style=golden-hour --json
   swain image generate "marina at dawn" --aspect-ratio=16:9 --resolution=2K --json
+  swain image generate "Port 32 Tampa spring storage special, marina with boats" --mode=flyer --aspect-ratio=4:5 --json
   swain image upload --url=http://localhost:8765/photo.jpg --json
   swain image upload --file=/tmp/screenshot.png --json
 

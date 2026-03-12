@@ -41,6 +41,18 @@ exact marina). Use the **swain-card-create** skill for these.
 - 1-2 actions per heartbeat is plenty. Don't spam.
 - Skip this if there's nothing new since your last heartbeat
 
+## Daily Flyers
+
+Once per day (ideally before the morning briefing), generate a batch of local flyers
+for your captain. Use the **swain-flyer** skill for the full workflow.
+
+Check if you've already run today:
+```bash
+swain flyer list --user={{userId}} --date=<today> --json
+```
+
+If no flyers exist for today, run the flyer generation workflow.
+
 ## Daily Briefing
 
 A cron wakes you at ~6 AM captain's local time with a briefing trigger.

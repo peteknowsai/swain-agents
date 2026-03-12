@@ -28,15 +28,45 @@ briefing.
    ```
    Returns card IDs and titles from the last briefing. Use this to pick different topics today.
 
-3. **Pull fresh card candidates**
+3. **Check liked flyers** (these are your captain's strongest interest signals)
+   ```bash
+   swain flyer list --user={{userId}} --status=liked --json
+   ```
+   Liked flyers tell you exactly what your captain cares about right now. For each
+   liked flyer, research the business/topic deeper and create a personalized card:
+
+   - A liked **marina** flyer → research slip rates, amenities, fuel prices, reviews.
+     Create a detailed card with the real info.
+   - A liked **dining** flyer → research the menu, dock-and-dine options, hours,
+     reservation tips. Create a card their crew would actually use.
+   - A liked **services** flyer → research pricing, scheduling, reviews, what's
+     included. Create a card with actionable details.
+   - A liked **deals** flyer → verify the deal is still active, add context on
+     how/when to use it. Create a card with specifics.
+   - A liked **events** flyer → research dates, registration, cost, what to expect.
+     Create a card with everything they need to go.
+
+   ```bash
+   swain card create --desk=<desk> --user={{userId}} \
+     --category=<category> --title="<headline>" \
+     --subtext="<2-3 sentence preview>" \
+     --content="<full researched markdown>" \
+     --freshness=timely --json
+   ```
+
+   **Liked flyer cards get priority in the briefing.** Your captain already told you
+   they care — don't bury these behind generic content.
+
+4. **Pull fresh card candidates**
    ```bash
    swain card pull --user={{userId}} --exclude-served --json
    ```
    Returns lightweight card summaries sorted by relevance. **User-tagged cards appear
    first** — these are cards you created specifically for this captain during heartbeats,
-   inspired by your conversations. Prioritize them. Then timely cards, then evergreen.
+   inspired by your conversations. Prioritize them. Then liked-flyer cards, then timely
+   cards, then evergreen.
 
-4. **Fill the gap if needed**
+6. **Fill the gap if needed**
    Count how many usable content cards came back from the pull (exclude boat art).
    If fewer than **9** content candidates:
 
@@ -59,7 +89,7 @@ briefing.
    If `firecrawl` is slow or rate-limited, create cards from your own knowledge
    (boat type tips, general boating content for the captain's region) rather than failing.
 
-5. **Get captain context from Convex and memory**
+7. **Get captain context from Convex and memory**
    ```bash
    swain boat profile --user={{userId}} --json
    ```
@@ -88,7 +118,7 @@ briefing.
    your comfort zone?" The question should feel like it belongs in the
    conversation, not like a form.
 
-6. **Generate today's boat art**
+8. **Generate today's boat art**
    ```bash
    swain card boat-art --user={{userId}} --json
    ```
@@ -96,8 +126,9 @@ briefing.
    and `boatName` from the result — you'll use these in step 11. Read the
    **swain-boat-art** skill for style options.
 
-7. **Select 8-10 cards** based on:
-   - **User-tagged cards first** — cards you created for this captain (marked `forUser` in pull results)
+9. **Select 8-10 cards** based on:
+   - **Liked-flyer cards first** — cards you created from liked flyers in step 3. Your captain explicitly said they want this.
+   - **User-tagged cards next** — cards you created for this captain (marked `forUser` in pull results)
    - **Prioritize timely cards** that are still valid today (check `expires_at`)
    - **Mix in evergreen cards** the captain hasn't seen yet
    - **Match the captain's interests** from MEMORY.md and recent conversations
@@ -107,7 +138,7 @@ briefing.
    If you still can't reach 8 after creating cards on the fly, include what you have —
    but this should be rare.
 
-8. **File desk requests** — If your captain cares about something and the library
+10. **File desk requests** — If your captain cares about something and the library
    doesn't have it, file a desk request so the content desk starts covering it:
    ```bash
    swain desk request --desk=<captain's desk> --topic="fuel dock locations and hours" --category=maintenance-care --user={{userId}} --json
@@ -115,13 +146,13 @@ briefing.
    This tells the desk "captains in your region care about this topic." The desk
    picks it up on its next heartbeat and produces lasting content for everyone.
 
-9. **Read full card content** for each selected card:
+11. **Read full card content** for each selected card:
    ```bash
    swain card get <cardId> --json
    ```
    Read each card to understand the content before writing your commentary.
 
-10. **Quality gate — style and polish every card before assembly**
+12. **Quality gate — style and polish every card before assembly**
 
     `boat_art` items aren't cards — they don't go through the quality gate.
 
@@ -164,16 +195,16 @@ briefing.
 
     **Do not proceed to assembly with unstyled cards.**
 
-11. **Build briefing items** as a JSON array:
+13. **Build briefing items** as a JSON array:
    - Always start with a `greeting` and end with a `closing`
    - In between: `text` commentary, `card` references, and `boat_art`
    - You don't have to introduce every card — sometimes one `text` item
      sets up two or three cards. Sometimes a card speaks for itself.
      Mix it up based on what feels right for this captain today.
-   - **Include 1-2 interactive items** from your curiosity list (step 5).
+   - **Include 1-2 interactive items** from your curiosity list (step 7).
      Weave them into the flow alongside related content — don't stack
      them at the end like a survey.
-   - For boat art, build the item from step 6's result:
+   - For boat art, build the item from step 8's result:
      ```json
      { "type": "boat_art", "image": "<url from step 6>", "styleName": "Art Deco", "boatName": "Fat Cat" }
      ```
@@ -182,7 +213,7 @@ briefing.
    cards you pick, how you connect them to the captain's life — that's all you.
    Learn what resonates with your captain over time and adapt.
 
-12. **Assemble the briefing**
+14. **Assemble the briefing**
     ```bash
     swain briefing assemble --user={{userId}} --items='<json_array>' --json
     ```
@@ -194,7 +225,7 @@ briefing.
     ```
     Each art ID maps to a shareable URL: `https://www.heyswain.com/art/{artId}`
 
-13. **Notify your captain**
+15. **Notify your captain**
     Send a short WhatsApp message letting them know the briefing is ready. Include
     the `heyswain://` deep link so they can tap straight into the app.
 

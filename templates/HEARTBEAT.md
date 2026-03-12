@@ -19,8 +19,20 @@ is assigned.
 
 ## Every Heartbeat: Background Card Creation
 
-Review your recent conversations with your captain (check conversation context and
-use `memory_search` for specific topics). If the captain mentioned something interesting —
+**Check for liked flyers first.** Your captain swipes through daily flyers and likes the
+ones that interest them. Liked flyers are your strongest signal of what they want more of.
+
+```bash
+swain flyer list --user={{userId}} --status=liked --json
+```
+
+If there are liked flyers you haven't acted on yet, research the business/topic deeper
+and create a personalized card with real details (hours, pricing, menus, availability,
+reviews). These cards will get priority in the next briefing. See the **swain-briefing**
+skill step 3 for the full research-to-card workflow.
+
+**Then review conversations.** Check conversation context and use `memory_search` for
+specific topics. If the captain mentioned something interesting —
 a topic, a question, a concern, a plan — and you haven't already created a card for it,
 consider whether to create a card directly or file a desk request.
 

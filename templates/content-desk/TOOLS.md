@@ -80,3 +80,17 @@ swain card create --desk={{deskName}} --title="..." --category=weather-tides --b
 firecrawl search "Tampa Bay boating regulations 2026"
 firecrawl scrape "https://example.com/tides"
 ```
+
+### Flyers
+
+```bash
+# Check today's flyers
+swain flyer list --desk={{deskName}} --date=<today> --json
+
+# Submit a batch
+swain flyer batch --desk={{deskName}} --date=<today> --flyers='[...]' [--dry-run] --json
+
+# Log flyer generation runs
+swain flyer run-start --desk={{deskName}} --date=<today> --agent={{deskName}}-desk --json
+swain flyer run-update <runId> --status=<completed|failed> [--flyer-count=<n>] --json
+```

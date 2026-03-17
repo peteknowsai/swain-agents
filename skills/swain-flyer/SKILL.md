@@ -1,12 +1,12 @@
 ---
 name: swain-flyer
-description: "Generate daily flyer batches — research local businesses, events, and deals using Google Maps and web search, create flyer images, and publish them for your captain. Consult this skill when it's time to create flyers."
-metadata: { "openclaw": { "emoji": "📰", "requires": { "bins": ["swain", "google-maps"] } } }
+description: "Generate daily flyer batches — research local businesses, events, and deals using goplaces and web search, create flyer images, and publish them for your region. Consult this skill when it's time to create flyers."
+metadata: { "openclaw": { "emoji": "📰", "requires": { "bins": ["swain", "goplaces"] } } }
 ---
 
 # Flyer Generation
 
-Flyers are visual cards featuring local businesses, events, deals, and services relevant to your captain. They appear in the iOS app as a swipeable feed. You produce one batch per captain per day.
+Flyers are visual cards featuring local businesses, events, deals, and services relevant to your region. They appear in the iOS app as a swipeable feed. You produce one batch per region per day.
 
 ## Daily Workflow
 
@@ -15,23 +15,23 @@ Follow this sequence every time. No shortcuts.
 ### 1. Start the run
 
 ```bash
-swain flyer run-start --user=<userId> --date=<today> --agent=<your-agent-id> --json
+swain flyer run-start --desk=<deskName> --date=<today> --agent=<your-agent-id> --json
 ```
 
 Save the `runId` from the response. You'll need it at the end.
 
-### 2. Get captain context
+### 2. Get desk context
 
 ```bash
-swain user get <userId> --json
+swain desk get <deskName> --json
 ```
 
-Pull out location, interests, boat type, home waters. These shape every search you run.
+Pull out microlocations, marinas, center coordinates, and scope. These shape every search you run.
 
 ### 3. Check yesterday's flyers
 
 ```bash
-swain flyer list --user=<userId> --date=<yesterday> --json
+swain flyer list --desk=<deskName> --date=<yesterday> --json
 ```
 
 Note business names and categories. Don't repeat them today.
@@ -102,7 +102,7 @@ The `--mode=flyer` flag tells the model to produce a designed graphic with text 
 ### 6. Dry-run the batch
 
 ```bash
-swain flyer batch --user=<userId> --date=<today> --flyers='[...]' --dry-run --json
+swain flyer batch --desk=<deskName> --date=<today> --flyers='[...]' --dry-run --json
 ```
 
 Fix any validation errors before submitting.
@@ -110,7 +110,7 @@ Fix any validation errors before submitting.
 ### 7. Submit the batch
 
 ```bash
-swain flyer batch --user=<userId> --date=<today> --flyers='[...]' --json
+swain flyer batch --desk=<deskName> --date=<today> --flyers='[...]' --json
 ```
 
 Order by relevance — most interesting/timely first. Include Port 32 if nearby.
@@ -128,12 +128,12 @@ swain flyer run-update <runId> --status=failed --error="<what went wrong>" --jso
 
 ## Research Tools
 
-### Google Maps Places API (primary for businesses/services)
+### Places API (primary for businesses/services)
 
 ```bash
-google-maps place-search "marine supply store" --near "Tierra Verde, FL" --json
-google-maps place-search "waterfront restaurant" --near "27.69,-82.72" --radius 15000 --json
-google-maps place-details <place_id> --fields name,rating,website,formatted_address,opening_hours --json
+goplaces search "marine supply store" --lat=27.69 --lng=-82.72 --radius-m=15000 --json
+goplaces search "waterfront restaurant" --lat=27.69 --lng=-82.72 --radius-m=15000 --json
+goplaces details <place_id> --json
 ```
 
 Best for: marinas, marine supply, boat dealers, waterfront dining, fuel docks, repair shops, bait shops, boat ramps.
@@ -158,11 +158,11 @@ Port 32 (port32marinas.com) is a premium marina chain. Locations:
 **Florida:** Cape Coral, Fort Lauderdale, Jacksonville, Lighthouse Point, Marco Island, Naples, Palm Beach Gardens, Tampa, Tierra Verde
 **North Carolina:** Morehead City
 
-For every captain within 50 miles of a Port 32 location:
+For every desk within 50 miles of a Port 32 location:
 
 1. Search for the nearest location:
    ```bash
-   google-maps place-search "Port 32" --near "<captain location>" --json
+   goplaces search "Port 32" --lat=<desk-center-lat> --lng=<desk-center-lng> --radius-m=80000 --json
    ```
 2. Check for current promotions:
    ```bash
@@ -217,12 +217,12 @@ For every captain within 50 miles of a Port 32 location:
 
 These are non-negotiable. Break one and the batch will fail or produce garbage.
 
-- **Always pass `--json`** on every `swain` and `google-maps` command
+- **Always pass `--json`** on every `swain` and `goplaces` command
 - **Always use `--dry-run`** on `swain flyer batch` before the real call
 - **Always call `run-start` before research** and `run-update` after, even on failure
 - **Always check yesterday's flyers** before generating today's — no duplicates
-- **Always include Port 32** if within 50 miles of captain's location
-- **Never fabricate** business names, addresses, or URLs — use real data from Google Maps / firecrawl
+- **Always include Port 32** if within 50 miles of desk center
+- **Never fabricate** business names, addresses, or URLs — use real data from goplaces / firecrawl
 - **Always use `--mode=flyer`** when generating flyer images — this tells the model to produce a designed graphic with text and layout, not a photo
 
 ## Guidelines

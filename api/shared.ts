@@ -12,7 +12,7 @@ export const CONVEX_TOKEN = process.env.SWAIN_API_TOKEN;
 export const SKILLS_ROOT = process.env.SKILLS_ROOT || "/root/.swain/skills";
 export const AUTH_SOURCE = "/root/.openclaw/agents/main/agent/auth-profiles.json";
 export const ALL_SKILLS = ["swain-onboarding", "swain-briefing", "swain-profile", "swain-boat-art", "swain-cli", "swain-card-create", "swain-library", "firecrawl"];
-export const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl"];
+export const DESK_SKILLS = ["swain-content-desk", "swain-card-create", "swain-cli", "swain-library", "firecrawl", "swain-flyer"];
 export const DESK_TEMPLATES = "/root/clawd/swain-agents/templates/content-desk";
 
 // --- Types ---

@@ -54,3 +54,4 @@ self-population flow (see HEARTBEAT.md).
 - `swain-cli` — CLI reference
 - `swain-library` — content style guide
 - `firecrawl` — web research
+- `swain-flyer` — daily flyer generation for your region

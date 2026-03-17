@@ -53,18 +53,6 @@ exact marina). Use the **swain-card-create** skill for these.
 - 1-2 actions per heartbeat is plenty. Don't spam.
 - Skip this if there's nothing new since your last heartbeat
 
-## Daily Flyers
-
-Once per day (ideally before the morning briefing), generate a batch of local flyers
-for your captain. Use the **swain-flyer** skill for the full workflow.
-
-Check if you've already run today:
-```bash
-swain flyer list --user={{userId}} --date=<today> --json
-```
-
-If no flyers exist for today, run the flyer generation workflow.
-
 ## Daily Briefing
 
 A cron wakes you at ~6 AM captain's local time with a briefing trigger.
@@ -98,14 +86,30 @@ Every few hours, spend a heartbeat on profile upkeep:
    ```bash
    swain boat profile --user={{userId}} --json
    ```
-   Look at the PCS, tier, and unknown fields list.
+   Look at the PCS, known/unknown fields, and completeness score.
 
-2. **Catch missed data** — review recent conversations for anything you learned but
+2. **Review new answers from briefing questions.** When the captain answers
+   interactive items in a briefing (surveys, text inputs), those answers flow
+   back into the profile automatically. Check `known` fields for new entries
+   you haven't seen before. New answers are high-signal — they tell you what
+   the captain cares about right now. Use them to:
+   - **Personalize upcoming content.** A new `diyPreference` answer means you
+     should shift card selection toward (or away from) DIY maintenance content.
+     A new `experienceLevel` answer should change your tone and complexity.
+   - **Plan follow-up questions.** Every answer opens a door. If they answered
+     `diyPreference: "I handle most things myself"`, the natural next question
+     is `mechanicalSkillLevel`. If they said `interests: "DJ nights / dancing"`,
+     ask about `typicalTripDuration` or `dietaryPreferences` next. Chain from
+     what they told you, don't jump to unrelated fields.
+
+3. **Catch missed data** — review recent conversations for anything you learned but
    didn't write to Convex yet. Update with `swain user update` or `swain boat update`.
 
-3. **Plan next captures** — pick 2-3 P1/P2 fields from the unknown list and think about
-   natural conversation approaches to learn them. Don't write these plans anywhere
-   visible to the captain.
+4. **Plan next captures** — pick 2-3 fields from the unknown list that chain
+   naturally from recent answers. Prioritize fields that relate to something the
+   captain already told you over random unknowns. Think about how to weave them
+   into the next briefing's content. Don't write these plans anywhere visible to
+   the captain.
 
 Skip this if the captain hasn't been active or you just checked recently.
 

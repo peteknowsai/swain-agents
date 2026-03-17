@@ -68,6 +68,21 @@ normal beat reporting workflow below.
 
 ---
 
+## Daily Flyers
+
+Once per day (first heartbeat of the day), generate a batch of local flyers
+for your region. Use the **swain-flyer** skill for the full workflow.
+
+Check if you've already run today:
+```bash
+swain flyer list --desk={{deskName}} --date=<today> --json
+```
+
+If no flyers exist for today, run the flyer generation workflow. Skip if
+you're still in self-population (no microlocations yet).
+
+---
+
 ## Regular Heartbeat
 
 ### 1. Check Editorial Requests

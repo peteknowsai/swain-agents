@@ -95,18 +95,24 @@ function validateFlyers(flyers: any[]): string[] | null {
 }
 
 /**
- * swain flyer batch --user=<userId> --date=<YYYY-MM-DD> --flyers='<json>' [--dry-run] --json
+ * swain flyer batch --user=<userId>|--desk=<deskName> --date=<YYYY-MM-DD> --flyers='<json>' [--dry-run] --json
  */
 async function batchFlyers(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const jsonOutput = isJsonMode(params);
   const userId = params['user'] || params['user-id'];
+  const desk = params['desk'];
   const date = params['date'] || todayISO();
   const flyersJson = params['flyers'];
   const dryRun = args.includes('--dry-run');
 
-  if (!userId || !flyersJson) {
-    printError("Usage: swain flyer batch --user=<userId> --date=<YYYY-MM-DD> --flyers='<json>' [--dry-run] [--json]");
+  if ((!userId && !desk) || !flyersJson) {
+    printError("Usage: swain flyer batch --user=<userId>|--desk=<deskName> --date=<YYYY-MM-DD> --flyers='<json>' [--dry-run] [--json]");
+    process.exit(1);
+  }
+
+  if (userId && desk) {
+    printError('Specify --user or --desk, not both');
     process.exit(1);
   }
 
@@ -136,9 +142,13 @@ async function batchFlyers(args: string[]): Promise<void> {
     return;
   }
 
+  const body: Record<string, any> = { batchDate: date, flyers };
+  if (desk) body.deskName = desk;
+  else body.userId = userId;
+
   const result = await workerRequest('/flyers/batch', {
     method: 'POST',
-    body: { userId, batchDate: date, flyers },
+    body,
   });
 
   if (jsonOutput) {
@@ -161,18 +171,20 @@ async function batchFlyers(args: string[]): Promise<void> {
 }
 
 /**
- * swain flyer list [--user=<userId>] [--status=<status>] [--date=<YYYY-MM-DD>] [--limit=<n>] --json
+ * swain flyer list [--user=<userId>] [--desk=<deskName>] [--status=<status>] [--date=<YYYY-MM-DD>] [--limit=<n>] --json
  */
 async function listFlyers(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const jsonOutput = isJsonMode(params);
   const userId = params['user'] || params['user-id'];
+  const desk = params['desk'];
   const status = params['status'];
   const date = params['date'];
   const limit = params['limit'];
 
   const queryParts: string[] = [];
   if (userId) queryParts.push(`userId=${userId}`);
+  if (desk) queryParts.push(`deskName=${desk}`);
   if (status) queryParts.push(`status=${status}`);
   if (date) queryParts.push(`batchDate=${date}`);
   if (limit) queryParts.push(`limit=${limit}`);
@@ -207,22 +219,30 @@ async function listFlyers(args: string[]): Promise<void> {
 }
 
 /**
- * swain flyer run-start --user=<userId> --date=<YYYY-MM-DD> --agent=<agentId> [--meta='<json>'] --json
+ * swain flyer run-start --user=<userId>|--desk=<deskName> --date=<YYYY-MM-DD> --agent=<agentId> [--meta='<json>'] --json
  */
 async function runStart(args: string[]): Promise<void> {
   const params = parseArgs(args);
   const jsonOutput = isJsonMode(params);
   const userId = params['user'] || params['user-id'];
+  const desk = params['desk'];
   const date = params['date'] || todayISO();
   const agentId = params['agent'] || params['agent-id'];
   const metaJson = params['meta'];
 
-  if (!userId || !agentId) {
-    printError('Usage: swain flyer run-start --user=<userId> --date=<YYYY-MM-DD> --agent=<agentId> [--meta=\'<json>\'] [--json]');
+  if ((!userId && !desk) || !agentId) {
+    printError('Usage: swain flyer run-start --user=<userId>|--desk=<deskName> --date=<YYYY-MM-DD> --agent=<agentId> [--meta=\'<json>\'] [--json]');
     process.exit(1);
   }
 
-  const body: Record<string, any> = { userId, date, agentId };
+  if (userId && desk) {
+    printError('Specify --user or --desk, not both');
+    process.exit(1);
+  }
+
+  const body: Record<string, any> = { date, agentId };
+  if (desk) body.deskName = desk;
+  else body.userId = userId;
 
   if (metaJson) {
     try {
@@ -304,13 +324,14 @@ function showHelp(): void {
 ${colors.bold}swain flyer${colors.reset} - Flyer management
 
 ${colors.bold}COMMANDS${colors.reset}
-  batch                   Submit a batch of flyers for a user
+  batch                   Submit a batch of flyers
   list                    List flyers with optional filters
   run-start               Log start of a flyer generation run
   run-update <runId>      Update run status (completed/failed)
 
 ${colors.bold}OPTIONS${colors.reset}
-  --user=<id>             User ID
+  --user=<id>             User ID (use --user or --desk, not both)
+  --desk=<name>           Desk name (use --desk or --user, not both)
   --date=<YYYY-MM-DD>     Date (default: today)
   --flyers=<json>         JSON array of flyer objects (for batch)
   --dry-run               Validate flyers locally without submitting (for batch)
@@ -323,13 +344,16 @@ ${colors.bold}OPTIONS${colors.reset}
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
-  swain flyer batch --user=user_abc --flyers='[{"imageUrl":"https://imagedelivery.net/xxx/yyy/public","meta":{"title":"Marina Deal","category":"marina"}}]' --dry-run --json
+  swain flyer batch --desk=nyc-harbor --flyers='[{"imageUrl":"https://imagedelivery.net/xxx/yyy/public","meta":{"title":"Marina Deal","category":"marina"}}]' --dry-run --json
+  swain flyer batch --desk=nyc-harbor --date=2026-03-12 --flyers='[...]' --json
   swain flyer batch --user=user_abc --date=2026-03-12 --flyers='[...]' --json
-  swain flyer list --user=user_abc --date=2026-03-12 --json
+  swain flyer list --desk=nyc-harbor --date=2026-03-12 --json
+  swain flyer list --user=user_abc --status=liked --json
   swain flyer list --status=active --limit=20 --json
+  swain flyer run-start --desk=nyc-harbor --agent=nyc-harbor-desk --json
   swain flyer run-start --user=user_abc --agent=pool-05 --json
   swain flyer run-update run_abc123 --status=completed --flyer-count=12 --json
-  swain flyer run-update run_abc123 --status=failed --error="Google Maps API rate limited" --json
+  swain flyer run-update run_abc123 --status=failed --error="API rate limited" --json
 `);
 }
 

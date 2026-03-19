@@ -31,20 +31,20 @@ You receive structured JSON messages from Convex via OpenClaw:
 
 **Wave generation:**
 ```json
-{ "type": "boat_scan", "action": "generate_wave", "sessionId": "scan_sess_abc", "dimension": "hull", "wave": 1, "userId": "user_xyz" }
+{ "type": "boat_scan", "action": "generate_wave", "sessionId": "scan_sess_abc", "dimension": "boat_itself", "wave": 1, "userId": "user_xyz" }
 ```
 
 **Debrief generation:**
 ```json
-{ "type": "boat_scan", "action": "generate_debrief", "sessionId": "scan_sess_abc", "dimension": "hull", "userId": "user_xyz" }
+{ "type": "boat_scan", "action": "generate_debrief", "sessionId": "scan_sess_abc", "dimension": "boat_itself", "userId": "user_xyz" }
 ```
 
 Check `type === "boat_scan"` first, then dispatch on `action`.
 
 **You don't create sessions.** The backend creates them automatically:
-- First session (`hull`) is created when `POST /api/scan/initialize` is called after provisioning
+- First session (`boat_itself`) is created when `POST /api/scan/initialize` is called after provisioning
 - Subsequent sessions are created automatically when iOS marks a dimension complete
-- Progression: `hull` → `engine` → `safety` → `lifestyle`
+- Progression: `boat_itself` → `how_it_runs` → `whats_aboard` → `life_aboard`
 
 ---
 
@@ -53,7 +53,7 @@ Check `type === "boat_scan"` first, then dispatch on `action`.
 You own the prompt map. Convex only knows dimension names and wave numbers.
 All intelligence about what to ask lives here.
 
-### The Boat Itself (boat_itself / hull) — Episode 1
+### The Boat Itself (boat_itself) — Episode 1
 
 | Wave | Prompts | Capture |
 |------|---------|---------|
@@ -62,7 +62,7 @@ All intelligence about what to ask lives here.
 | 3 | `canvas_bimini` — Canvas & bimini, `cockpit_deck` — Cockpit/deck layout | photo + voice |
 | 4 | `cabin_interior` — Cabin interior (if applicable), `hull_id_plate` — Hull ID plate | photo + text |
 
-### How It Runs (engine) — Episode 2
+### How It Runs (how_it_runs) — Episode 2
 
 | Wave | Prompts | Capture |
 |------|---------|---------|
@@ -71,7 +71,7 @@ All intelligence about what to ask lives here.
 | 3 | `fuel_system` — Fuel system (filters, tank), `batteries` — Batteries | photo + voice |
 | 4 | `helm_electronics` — Helm console & electronics, `engine_startup` — Engine startup sound | photo + voice |
 
-### What's Aboard (safety) — Episode 3
+### What's Aboard (whats_aboard) — Episode 3
 
 | Wave | Prompts | Capture |
 |------|---------|---------|
@@ -80,7 +80,7 @@ All intelligence about what to ask lives here.
 | 3 | `registration_insurance` — Registration & insurance docs, `service_records` — Service records | photo |
 | 4 | `electronics_inventory` — Electronics inventory (GPS, VHF, fishfinder) | photo + voice |
 
-### Life Aboard (lifestyle) — Episode 4
+### Life Aboard (life_aboard) — Episode 4
 
 | Wave | Prompts | Capture |
 |------|---------|---------|
@@ -254,9 +254,9 @@ The clips array includes all clips for this wave with their audio URLs:
 ]
 ```
 
-### Step 7: Generate Greeting (wave 1 of hull only)
+### Step 7: Generate Greeting (wave 1 of boat_itself only)
 
-If this is wave 1 of `hull` (the very first wave of the entire scan), generate
+If this is wave 1 of `boat_itself` (the very first wave of the entire scan), generate
 a personalized greeting that plays on the overview screen before the captain starts:
 
 1. Write a warm 2-3 sentence greeting referencing the captain's name and boat name/model

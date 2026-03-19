@@ -582,7 +582,7 @@ ${colors.bold}OPTIONS${colors.reset}
   --session=<id>          Session ID
   --user=<id>             User ID (for sessions)
   --boat=<id>             Boat ID (for sessions)
-  --dimension=<dim>       Dimension filter (hull, engine, safety, lifestyle)
+  --dimension=<dim>       Dimension filter (boat_itself, how_it_runs, whats_aboard, life_aboard)
   --wave=N                Wave number
   --status=<s>            Session status (not_started, generating, active, awaiting_captures, completed)
   --current-wave=N        Current wave number (for session-update)

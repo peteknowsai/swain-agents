@@ -109,5 +109,5 @@ Up to **3 cards** per regular heartbeat (requests + gap fills combined).
 Use the `swain-content-desk` skill for each card.
 
 ```
-HEARTBEAT_OK
+NO_REPLY
 ```

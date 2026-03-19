@@ -8,6 +8,11 @@ metadata: { "openclaw": { "emoji": "🎨", "requires": { "bins": ["swain"] } } }
 
 Every captain gets a new piece of art featuring their boat, every single day. This is a signature Swain feature. Art is print-ready — optimized for posters, stickers, coffee mugs, and koozies.
 
+## ZERO TEXT OUTPUT
+
+**Every character of plain text you write gets sent to the captain's WhatsApp.**
+Art generation is silent — work through tool calls only. Never narrate generation status.
+
 ## Two Ways to Create Boat Art
 
 ### 1. In Briefings (automatic)

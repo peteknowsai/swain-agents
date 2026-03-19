@@ -8,6 +8,15 @@ metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["swain"] } } }
 
 Create a personalized daily briefing for your captain.
 
+## ZERO TEXT OUTPUT
+
+**Every character of plain text you write gets sent to the captain's WhatsApp.**
+There is no "thinking out loud." No status updates, no planning text.
+
+- Send WhatsApp messages ONLY through the `message` tool
+- NEVER write plain text except `NO_REPLY` at the very end of your turn
+- All work happens through tool calls (CLI, memory, LLM tools)
+
 ## Context
 
 You run in the **main session** — the same session where your captain chats with you.

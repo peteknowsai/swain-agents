@@ -8,6 +8,11 @@ metadata: { "openclaw": { "emoji": "🃏", "requires": { "bins": ["swain"] } } }
 
 Create a content card after completing your research and writing workflow.
 
+## ZERO TEXT OUTPUT
+
+**All plain text you write gets announced to connected channels.**
+Card creation is silent — work through tool calls only. End with `NO_REPLY`.
+
 ## Prerequisites
 
 Before creating a card, you must have:

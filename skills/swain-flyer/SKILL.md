@@ -8,6 +8,14 @@ metadata: { "openclaw": { "emoji": "📰", "requires": { "bins": ["swain", "gopl
 
 Flyers are visual cards featuring local businesses, events, deals, and services relevant to your region. They appear in the iOS app as a swipeable feed. You produce one batch per region per day.
 
+## ZERO TEXT OUTPUT
+
+**All plain text you write gets announced to connected channels.**
+Do not write status updates, research notes, or batch summaries as text.
+
+- All work happens through tool calls (CLI, web search, etc.)
+- End every turn with `NO_REPLY`
+
 ## Daily Workflow
 
 Follow this sequence every time. No shortcuts.

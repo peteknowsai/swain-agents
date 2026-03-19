@@ -98,25 +98,52 @@ briefing.
    for specific past conversations. You're in the main session, so recent conversation
    history is already in context.
 
-   Use profile data to personalize card selection:
+   **Use profile data to personalize everything** — card selection, commentary
+   tone, and question strategy all flow from what you know:
    - Match cards to their `primaryUse`, `fishingStyle`, `targetSpecies`
    - Reference their `experienceLevel` when picking complexity
    - Check maintenance dates for relevant service content
    - Use `favoriteWatersideDining`, `preferredWaterways` for destination cards
 
+   **Review recently answered fields.** Compare today's `known` fields against
+   what you remember from prior briefings. New answers are signals — the captain
+   just told you something. Use them:
+   - **Personalize today's content** based on new answers. If the captain just
+     said `diyPreference: "I handle most things myself"`, lean into DIY
+     maintenance cards, not "find a pro" content. If they said
+     `experienceLevel: "Brand new to it"`, don't assume knowledge — explain
+     things, pick beginner-friendly content, skip advanced technique cards.
+   - **Chain into follow-up questions.** Every answer opens a door to a more
+     specific question. Examples:
+     - `diyPreference: "I handle most things myself"` → ask about
+       `mechanicalSkillLevel` ("Since you handle your own work on Gibby —
+       how deep do you go? Oil changes and filters, or full engine work?")
+     - `experienceLevel: "Brand new to it"` → ask about
+       `boatingCertifications` or `navigationSkillLevel` ("Being new to
+       boating — have you done any courses, or learning as you go?")
+     - `interests: "DJ nights / dancing"` → ask about `typicalTripDuration`
+       or `dietaryPreferences` ("For your DJ nights — how long do events
+       usually run? And do you do food or just drinks?")
+     - `primaryUse: "entertaining"` + `typicalCrew: "10-20"` → ask about
+       `dockPower` ("With 10-20 people and a sound system — what's your
+       shore power situation? 30 amp, 50 amp?")
+   - **Don't re-ask answered fields.** Check `known` before building
+     interactive items. If it's already in `known`, it's answered — move on.
+
    **Study the `unknown` fields.** The profile JSON returns an `unknown` array —
    every field you haven't learned yet. This is your curiosity list. Each
    briefing, pick 1-2 unknowns that connect to today's content and turn them
-   into `survey`, `text_input`, or `multi_select` items.
+   into `survey`, `text_input`, or `multi_select` items. Prefer unknowns that
+   chain naturally from recent answers (see above) over random picks.
 
    **Don't just ask — give a reason.** Tie the question to something in the
-   briefing. If you're including a fishing card and don't know their
-   `targetSpecies`, don't ask "What species do you target?" Instead, introduce
-   it: "This report covers redfish and snook — curious what you usually go
-   after?" then follow with the survey. If there's a weather card and you
-   don't know `maxWindKnots`, try "Winds are picking up this weekend — what's
-   your comfort zone?" The question should feel like it belongs in the
-   conversation, not like a form.
+   briefing or to an answer the captain recently gave. If you're including a
+   fishing card and don't know their `targetSpecies`, don't ask "What species
+   do you target?" Instead, introduce it: "This report covers redfish and
+   snook — curious what you usually go after?" then follow with the survey.
+   If there's a weather card and you don't know `maxWindKnots`, try "Winds
+   are picking up this weekend — what's your comfort zone?" The question
+   should feel like it belongs in the conversation, not like a form.
 
 8. **Generate today's boat art**
    ```bash

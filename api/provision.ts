@@ -316,6 +316,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   await writeFile(join(workspace, "MEMORY.md"), generateMemorySeed(input));
 
   // 2. Create boat in Convex
+  let boatId: string | undefined;
   if (input.boatName) {
     try {
       const proc = Bun.spawn([
@@ -327,7 +328,9 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
       ], { stdout: "pipe", stderr: "pipe" });
       const stdout = await new Response(proc.stdout).text();
       await proc.exited;
-      console.log(`Boat created: ${JSON.parse(stdout).boatId} (${input.boatName})`);
+      const boatResult = JSON.parse(stdout);
+      boatId = boatResult.boatId;
+      console.log(`Boat created: ${boatId} (${input.boatName})`);
     } catch (err) {
       console.error(`Boat creation failed (non-fatal): ${err}`);
     }
@@ -373,7 +376,41 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     }
   }
 
-  // 6. Create daily briefing crons + trigger intro
+  // 6. Initialize knowledge DB (Stoolap)
+  try {
+    const initProc = Bun.spawn([
+      "swain", "knowledge", "init",
+      `--db=${join(workspace, "knowledge.db")}`, "--json",
+    ], { stdout: "pipe", stderr: "pipe" });
+    await initProc.exited;
+    console.log(`Knowledge DB initialized for ${agentId}`);
+  } catch (err) {
+    console.error(`Knowledge DB init failed (non-fatal): ${err}`);
+  }
+
+  // 7. Initialize boat scan progression
+  if (boatId) {
+    try {
+      const scanProc = Bun.spawn([
+        "swain", "scan", "initialize",
+        `--user=${input.userId}`,
+        `--boat=${boatId}`,
+        "--json",
+      ], { stdout: "pipe", stderr: "pipe" });
+      const scanStdout = await new Response(scanProc.stdout).text();
+      const scanExitCode = await scanProc.exited;
+      if (scanExitCode === 0) {
+        console.log(`Scan initialized for ${agentId}: ${scanStdout.trim().slice(0, 200)}`);
+      } else {
+        const scanStderr = await new Response(scanProc.stderr).text();
+        console.error(`Scan init failed (non-fatal, exit ${scanExitCode}): ${scanStderr.trim().slice(0, 200)}`);
+      }
+    } catch (err) {
+      console.error(`Scan initialization failed (non-fatal): ${err}`);
+    }
+  }
+
+  // 8. Create daily briefing crons + trigger intro
   if (waPhone) {
     try { await createDailyBriefingCron(input, agentId); }
     catch (err) { console.error(`Daily briefing cron failed (non-fatal): ${err}`); }

@@ -27,6 +27,8 @@ import { run as runSetup } from './commands/setup';
 import { run as runUpdate } from './commands/update';
 import { run as runSkill } from './commands/skill';
 import { run as runFlyer } from './commands/flyer';
+import { run as runScan } from './commands/scan';
+import { run as runKnowledge } from './commands/knowledge';
 
 import { print, colors } from './lib/worker-client';
 import { checkForUpdate } from './lib/update-check';
@@ -54,6 +56,8 @@ ${colors.bold}COMMANDS${colors.reset}
   advisor                 Advisor agents (list, delete)
   desk                    Content desks (list, get, create, update, delete, search)
   flyer                   Flyer batches (batch, list, run-start, run-update)
+  scan                    Boat scan sessions (sessions, clips, captures, audio)
+  knowledge               Agent knowledge DB (ask, store, list, stats)
 
   setup                   Detect environment and install embedded skills
   update                  Version management (check)
@@ -142,6 +146,12 @@ async function main(): Promise<void> {
       break;
     case 'flyer':
       await runFlyer(subArgs);
+      break;
+    case 'scan':
+      await runScan(subArgs);
+      break;
+    case 'knowledge':
+      await runKnowledge(subArgs);
       break;
     case 'setup':
       await runSetup(subArgs);

@@ -147,6 +147,51 @@ swain flyer run-update <runId> --status=<completed|failed> [--flyer-count=<n>] [
 - **run-start** logs the beginning of a generation run for observability.
 - **run-update** marks a run completed or failed.
 
+### Knowledge
+```bash
+swain knowledge ask "question" [--boat=<boatId>] [--limit=5] [--threshold=0.3] --json
+swain knowledge store --boat=<boatId> --content="text" [--dimension=<dim>] [--category=<cat>] [--session=<id>] [--prompt=<id>] [--wave=N] --json
+swain knowledge list [--boat=<boatId>] [--dimension=<dim>] [--category=<cat>] [--limit=20] --json
+swain knowledge stats [--boat=<boatId>] --json
+swain knowledge init --json
+```
+
+- **ask** performs semantic search — embeds your question via Gemini, queries the local Stoolap vector DB, returns ranked results with relevance scores. Use before generating scan scripts, during heartbeats, or when your captain asks about their boat.
+- **store** embeds text content via Gemini and stores it in the knowledge DB. Auto-initializes the DB on first use.
+- **list** browses entries by boat, dimension, or category. No embedding needed — this is a metadata/content browse.
+- **stats** shows counts by dimension, category, and boat. Quick way to check knowledge coverage.
+- **init** creates the knowledge DB and schema. Also runs automatically on first `store`.
+
+Categories: `scan_extraction` (default), `visual_assessment`, `captain_observation`, `captain_preference`, `research`, `maintenance_note`.
+
+Requires `GEMINI_API_KEY` environment variable for embedding operations (`ask` and `store`).
+
+### Scan Sessions
+```bash
+swain scan sessions --user=<userId> [--boat=<boatId>] [--dimension=<dim>] --json
+swain scan session-get --session=<sessionId> --json
+swain scan session-update --session=<sessionId> --status=<s> [--current-wave=N] [--advisor-summary="..."] [--debrief-audio-url=<url>] [--debrief-summary="..."] [--greeting="..."] [--greeting-audio-url=<url>] --json
+swain scan captures --session=<sessionId> [--wave=N] [--unprocessed] --json
+swain scan capture-update <captureId> --processed [--transcription="..."] --json
+swain scan clips --session=<sessionId> [--wave=N] --json
+swain scan clips-post --session=<sessionId> --wave=N --clips='<json>' --json
+swain scan audio-upload --session=<sessionId> --clip=<clipId> [--url=<sourceUrl>] [--format=mp3] --json
+swain scan initialize --user=<userId> --boat=<boatId> --json
+swain scan generate-wave --session=<sessionId> --wave=N --json
+swain scan generate-debrief --session=<sessionId> --json
+```
+
+- **sessions** lists all scan sessions for a user, optionally filtered by boat or dimension.
+- **session-get** returns full session state including status, current wave, and summaries.
+- **session-update** patches session fields — status, currentWave, advisorSummary, debriefAudioUrl, debriefSummary, greeting, greetingAudioUrl. Greeting fields are for the first session only (boat_itself wave 1) — the personalized intro that plays on the overview screen.
+- **captures** lists captures for a session. Use `--unprocessed` to get only unprocessed captures for batch processing.
+- **capture-update** marks a capture as processed and optionally sets transcription text.
+- **clips** lists audio clips. Filter by wave with `--wave`.
+- **clips-post** posts a batch of generated audio clips. `--clips` is a JSON array of `{ clipType, script, audioUrl, sortOrder, promptId?, captureType?, instructionTitle?, instructionDetail?, durationMs? }`. Validates locally before posting.
+- **audio-upload** uploads TTS audio to R2. With `--url`: server downloads and uploads, returns `{ audioUrl }`. Without `--url`: returns `{ uploadUrl, audioUrl, method: "PUT" }` for direct upload.
+- **initialize** kicks off the scan progression for a user/boat. Creates the first session (`boat_itself`), sets status to `generating`, and sends `generate_wave` to the advisor. Called automatically during provisioning.
+- **generate-wave** and **generate-debrief** are testing triggers — they hit the Convex trigger endpoint which messages the advisor agent.
+
 ### Styles & Images
 ```bash
 swain style list --json
@@ -177,5 +222,6 @@ swain update check --json
 
 - `SWAIN_API_URL` — Override API URL
 - `SWAIN_API_TOKEN` — Admin token for authenticated access
+- `GEMINI_API_KEY` — Google Gemini API key (required for `knowledge ask` and `knowledge store`)
 - Prod: `https://wandering-sparrow-224.convex.site`
 - Dev: Override with `SWAIN_API_URL`

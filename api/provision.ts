@@ -97,12 +97,8 @@ async function copyAuthProfile(agentId: string): Promise<void> {
 
 async function setupAdvisorSkills(workspaceDir: string): Promise<void> {
   const skillsDest = join(workspaceDir, "skills");
-  await mkdir(skillsDest, { recursive: true });
-  for (const skill of ALL_SKILLS) {
-    const target = join(skillsDest, skill);
-    try { await rm(target, { recursive: true, force: true }); } catch {}
-    await symlink(join(SKILLS_ROOT, skill), target);
-  }
+  try { await rm(skillsDest, { recursive: true, force: true }); } catch {}
+  await symlink(SKILLS_ROOT, skillsDest);
 }
 
 function generateMemorySeed(input: CaptainInput): string {
@@ -600,14 +596,10 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     await writeFile(join(workspace, file), render(content, vars));
   }
 
-  // 2. Symlink skills
+  // 2. Symlink skills directory
   const skillsDest = join(workspace, "skills");
-  await mkdir(skillsDest, { recursive: true });
-  for (const skill of DESK_SKILLS) {
-    const target = join(skillsDest, skill);
-    try { await rm(target, { recursive: true, force: true }); } catch {}
-    await symlink(join(SKILLS_ROOT, skill), target);
-  }
+  try { await rm(skillsDest, { recursive: true, force: true }); } catch {}
+  await symlink(SKILLS_ROOT, skillsDest);
 
   // 3. Register in gateway via CLI (hot-add to running gateway)
   await openclaw([

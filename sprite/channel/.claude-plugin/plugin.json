@@ -1,0 +1,12 @@
+{
+  "name": "swain-channel",
+  "description": "Swain advisor channel for Claude Code — bridges HTTP messages from Bridge into a Claude Code session via iMessage relay.",
+  "version": "0.1.0",
+  "keywords": [
+    "swain",
+    "messaging",
+    "channel",
+    "mcp",
+    "imessage"
+  ]
+}

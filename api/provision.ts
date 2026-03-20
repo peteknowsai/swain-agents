@@ -456,7 +456,7 @@ async function createDailyBriefingCron(input: CaptainInput, agentId: string): Pr
     "--name", `Daily briefing - ${input.name}`,
     "--cron", `${minuteOffset} 6 * * *`,
     "--tz", tz,
-    "--session", "isolated",
+    "--session-key", `agent:${agentId}:main`,
     "--message", `It's briefing time. Build today's daily briefing for ${input.name} using the swain-briefing skill. You have full conversation context — use anything ${input.name} has mentioned recently to personalize card selection. Check MEMORY.md for their interests and recent topics. Include today's boat art card. If a briefing already exists for today, reply NO_REPLY.`,
   ]);
 
@@ -476,7 +476,7 @@ async function createBriefingWatchdog(input: CaptainInput, agentId: string): Pro
     "--name", `Briefing watchdog - ${input.name}`,
     "--cron", `${watchdogMinute} ${watchdogHour} * * *`,
     "--tz", tz,
-    "--session", "isolated",
+    "--session-key", `agent:${agentId}:main`,
     "--message", `Briefing watchdog: check if today's briefing exists. Run swain briefing list --user=${input.userId} --json. If no briefing for today, build it now using the swain-briefing skill. If it already exists, reply NO_REPLY.`,
   ]);
 
@@ -492,7 +492,7 @@ async function createLikedFlyersCheckCron(input: CaptainInput, agentId: string):
     "--name", `Liked flyers check - ${input.name}`,
     "--cron", "0 8,12,16,20 * * *",
     "--tz", tz,
-    "--session", "isolated",
+    "--session-key", `agent:${agentId}:main`,
     "--message", `Check for liked flyers using the swain-briefing skill step 3. If any liked flyers exist, create personalized cards. Then NO_REPLY.`,
   ]);
 
@@ -508,7 +508,7 @@ async function createProfileMaintenanceCron(input: CaptainInput, agentId: string
     "--name", `Profile maintenance - ${input.name}`,
     "--cron", "0 14 * * *",
     "--tz", tz,
-    "--session", "isolated",
+    "--session-key", `agent:${agentId}:main`,
     "--message", `Review your captain's profile completeness. Run swain boat profile --user=${input.userId} --json. Plan follow-up questions for tomorrow's briefing. NO_REPLY.`,
   ]);
 

@@ -102,20 +102,25 @@ function advisorBriefingCrons(agentId: string, captainName: string, userId: stri
   ];
 }
 
-async function createCron(agentId: string, def: { cronName: string; cron: string; tz: string; systemEvent: string }) {
-  log(`  + cron: ${def.cronName} (${def.cron} ${def.tz})`);
+async function createCron(agentId: string, def: { cronName: string; cron: string; tz: string; systemEvent: string }, sessionKey?: string) {
+  log(`  + cron: ${def.cronName} (${def.cron} ${def.tz}${sessionKey ? ` → ${sessionKey}` : ""})`);
   if (DRY_RUN) return;
 
-  await openclaw([
+  const args = [
     "cron", "add",
     "--agent", agentId,
     "--name", def.cronName,
     "--cron", def.cron,
     "--tz", def.tz,
-    "--session", "isolated",
     "--message", def.systemEvent,
     "--json",
-  ]);
+  ];
+  if (sessionKey) {
+    args.push("--session-key", sessionKey);
+  } else {
+    args.push("--session", "isolated");
+  }
+  await openclaw(args);
 }
 
 async function migrate() {
@@ -181,7 +186,8 @@ async function migrate() {
     if (!entry.userId || !entry.captainName) continue;
 
     const tz = entry.timezone || "America/New_York";
-    log(`\nAdvisor: ${agentId} (${entry.captainName})`);
+    const sessionKey = `agent:${agentId}:main`;
+    log(`\nAdvisor: ${agentId} (${entry.captainName}) → session ${sessionKey}`);
 
     // Liked flyers + profile maintenance (new for everyone)
     for (const def of advisorExtraCrons(agentId, entry.captainName, entry.userId, tz)) {
@@ -189,7 +195,7 @@ async function migrate() {
         log(`  (skip) ${def.cronName} already exists`);
         continue;
       }
-      await createCron(agentId, def);
+      await createCron(agentId, def, sessionKey);
     }
 
     // Briefing + watchdog (create if missing — catches pool-08/Manny)
@@ -199,7 +205,7 @@ async function migrate() {
         continue;
       }
       log(`  (MISSING — creating) ${def.cronName}`);
-      await createCron(agentId, def);
+      await createCron(agentId, def, sessionKey);
     }
   }
 

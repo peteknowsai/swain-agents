@@ -113,7 +113,7 @@ async function createCron(agentId: string, def: { cronName: string; cron: string
     "--cron", def.cron,
     "--tz", def.tz,
     "--session", "isolated",
-    "--system-event", def.systemEvent,
+    "--message", def.systemEvent,
     "--json",
   ]);
 }

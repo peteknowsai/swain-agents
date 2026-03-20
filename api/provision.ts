@@ -169,7 +169,6 @@ async function provisionPoolAgents(
       type: "advisor",
       status: "available",
       createdAt: new Date().toISOString(),
-      heartbeatInterval: "1h",
       poolIndex: i,
     };
     created++;
@@ -366,17 +365,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
   entry.assignedAt = new Date().toISOString();
   await saveRegistry(registry);
 
-  // 5. Enable heartbeat
-  {
-    const config = await readConfig();
-    const agentConfig = config.agents?.list?.find((a: any) => a.id === agentId);
-    if (agentConfig) {
-      agentConfig.heartbeat = { every: "1h" };
-      await writeConfig(config);
-    }
-  }
-
-  // 6. Initialize knowledge DB (Stoolap)
+  // 5. Initialize knowledge DB (Stoolap)
   try {
     const initProc = Bun.spawn([
       "swain", "knowledge", "init",
@@ -388,7 +377,7 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     console.error(`Knowledge DB init failed (non-fatal): ${err}`);
   }
 
-  // 7. Initialize boat scan progression
+  // 6. Initialize boat scan progression
   if (boatId) {
     try {
       const scanProc = Bun.spawn([
@@ -410,13 +399,19 @@ export async function provisionAdvisor(input: CaptainInput): Promise<{ agentId: 
     }
   }
 
-  // 8. Create daily briefing crons + trigger intro
+  // 7. Create crons + trigger intro
   if (waPhone) {
     try { await createDailyBriefingCron(input, agentId); }
     catch (err) { console.error(`Daily briefing cron failed (non-fatal): ${err}`); }
 
     try { await createBriefingWatchdog(input, agentId); }
     catch (err) { console.error(`Briefing watchdog cron failed (non-fatal): ${err}`); }
+
+    try { await createLikedFlyersCheckCron(input, agentId); }
+    catch (err) { console.error(`Liked flyers check cron failed (non-fatal): ${err}`); }
+
+    try { await createProfileMaintenanceCron(input, agentId); }
+    catch (err) { console.error(`Profile maintenance cron failed (non-fatal): ${err}`); }
 
     await Bun.sleep(2000);
     triggerIntro(agentId, input, waPhone);
@@ -486,6 +481,38 @@ async function createBriefingWatchdog(input: CaptainInput, agentId: string): Pro
   ]);
 
   console.log(`Briefing watchdog cron created for ${agentId}: ${watchdogMinute} ${watchdogHour} * * * ${tz}`);
+}
+
+async function createLikedFlyersCheckCron(input: CaptainInput, agentId: string): Promise<void> {
+  const tz = input.timezone || "America/New_York";
+
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `Liked flyers check - ${input.name}`,
+    "--cron", "0 8,12,16,20 * * *",
+    "--tz", tz,
+    "--session", "main",
+    "--system-event", `Check for liked flyers using the swain-briefing skill step 3. If any liked flyers exist, create personalized cards. Then NO_REPLY.`,
+  ]);
+
+  console.log(`Liked flyers check cron created for ${agentId}: 0 8,12,16,20 * * * ${tz}`);
+}
+
+async function createProfileMaintenanceCron(input: CaptainInput, agentId: string): Promise<void> {
+  const tz = input.timezone || "America/New_York";
+
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `Profile maintenance - ${input.name}`,
+    "--cron", "0 14 * * *",
+    "--tz", tz,
+    "--session", "main",
+    "--system-event", `Review your captain's profile completeness. Run swain boat profile --user=${input.userId} --json. Plan follow-up questions for tomorrow's briefing. NO_REPLY.`,
+  ]);
+
+  console.log(`Profile maintenance cron created for ${agentId}: 0 14 * * * ${tz}`);
 }
 
 // --- Delete advisor ---
@@ -591,14 +618,37 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     "--json",
   ]);
 
-  // 4. Create heartbeat cron (reliable, no restart needed)
+  // 4. Create task crons
   await openclaw([
     "cron", "add",
     "--agent", agentId,
-    "--name", `desk-heartbeat-${name}`,
-    "--every", "4h",
+    "--name", `desk-requests-${name}`,
+    "--cron", "0 6,12,18,0 * * *",
+    "--tz", "UTC",
     "--session", "main",
-    "--system-event", `Desk heartbeat for ${name}`,
+    "--system-event", `Check editorial requests: swain desk requests --desk=${name} --status=pending --json. Fulfill any you can with existing cards or create new ones (max 2). Use swain-content-desk skill. NO_REPLY.`,
+    "--json",
+  ]);
+
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `desk-cards-${name}`,
+    "--cron", "0 10 * * *",
+    "--tz", "UTC",
+    "--session", "main",
+    "--system-event", `Run gap analysis: swain card coverage --desk=${name} --json. Create up to 3 cards for uncovered categories or stale content. Use swain-content-desk skill. NO_REPLY.`,
+    "--json",
+  ]);
+
+  await openclaw([
+    "cron", "add",
+    "--agent", agentId,
+    "--name", `desk-flyers-${name}`,
+    "--cron", "0 8 * * *",
+    "--tz", "UTC",
+    "--session", "main",
+    "--system-event", `Generate today's flyer batch for your region. Use the swain-flyer skill. NO_REPLY.`,
     "--wake", "now",
     "--json",
   ]);
@@ -615,7 +665,6 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
     type: "desk",
     status: "active",
     createdAt: new Date().toISOString(),
-    heartbeatInterval: "4h",
     region,
   };
   await saveRegistry(registry);
@@ -652,7 +701,7 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
   try {
     await openclaw([
       "agent", "--agent", agentId,
-      "--message", `You are a content desk for ${region}. Read your workspace files (AGENTS.md, HEARTBEAT.md, TOOLS.md, SOUL.md) to understand your role, then read the swain-content-desk skill. Stand by for your first heartbeat.`,
+      "--message", `You are a content desk for ${region}. Read your workspace files (AGENTS.md, TOOLS.md, SOUL.md) to understand your role, then read the swain-content-desk skill. Your crons will trigger your work on schedule.`,
     ]);
     console.log(`Primed ${agentId}`);
   } catch (err) {
@@ -666,28 +715,17 @@ export async function provisionContentDesk(input: DeskProvisionInput): Promise<{
 export async function listDesks(): Promise<unknown[]> {
   const config = await readConfig();
   return (config.agents?.list ?? [])
-    .filter((a: any) => (a.id || "").endsWith("-desk"))
-    .map((a: any) => ({ ...a, paused: !a.heartbeat }));
+    .filter((a: any) => (a.id || "").endsWith("-desk"));
 }
 
 export async function pauseDesk(name: string): Promise<void> {
-  const agentId = `${name}-desk`;
-  const config = await readConfig();
-  const agent = (config.agents?.list ?? []).find((a: any) => a.id === agentId);
-  if (!agent) throw new Error(`Desk agent ${agentId} not found`);
-  delete agent.heartbeat;
-  await writeConfig(config);
-  console.log(`Content desk ${agentId} paused (heartbeat removed)`);
+  const { pauseAgent } = await import("./agents");
+  await pauseAgent(`${name}-desk`);
 }
 
 export async function unpauseDesk(name: string): Promise<void> {
-  const agentId = `${name}-desk`;
-  const config = await readConfig();
-  const agent = (config.agents?.list ?? []).find((a: any) => a.id === agentId);
-  if (!agent) throw new Error(`Desk agent ${agentId} not found`);
-  agent.heartbeat = { every: "4h" };
-  await writeConfig(config);
-  console.log(`Content desk ${agentId} unpaused (heartbeat: 4h)`);
+  const { resumeAgent } = await import("./agents");
+  await resumeAgent(`${name}-desk`);
 }
 
 export async function deleteDesk(name: string): Promise<void> {

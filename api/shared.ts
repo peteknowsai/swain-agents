@@ -21,7 +21,6 @@ export interface AgentEntry {
   type: "advisor" | "desk";
   status: "available" | "active" | "paused";
   createdAt: string;
-  heartbeatInterval: string;
 
   // Advisor-specific
   poolIndex?: number;
@@ -38,7 +37,6 @@ export interface AgentEntry {
   pausedAt?: string;
   pauseSnapshot?: {
     previousStatus: "available" | "active";
-    heartbeat: { every: string };
     crons: Array<{
       name: string;
       cron: string;

@@ -128,7 +128,7 @@ swain desk fulfill --desk=<name> --request=<id> --card=<cardId> --json
 ```
 
 - **get** returns full desk metadata: region, scope, coordinates, bounds, microlocations, marinas, topics, card/user counts.
-- **pause / unpause** suspends or restores a desk's heartbeat without deleting it.
+- **pause / unpause** suspends or restores a desk's crons without deleting it.
 - **search** finds desks near coordinates within a radius (default 50 miles).
 - **request** files an editorial signal — tells a desk "captains care about this topic."
 - **requests** lists pending editorial requests for a desk.

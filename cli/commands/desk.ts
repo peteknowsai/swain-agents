@@ -456,7 +456,7 @@ async function deleteDesk(args: string[]): Promise<void> {
 
 /**
  * swain desk pause <name> [--json]
- * Pause a content desk (remove heartbeat, keep agent registered)
+ * Pause a content desk (remove crons, keep agent registered)
  */
 async function pauseDeskCmd(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -495,7 +495,7 @@ async function pauseDeskCmd(args: string[]): Promise<void> {
 
 /**
  * swain desk unpause <name> [--json]
- * Unpause a content desk (restore 4h heartbeat)
+ * Unpause a content desk (restore crons)
  */
 async function unpauseDeskCmd(args: string[]): Promise<void> {
   const params = parseArgs(args);
@@ -542,8 +542,8 @@ ${colors.bold}COMMANDS${colors.reset}
   create                  Provision a new content desk
   update <name>           Update desk record (status, microlocations, marinas, etc.)
   delete <name>           Delete a content desk
-  pause <name>            Pause a desk (stops heartbeat, keeps agent)
-  unpause <name>          Unpause a desk (restores 4h heartbeat)
+  pause <name>            Pause a desk (removes crons, keeps agent)
+  unpause <name>          Unpause a desk (restores crons)
   search                  Find desks near a point (geo search)
   request                 File an editorial signal to a desk
   requests                List editorial requests for a desk

@@ -65,7 +65,6 @@ export async function listAgents(filters?: ListFilters): Promise<any[]> {
       agentId,
       type: entry.type,
       status: entry.status,
-      heartbeat: entry.status === "paused" ? null : entry.heartbeatInterval,
       cronCount,
       lastActivityAt,
     };
@@ -115,7 +114,6 @@ export async function getAgent(agentId: string): Promise<any> {
     agentId,
     type: entry.type,
     status: entry.status,
-    heartbeat: entry.status === "paused" ? null : { every: entry.heartbeatInterval },
     crons: crons.map((c: any) => ({
       id: c.id,
       name: c.name,
@@ -166,15 +164,7 @@ export async function pauseAgent(agentId: string): Promise<any> {
     systemEvent: c.systemEvent || c.system_event || "",
   }));
 
-  // 2. Remove heartbeat from gateway config
-  const config = await readConfig();
-  const agentConfig = (config.agents?.list ?? []).find((a: any) => a.id === agentId);
-  if (agentConfig) {
-    delete agentConfig.heartbeat;
-    await writeConfig(config);
-  }
-
-  // 3. Delete cron jobs
+  // 2. Delete cron jobs
   for (const cron of crons) {
     try {
       await openclaw(["cron", "rm", cron.id, "--json"]);
@@ -184,10 +174,9 @@ export async function pauseAgent(agentId: string): Promise<any> {
     }
   }
 
-  // 4. Update registry
+  // 3. Update registry
   entry.pauseSnapshot = {
     previousStatus: entry.status as "available" | "active",
-    heartbeat: { every: entry.heartbeatInterval },
     crons: cronSnapshots,
   };
   entry.status = "paused";
@@ -209,15 +198,7 @@ export async function resumeAgent(agentId: string): Promise<any> {
   const snapshot = entry.pauseSnapshot;
   if (!snapshot) throw new Error("No pause snapshot found — cannot restore");
 
-  // 1. Restore heartbeat in gateway config
-  const config = await readConfig();
-  const agentConfig = (config.agents?.list ?? []).find((a: any) => a.id === agentId);
-  if (agentConfig) {
-    agentConfig.heartbeat = snapshot.heartbeat;
-    await writeConfig(config);
-  }
-
-  // 2. Recreate crons
+  // 1. Recreate crons
   let cronCount = 0;
   for (const cron of snapshot.crons) {
     try {
@@ -246,12 +227,12 @@ export async function resumeAgent(agentId: string): Promise<any> {
   delete entry.pauseSnapshot;
   await saveRegistry(registry);
 
-  console.log(`Agent ${agentId} resumed (heartbeat: ${snapshot.heartbeat.every}, ${cronCount}/${snapshot.crons.length} crons restored)`);
+  console.log(`Agent ${agentId} resumed (${cronCount}/${snapshot.crons.length} crons restored)`);
   return {
     agentId,
     status: "active",
     action: "resumed",
-    restored: { heartbeat: snapshot.heartbeat.every, crons: cronCount },
+    restored: { crons: cronCount },
   };
 }
 

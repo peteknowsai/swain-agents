@@ -91,7 +91,6 @@ async function migrate() {
         type: "advisor",
         status: agent.status === "assigned" ? "active" : "available",
         createdAt: agent.assignedAt || new Date().toISOString(),
-        heartbeatInterval: "1h",
         poolIndex: agent.index,
       };
 
@@ -125,9 +124,8 @@ async function migrate() {
 
       const entry: AgentEntry = {
         type: "desk",
-        status: ga.heartbeat ? "active" : "paused",
+        status: "active",
         createdAt: new Date().toISOString(),
-        heartbeatInterval: ga.heartbeat?.every || "4h",
       };
       if (region) entry.region = region;
 

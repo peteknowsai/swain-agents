@@ -1,14 +1,14 @@
 ---
 name: swain-boat-scan
-description: "Generate progressive audio-guided boat scan sessions — script generation, TTS, capture processing, and knowledge extraction. Activated by generate_wave and generate_debrief trigger messages."
+description: "Generate progressive audio-guided boat scan sessions — full-dimension script generation, TTS, and knowledge extraction. Activated by generate_dimension and generate_debrief trigger messages."
 metadata: { "openclaw": { "emoji": "🔍", "requires": { "bins": ["swain"] } } }
 ---
 
 # Boat Scan
 
 Guide captains through progressive, audio-narrated boat documentation sessions.
-You generate scripts, convert them to speech, process captures, extract knowledge,
-and use what you learn to personalize the next wave.
+You generate scripts for an entire dimension at once (all waves), convert them to speech,
+and use prior captures to personalize the next dimension.
 
 READ THIS ENTIRE SKILL BEFORE DOING ANYTHING.
 
@@ -29,14 +29,29 @@ This is a hard technical fact. There is no "thinking out loud."
 
 You receive structured JSON messages from Convex via OpenClaw:
 
-**Wave generation:**
+**Dimension generation (all waves at once):**
 ```json
-{ "type": "boat_scan", "action": "generate_wave", "sessionId": "scan_sess_abc", "dimension": "boat_itself", "wave": 1, "userId": "user_xyz" }
+{ "type": "boat_scan", "action": "generate_dimension", "sessionId": "scan_xxx", "dimension": "boat_itself", "userId": "usr_xyz" }
+```
+
+**Dimension generation with prior captures (2nd+ dimensions):**
+```json
+{
+  "type": "boat_scan",
+  "action": "generate_dimension",
+  "sessionId": "scan_yyy",
+  "dimension": "how_it_runs",
+  "userId": "usr_xyz",
+  "priorCaptures": [
+    { "wave": 1, "promptId": "hull_overview", "captureType": "photo", "mediaUrl": "...", "transcription": "..." },
+    ...
+  ]
+}
 ```
 
 **Debrief generation:**
 ```json
-{ "type": "boat_scan", "action": "generate_debrief", "sessionId": "scan_sess_abc", "dimension": "boat_itself", "userId": "user_xyz" }
+{ "type": "boat_scan", "action": "generate_debrief", "sessionId": "scan_xxx", "dimension": "boat_itself", "userId": "usr_xyz" }
 ```
 
 Check `type === "boat_scan"` first, then dispatch on `action`.
@@ -45,6 +60,8 @@ Check `type === "boat_scan"` first, then dispatch on `action`.
 - First session (`boat_itself`) is created when `POST /api/scan/initialize` is called after provisioning
 - Subsequent sessions are created automatically when iOS marks a dimension complete
 - Progression: `boat_itself` → `how_it_runs` → `whats_aboard` → `life_aboard`
+
+**Wave advancement is handled by the app.** iOS calls `POST /scan/sessions/:id/advance` to bump the wave counter. All clips are already generated — no trigger needed.
 
 ---
 
@@ -101,9 +118,9 @@ Check the boat profile (`swain boat profile --user=<userId> --json`) for `type`,
 
 ---
 
-## Wave Generation Workflow
+## Dimension Generation Workflow
 
-When you receive a `generate_wave` message:
+When you receive a `generate_dimension` message, you generate ALL waves for the dimension in one shot.
 
 ### Step 1: Gather Context
 
@@ -120,41 +137,35 @@ Query your knowledge DB for existing context about this boat:
 swain knowledge ask "What do I know about {boatName}?" --boat={boatId} --json
 ```
 
-### Step 2: Process Previous Captures (if wave > 1)
+### Step 2: Process Prior Captures (if provided)
 
-```bash
-# Fetch unprocessed captures from previous waves
-swain scan captures --session=<sessionId> --unprocessed --json
-```
+If the trigger includes `priorCaptures`, use them to inform your scripts. These are
+captures from the previously completed dimension — photos, videos, and transcriptions
+the captain already submitted.
 
-For each capture, process based on type:
+For each prior capture:
 
-**Photos:** Use your vision capabilities to analyze:
+**Photos/Videos (mediaUrl):** Use your vision capabilities to analyze:
 - Condition assessment (good/fair/poor/critical)
 - Visible specs, numbers, or identifiers
-- Observations relevant to the dimension
-- Concerns or red flags
+- Observations relevant to the upcoming dimension
+- Concerns or red flags that should be followed up on
 
-**Voice:** Transcribe and extract:
+**Transcriptions:** Extract:
 - Key facts, preferences, or concerns
-- Anything the captain said that should inform future waves
-
-**Text:** Extract structured data directly.
-
-After processing each capture:
-```bash
-swain scan capture-update <captureId> --processed [--transcription="..."] --json
-```
+- Anything the captain said that should inform this dimension's prompts
 
 Store all extracted knowledge in your knowledge DB:
 ```bash
-swain knowledge store --boat={boatId} --content="{summary}" --dimension={dimension} --session={sessionId} --prompt={promptId} --wave={wave} --json
+swain knowledge store --boat={boatId} --content="{summary}" --dimension={dimension} --session={sessionId} --json
 ```
 
-### Step 3: Generate Scripts
+### Step 3: Generate Scripts for ALL Waves
 
-Look up this wave's prompts from the prompt map above. For each prompt, generate:
+Look up ALL waves for this dimension from the prompt map above. For each wave,
+generate a wave intro clip and prompt clips.
 
+For each prompt clip:
 ```json
 {
   "promptId": "waterline_bottom_paint",
@@ -167,9 +178,10 @@ Look up this wave's prompts from the prompt map above. For each prompt, generate
 }
 ```
 
-**Always start with a wave intro clip** (`clipType: "wave_intro"`, `sortOrder: 0`):
-- Wave 1: Introduce yourself and what you'll cover. Reference the boat by name.
-- Wave 2+: Reference what you learned from previous waves. Be specific — "Your gel coat looked clean" not "I've reviewed your previous photos."
+**Each wave MUST start with a wave intro clip** (`clipType: "wave_intro"`, `sortOrder: 0`):
+- Wave 1: Introduce yourself and what you'll cover in this dimension. Reference the boat by name.
+- Wave 2+: Build continuity. Reference what the captain will have seen/done in the previous wave. Be specific — "After looking at the waterline, now let's check the canvas" not generic transitions.
+- If you have prior captures from a previous dimension, reference what you learned. "Your hull looked great — now let's see what's under the hood."
 
 **Script tone guidelines:**
 - Conversational, knowledgeable, American accent
@@ -180,7 +192,7 @@ Look up this wave's prompts from the prompt map above. For each prompt, generate
 
 ### Step 4: Generate TTS Audio
 
-For each clip, call ElevenLabs TTS:
+For each clip across all waves, call ElevenLabs TTS:
 
 ```bash
 curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}" \
@@ -217,17 +229,22 @@ swain scan audio-upload --session=<sessionId> --clip=clip_<promptId> --json
 Returns `{ uploadUrl: "https://...", audioUrl: "https://...", method: "PUT" }`.
 Then PUT the file to `uploadUrl`. The `audioUrl` is the CDN URL for playback.
 
-### Step 6: Post Clips to Convex
+### Step 6: Post ALL Clips to Convex
+
+Post clips for each wave separately:
 
 ```bash
-swain scan clips-post --session=<sessionId> --wave=<N> --clips='<json_array>' --json
+swain scan clips-post --session=<sessionId> --wave=1 --clips='<json_array>' --json
+swain scan clips-post --session=<sessionId> --wave=2 --clips='<json_array>' --json
+swain scan clips-post --session=<sessionId> --wave=3 --clips='<json_array>' --json
+swain scan clips-post --session=<sessionId> --wave=4 --clips='<json_array>' --json
 ```
 
-The clips array includes all clips for this wave with their audio URLs:
+The clips array for each wave includes all clips with their audio URLs:
 ```json
 [
   {
-    "clipId": "clip_intro_001",
+    "clipId": "clip_intro_w1",
     "sessionId": "<sessionId>",
     "wave": 1,
     "clipType": "wave_intro",
@@ -254,9 +271,9 @@ The clips array includes all clips for this wave with their audio URLs:
 ]
 ```
 
-### Step 7: Generate Greeting (wave 1 of boat_itself only)
+### Step 7: Generate Greeting (boat_itself only)
 
-If this is wave 1 of `boat_itself` (the very first wave of the entire scan), generate
+If this is `boat_itself` (the very first dimension of the entire scan), generate
 a personalized greeting that plays on the overview screen before the captain starts:
 
 1. Write a warm 2-3 sentence greeting referencing the captain's name and boat name/model
@@ -272,13 +289,17 @@ swain scan session-update --session=<sessionId> \
 ```
 
 This greeting shows on the overview screen and plays before any dimension starts.
-Skip this step for all other waves and dimensions.
+Skip this step for all other dimensions.
 
 ### Step 8: Update Session
 
+After ALL waves are posted, set the session to active:
+
 ```bash
-swain scan session-update --session=<sessionId> --status=active --current-wave=<N> --json
+swain scan session-update --session=<sessionId> --status=active --current-wave=1 --json
 ```
+
+This tells the app the dimension is ready. The app handles wave advancement from here.
 
 End your turn with `NO_REPLY`.
 
@@ -286,7 +307,7 @@ End your turn with `NO_REPLY`.
 
 ## Debrief Workflow
 
-When you receive `generate_debrief: sessionId=X`:
+When you receive `generate_debrief`:
 
 ### Step 1: Gather Everything
 
@@ -296,7 +317,7 @@ swain scan captures --session=<sessionId> --json
 swain boat profile --user=<userId> --json
 ```
 
-Process any remaining unprocessed captures (same as wave generation step 2).
+Process any remaining unprocessed captures.
 
 Query knowledge DB for everything about this boat:
 ```bash
@@ -349,12 +370,13 @@ swain scan clips-post --session=<sessionId> --wave=0 --clips='[{
 
 ```bash
 swain scan session-update --session=<sessionId> \
-  --status=completed \
   --debrief-audio-url=<url> \
   --debrief-summary="<takeaway bullets as markdown>" \
   --advisor-summary="I've got a solid picture of your hull and cosmetics..." \
   --json
 ```
+
+Note: The session status is already set to `completed` by Convex before the debrief trigger fires. You don't need to set it.
 
 End your turn with `NO_REPLY`.
 
@@ -362,14 +384,17 @@ End your turn with `NO_REPLY`.
 
 ## Progressive Script Examples
 
-**Wave 1 (no prior knowledge):**
+**Wave 1 of boat_itself (no prior knowledge):**
 > "Hey! I'm going to walk you through documenting your 2019 Boston Whaler 270 Dauntless. We'll start with the big picture — I want to see what she looks like from the outside. Grab your phone and let's get started."
 
-**Wave 2 (after processing wave 1 captures):**
-> "That hull is in really nice shape — clean gel coat, no cracks I can see from the wide shots. Now let's look closer at the waterline. Your bottom paint looked fresh in those first photos, but I want to see the details up close."
+**Wave 2 of boat_itself (building on wave 1):**
+> "That hull overview should give us a good baseline. Now let's get closer — I want to see the waterline where the hull meets the water, and get some close-ups of the gel coat. This is where you really see how the boat's been treated."
 
-**Wave 4 (deep into the session):**
-> "You've shown me a lot already. The hull's solid, the paint's good, the canvas needs some attention on the port side snap covers — I caught that in your photos. Last thing for this round: if you've got a cabin, give me a quick look inside. And find your hull ID plate — usually on the starboard transom."
+**Wave 4 of boat_itself (wrapping up dimension):**
+> "Almost done with the outside. Last thing for this round: if you've got a cabin, give me a quick look inside. And find your hull ID plate — usually on the starboard transom. That number tells me a lot about when and where she was built."
+
+**Wave 1 of how_it_runs (with prior captures from boat_itself):**
+> "Your hull looked solid in those photos — clean gel coat, no cracks. Now let's see what's keeping her running. Pop the engine bay open and let's take a look at what we're working with."
 
 **Debrief:**
 > "Alright, here's what I'm seeing with your Whaler. Overall, she's in great shape — you're clearly taking care of her. The gel coat is clean, no stress cracks, no blistering. Your bottom paint's got about a season left in it — I'd plan on hauling out this fall. The one thing I'd get on sooner is those port-side snap covers. They're starting to pull away and once water gets behind the canvas, it gets expensive fast. Everything else — deck hardware, rubrail, windshield — all looking solid. Next time, I want to look under the hood."

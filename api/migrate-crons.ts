@@ -112,7 +112,7 @@ async function createCron(agentId: string, def: { cronName: string; cron: string
     "--name", def.cronName,
     "--cron", def.cron,
     "--tz", def.tz,
-    "--session", "main",
+    "--session", "isolated",
     "--system-event", def.systemEvent,
     "--json",
   ]);

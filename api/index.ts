@@ -23,6 +23,7 @@ import {
   listAgentFiles,
   readAgentFile,
   listAgentCrons,
+  sendAgentMessage,
 } from "./agents";
 
 const PORT = 3847;
@@ -79,6 +80,13 @@ const server = Bun.serve({
 
     try {
       // ========== Unified /agents routes ==========
+
+      // POST /agents/:agentId/message — send a message to an agent via OpenClaw
+      const messageMatch = matchRoute(pathname, "/agents/:agentId/message");
+      if (messageMatch && method === "POST") {
+        const result = await sendAgentMessage(messageMatch.agentId, req);
+        return json(result);
+      }
 
       // GET /agents/:agentId/files/* — read a workspace file (must match before /files)
       const filesContentMatch = pathname.match(/^\/agents\/([^/]+)\/files\/(.+)$/);

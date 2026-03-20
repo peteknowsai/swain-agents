@@ -352,3 +352,47 @@ export async function listAgentCrons(agentId: string): Promise<any> {
     })),
   };
 }
+
+// --- Send message to agent ---
+
+export async function sendAgentMessage(agentId: string, req: Request): Promise<any> {
+  const registry = await loadRegistry();
+  if (!registry.agents[agentId]) throw new Error(`Agent ${agentId} not found`);
+
+  const body = await req.json() as { message: string; session?: string };
+  if (!body.message || typeof body.message !== "string") {
+    throw new Error("message is required and must be a string");
+  }
+
+  const args = [
+    "openclaw", "agent",
+    "--agent", agentId,
+    "--message", body.message,
+  ];
+
+  if (body.session) {
+    args.push("--session-id", `agent:${agentId}:${body.session}`);
+  }
+
+  // Fire and forget — agent turns can take minutes (TTS, image processing, etc).
+  // We just need to confirm the process launched successfully.
+  const proc = Bun.spawn(args, {
+    stdout: "ignore",
+    stderr: "pipe",
+  });
+
+  // Give it a moment to fail fast on bad args / missing agent
+  const raceResult = await Promise.race([
+    proc.exited.then(code => ({ type: "exited" as const, code })),
+    new Promise<{ type: "running" }>(resolve =>
+      setTimeout(() => resolve({ type: "running" }), 2000)
+    ),
+  ]);
+
+  if (raceResult.type === "exited" && raceResult.code !== 0) {
+    const stderr = await new Response(proc.stderr).text();
+    throw new Error(`Agent message failed (exit ${raceResult.code}): ${stderr}`);
+  }
+
+  return { success: true, agentId, dispatched: true };
+}

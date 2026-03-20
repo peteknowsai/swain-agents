@@ -359,19 +359,31 @@ export async function sendAgentMessage(agentId: string, req: Request): Promise<a
   const registry = await loadRegistry();
   if (!registry.agents[agentId]) throw new Error(`Agent ${agentId} not found`);
 
-  const body = await req.json() as { message: string; session?: string };
-  if (!body.message || typeof body.message !== "string") {
-    throw new Error("message is required and must be a string");
+  const body = await req.json() as Record<string, any>;
+
+  // Accept { message: "..." } or a trigger payload directly (with type/action fields)
+  let message: string;
+  let session: string | undefined;
+
+  if (typeof body.message === "string") {
+    message = body.message;
+    session = body.session;
+  } else if (body.type || body.action) {
+    const { session: s, ...payload } = body;
+    message = JSON.stringify(payload);
+    session = s;
+  } else {
+    throw new Error("message is required — pass { message: string } or a trigger payload with type/action");
   }
 
   const args = [
     "openclaw", "agent",
     "--agent", agentId,
-    "--message", body.message,
+    "--message", message,
   ];
 
-  if (body.session) {
-    args.push("--session-id", `agent:${agentId}:${body.session}`);
+  if (session) {
+    args.push("--session-id", `agent:${agentId}:${session}`);
   }
 
   // Fire and forget — agent turns can take minutes (TTS, image processing, etc).

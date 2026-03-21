@@ -20,7 +20,14 @@ const HOME = "/home/sprite";
 
 // Sync everything — find all .md files under HOME
 // Skip: node_modules, .claude/todos, .claude/settings
-const SKIP_PATTERNS = ["node_modules", ".claude/todos", ".claude/settings"];
+const SKIP_PATTERNS = [
+  "node_modules",
+  ".claude/todos",
+  ".claude/settings",
+  ".cursor",
+  ".gemini",
+  ".codex",
+];
 
 interface SyncState {
   lastSync: number; // epoch ms

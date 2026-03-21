@@ -160,6 +160,23 @@ export async function syncToR2(): Promise<void> {
     }
   }
 
+  // Upload sprite metadata (URL, etc.) so the vault viewer can link to Studio
+  try {
+    const spriteUrl = process.env.SPRITE_URL ?? "";
+    const meta = JSON.stringify({
+      spriteId: SPRITE_ID,
+      spriteUrl,
+      studioPath: "/data/",
+      lastSync: new Date().toISOString(),
+    });
+    await client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `${SPRITE_ID}/_meta.json`,
+      Body: meta,
+      ContentType: "application/json",
+    }));
+  } catch {}
+
   // Save updated state
   state.lastSync = Date.now();
   state.mtimes = { ...state.mtimes, ...newMtimes };

@@ -37,6 +37,27 @@ async function listAllObjects(
   return objects;
 }
 
+// ── Sprite metadata ───────────────────────────────────────────
+
+interface SpriteMeta {
+  spriteUrl?: string;
+  studioPath?: string;
+}
+
+async function getSpriteMeta(env: Env, sprite: string): Promise<SpriteMeta> {
+  try {
+    const obj = await env.VAULT.get(`${sprite}/_meta.json`);
+    if (obj) return await obj.json();
+  } catch {}
+  return {};
+}
+
+function renderDbLink(meta: SpriteMeta): string {
+  if (!meta.spriteUrl || !meta.studioPath) return "";
+  const url = `${meta.spriteUrl}${meta.studioPath}`;
+  return `<a href="${url}" target="_blank" class="db-link">Database</a>`;
+}
+
 // ── Route handlers ────────────────────────────────────────────
 
 async function listSprites(env: Env): Promise<Response> {
@@ -90,6 +111,7 @@ async function spriteView(env: Env, sprite: string): Promise<Response> {
 
   const tree = buildTree(files);
   const sidebar = renderTree(tree, sprite);
+  const meta = await getSpriteMeta(env, sprite);
 
   // Try to show CLAUDE.md by default
   const claudeMd = objects.find((o) => o.key === `${sprite}/CLAUDE.md`);
@@ -119,6 +141,7 @@ async function spriteView(env: Env, sprite: string): Promise<Response> {
       <nav class="sidebar">
         <a href="/" class="back">&larr; All Sprites</a>
         <h2>${sprite}</h2>
+        ${renderDbLink(meta)}
         ${sidebar}
       </nav>
       <main>${content}</main>
@@ -147,6 +170,7 @@ async function fileView(
   }));
   const tree = buildTree(files);
   const sidebar = renderTree(tree, sprite, filePath);
+  const spriteMeta = await getSpriteMeta(env, sprite);
 
   // Breadcrumb
   const parts = filePath.split("/");
@@ -164,6 +188,7 @@ async function fileView(
       <nav class="sidebar">
         <a href="/" class="back">&larr; All Sprites</a>
         <h2><a href="/${sprite}/">${sprite}</a></h2>
+        ${renderDbLink(spriteMeta)}
         ${sidebar}
       </nav>
       <main>
@@ -361,6 +386,8 @@ a:hover{text-decoration:underline}
 .sidebar .file.active a{background:#1e3a5f;color:#93c5fd}
 .sidebar details summary{cursor:pointer;padding:3px 8px;color:#71717a;border-radius:4px;font-size:.85rem}
 .sidebar details summary:hover{background:#27272a;color:#a1a1aa}
+.db-link{display:block;padding:8px 12px;margin-bottom:12px;background:#1e3a5f;color:#93c5fd;border-radius:6px;text-align:center;font-size:.85rem;font-weight:500;text-decoration:none;transition:background .15s}
+.db-link:hover{background:#1e4a7f;text-decoration:none}
 
 /* Main */
 main{flex:1;padding:2rem 3rem;max-width:900px;overflow-y:auto}

@@ -3,7 +3,6 @@
  */
 
 const SPRITE_API_TOKEN = process.env.SPRITE_API_TOKEN ?? "";
-const SPRITE_CHANNEL_PORT = Number(process.env.SPRITE_CHANNEL_PORT ?? 8080);
 
 export type SpriteConfig = {
   id: string;
@@ -13,14 +12,15 @@ export type SpriteConfig = {
 /**
  * Send a message to a Sprite's channel server.
  * Wakes the Sprite if sleeping (hitting the URL triggers wake).
- * Retries until the channel server is ready.
+ *
+ * Strategy: first wake with a health check (long timeout),
+ * then send the actual message once healthy.
  */
 export async function sendToSprite(
   sprite: SpriteConfig,
   path: string,
   body: Record<string, unknown>
 ): Promise<boolean> {
-  const url = `${sprite.url}${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(SPRITE_API_TOKEN
@@ -28,56 +28,80 @@ export async function sendToSprite(
       : {}),
   };
 
-  // Retry up to 5 times with 2s delay — Sprite may be waking up
-  for (let attempt = 0; attempt < 5; attempt++) {
+  // Step 1: Wake the Sprite with a health check (up to 60s)
+  console.log(`[sprites] waking ${sprite.id}...`);
+  const awake = await waitForHealth(sprite, 60_000);
+  if (!awake) {
+    console.error(`[sprites] ${sprite.id} failed to wake after 60s`);
+    return false;
+  }
+  console.log(`[sprites] ${sprite.id} is awake`);
+
+  // Step 2: Send the message (Sprite is already running)
+  try {
+    const res = await fetch(`${sprite.url}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000), // claude -p can take a while
+    });
+    if (res.ok) return true;
+
+    console.error(
+      `[sprites] ${sprite.id} message failed: ${res.status} ${res.statusText}`
+    );
+    return false;
+  } catch (err) {
+    console.error(`[sprites] ${sprite.id} message error:`, err);
+    return false;
+  }
+}
+
+/**
+ * Wait for a Sprite's channel server to be healthy.
+ * Polls /health with increasing intervals until ready or timeout.
+ */
+async function waitForHealth(
+  sprite: SpriteConfig,
+  timeoutMs: number
+): Promise<boolean> {
+  const start = Date.now();
+  let attempt = 0;
+
+  while (Date.now() - start < timeoutMs) {
+    attempt++;
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(10_000),
+      const res = await fetch(`${sprite.url}/health`, {
+        signal: AbortSignal.timeout(15_000),
       });
       if (res.ok) return true;
 
-      // 502/503 = Sprite waking up, retry
       if (res.status === 502 || res.status === 503) {
         console.log(
-          `[sprites] ${sprite.id} not ready (${res.status}), retry ${attempt + 1}/5...`
+          `[sprites] ${sprite.id} waking (${res.status}), attempt ${attempt}...`
         );
-        await Bun.sleep(2000);
-        continue;
       }
-
-      console.error(
-        `[sprites] ${sprite.id} error: ${res.status} ${res.statusText}`
-      );
-      return false;
-    } catch (err) {
+    } catch {
       console.log(
-        `[sprites] ${sprite.id} unreachable, retry ${attempt + 1}/5...`
+        `[sprites] ${sprite.id} not reachable yet, attempt ${attempt}...`
       );
-      await Bun.sleep(2000);
     }
+
+    // Wait 3s between attempts
+    await Bun.sleep(3000);
   }
 
-  console.error(`[sprites] ${sprite.id} failed after 5 attempts`);
   return false;
 }
 
 /**
- * Check if a Sprite's channel server is healthy.
+ * Check if a Sprite's channel server is healthy (quick check, no retries).
  */
 export async function checkHealth(
   sprite: SpriteConfig
 ): Promise<{ ok: boolean; claude?: string }> {
-  const url = `${sprite.url}/health`;
-  const headers: Record<string, string> = SPRITE_API_TOKEN
-    ? { Authorization: `Bearer ${SPRITE_API_TOKEN}` }
-    : {};
-
   try {
-    const res = await fetch(url, {
-      headers,
+    const res = await fetch(`${sprite.url}/health`, {
       signal: AbortSignal.timeout(5_000),
     });
     if (res.ok) return await res.json();

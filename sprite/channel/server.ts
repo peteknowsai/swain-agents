@@ -1,252 +1,208 @@
 #!/usr/bin/env bun
 /**
- * Swain channel server for Claude Code.
+ * Swain channel server — HTTP wrapper around `claude -p`.
  *
- * MCP server (stdio) that bridges HTTP messages from Bridge into a running
- * Claude Code session via the channel contract. Exposes reply() and
- * send_image() tools so the agent can respond through Bridge → iMessage.
+ * Receives messages from Bridge via HTTP, runs `claude -p` with session
+ * resume for conversation continuity, sends replies back to Bridge.
+ *
+ * No MCP, no channels, no TTY, no interactive prompts.
+ * Process per message: start → process → exit → Sprite can sleep.
  *
  * HTTP endpoints (called by Bridge):
- *   POST /message   — inbound captain message
+ *   POST /message   — inbound message, runs claude -p, replies to Bridge
  *   POST /cron      — cron trigger
  *   GET  /health    — health check
- *
- * MCP tools (used by Claude Code):
- *   reply(text)           — send text back to captain
- *   send_image(url, caption?) — send image to captain
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  ListToolsRequestSchema,
-  CallToolRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { $ } from "bun";
 
 const PORT = Number(process.env.CHANNEL_PORT ?? 8080);
 const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
+const CLAUDE_PATH = process.env.CLAUDE_PATH ?? "/home/sprite/.local/bin/claude";
+const SESSION_DIR = "/home/sprite/.claude-sessions";
+const startTime = Date.now();
 
-// --- State ---
+// Track session IDs per chat for conversation continuity
+const sessions = new Map<string, string>();
 
-let claudeState: "idle" | "processing" = "idle";
-let lastActivity = Date.now();
-let currentChatId: string | null = null; // Discord channel ID for routing replies
+// Persist sessions to disk so they survive Sprite sleep
+const SESSION_MAP_FILE = `${SESSION_DIR}/sessions.json`;
 
-function markActive() {
-  claudeState = "processing";
-  lastActivity = Date.now();
+async function loadSessions(): Promise<void> {
+  try {
+    const file = Bun.file(SESSION_MAP_FILE);
+    if (await file.exists()) {
+      const data = await file.json();
+      for (const [k, v] of Object.entries(data)) {
+        sessions.set(k, v as string);
+      }
+    }
+  } catch {}
 }
 
-function markIdle() {
-  claudeState = "idle";
-  lastActivity = Date.now();
+async function saveSessions(): Promise<void> {
+  await Bun.write(
+    SESSION_MAP_FILE,
+    JSON.stringify(Object.fromEntries(sessions), null, 2)
+  );
 }
 
-// --- Reply delivery ---
+await $`mkdir -p ${SESSION_DIR}`.quiet();
+await loadSessions();
 
+/**
+ * Run claude -p with optional session resume.
+ * Returns the response text.
+ */
+async function runClaude(
+  prompt: string,
+  chatId?: string
+): Promise<string> {
+  const args = [
+    CLAUDE_PATH,
+    "-p",
+    prompt,
+    "--output-format", "text",
+    "--dangerously-skip-permissions",
+  ];
+
+  // Resume existing session for this chat
+  if (chatId && sessions.has(chatId)) {
+    args.push("--resume", sessions.get(chatId)!);
+  }
+
+  try {
+    const proc = Bun.spawn(args, {
+      env: {
+        ...process.env,
+        CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN ?? "",
+        PATH: process.env.PATH ?? "",
+        HOME: process.env.HOME ?? "/home/sprite",
+      },
+      cwd: "/home/sprite",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const output = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    const exitCode = await proc.exited;
+
+    if (exitCode !== 0) {
+      console.error(`[claude] exit ${exitCode}: ${stderr.slice(0, 200)}`);
+    }
+
+    // Try to extract session ID from stderr for resume
+    // Claude -p outputs session info to stderr
+    const sessionMatch = stderr.match(/session_id['":\s]+([a-f0-9-]+)/i);
+    if (sessionMatch && chatId) {
+      sessions.set(chatId, sessionMatch[1]);
+      await saveSessions();
+    }
+
+    return output.trim();
+  } catch (err) {
+    console.error(`[claude] error:`, err);
+    return "Sorry, I had trouble processing that. Try again in a moment.";
+  }
+}
+
+/**
+ * Send reply back to Bridge.
+ */
 async function sendToBridge(
   payload: Record<string, unknown>
 ): Promise<boolean> {
   if (!BRIDGE_URL) {
-    process.stderr.write(
-      `[channel] no BRIDGE_URL — reply logged only: ${JSON.stringify(payload)}\n`
-    );
+    console.log(`[channel] no BRIDGE_URL — reply: ${JSON.stringify(payload)}`);
     return true;
   }
 
   try {
-    const res = await fetch(
-      `${BRIDGE_URL}/sprites/${SPRITE_ID}/reply`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
+    const res = await fetch(`${BRIDGE_URL}/sprites/${SPRITE_ID}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     if (!res.ok) {
-      process.stderr.write(
-        `[channel] bridge reply failed: ${res.status} ${res.statusText}\n`
-      );
+      console.error(`[channel] bridge reply failed: ${res.status}`);
       return false;
     }
     return true;
   } catch (err) {
-    process.stderr.write(`[channel] bridge reply error: ${err}\n`);
+    console.error(`[channel] bridge reply error:`, err);
     return false;
   }
 }
 
-// --- MCP Server ---
-
-const mcp = new Server(
-  { name: "swain-channel", version: "0.1.0" },
-  {
-    capabilities: { tools: {}, experimental: { "claude/channel": {} } },
-    instructions: [
-      "You are a Swain advisor communicating with your captain via iMessage.",
-      "Messages from your captain arrive as <channel> notifications.",
-      "You MUST use the reply tool to send messages back — plain text output does NOT reach the captain.",
-      "Keep replies to 1-2 short sentences. You're texting, not writing essays.",
-      "For cron tasks: do your work, use reply() only if there's something to deliver.",
-    ].join("\n"),
-  }
-);
-
-mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: "reply",
-      description:
-        "Send a text message back to the captain via iMessage. This is the ONLY way to reach them.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          text: {
-            type: "string",
-            description: "The message to send to the captain",
-          },
-        },
-        required: ["text"],
-      },
-    },
-    {
-      name: "send_image",
-      description: "Send an image to the captain via iMessage.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string", description: "URL of the image to send" },
-          caption: {
-            type: "string",
-            description: "Optional caption to send with the image",
-          },
-        },
-        required: ["url"],
-      },
-    },
-  ],
-}));
-
-mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
-  const args = (req.params.arguments ?? {}) as Record<string, unknown>;
-
-  switch (req.params.name) {
-    case "reply": {
-      const text = args.text as string;
-      markIdle();
-      const ok = await sendToBridge({ type: "text", text, chatId: currentChatId });
-      process.stderr.write(`[reply] ${ok ? "sent" : "FAILED"}: ${text}\n`);
-      return {
-        content: [{ type: "text", text: ok ? "Message sent." : "Failed to send — check logs." }],
-      };
-    }
-
-    case "send_image": {
-      const url = args.url as string;
-      const caption = args.caption as string | undefined;
-      markIdle();
-      const ok = await sendToBridge({ type: "image", url, caption, chatId: currentChatId });
-      process.stderr.write(
-        `[send_image] ${ok ? "sent" : "FAILED"}: ${url}\n`
-      );
-      return {
-        content: [{ type: "text", text: ok ? "Image sent." : "Failed to send — check logs." }],
-      };
-    }
-
-    default:
-      return {
-        content: [{ type: "text", text: `unknown tool: ${req.params.name}` }],
-        isError: true,
-      };
-  }
-});
-
-// --- Channel notification (push message into Claude Code) ---
-
-function deliver(
-  source: string,
-  content: string,
-  meta: Record<string, string> = {}
-): void {
-  markActive();
-  void mcp.notification({
-    method: "notifications/claude/channel",
-    params: {
-      content,
-      meta: {
-        chat_id: SPRITE_ID,
-        user: source,
-        ts: new Date().toISOString(),
-        ...meta,
-      },
-    },
-  });
-}
-
-// --- HTTP Server (Bridge-facing) ---
-
+// HTTP Server
 Bun.serve({
   port: PORT,
   hostname: "0.0.0.0",
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
 
     // Health check
     if (url.pathname === "/health" && req.method === "GET") {
       return Response.json({
         ok: true,
-        claude: claudeState,
-        lastActivity: new Date(lastActivity).toISOString(),
+        mode: "print",
         uptime: Math.floor((Date.now() - startTime) / 1000),
+        sessions: sessions.size,
       });
     }
 
-    // Inbound message from captain (via Bridge)
+    // Inbound message from Bridge
     if (url.pathname === "/message" && req.method === "POST") {
-      return (async () => {
-        const body = (await req.json()) as {
-          text: string;
-          chatId?: string;
-          messageId?: string;
-          user?: string;
-          userId?: string;
-        };
-        // Track chatId for reply routing
-        if (body.chatId) currentChatId = body.chatId;
-        deliver(body.user ?? "captain", body.text, {
-          ...(body.chatId ? { chat_id: body.chatId } : {}),
-          ...(body.messageId ? { message_id: body.messageId } : {}),
-          ...(body.userId ? { user_id: body.userId } : {}),
+      const body = (await req.json()) as {
+        text: string;
+        chatId?: string;
+        messageId?: string;
+        user?: string;
+        userId?: string;
+      };
+
+      console.log(`[channel] message from ${body.user ?? "unknown"}: ${body.text.slice(0, 80)}`);
+
+      // Run claude -p
+      const response = await runClaude(body.text, body.chatId);
+
+      // Send reply back to Bridge
+      if (response) {
+        await sendToBridge({
+          type: "text",
+          text: response,
+          chatId: body.chatId,
         });
-        return Response.json({ ok: true });
-      })();
+      }
+
+      return Response.json({ ok: true });
     }
 
     // Cron trigger from Bridge
     if (url.pathname === "/cron" && req.method === "POST") {
-      return (async () => {
-        const body = (await req.json()) as {
-          skill: string;
-          name?: string;
-        };
-        deliver("cron", `Cron triggered: ${body.name ?? body.skill}. Read /data/skills/${body.skill}.md and execute.`, {
-          skill: body.skill,
-          ...(body.name ? { cron_name: body.name } : {}),
+      const body = (await req.json()) as {
+        skill: string;
+        name?: string;
+      };
+
+      const prompt = `Read /home/sprite/skills/${body.skill}.md and execute the task described in it. Only use the reply tool if there's something to deliver to the captain.`;
+      const response = await runClaude(prompt, `cron:${body.skill}`);
+
+      if (response) {
+        await sendToBridge({
+          type: "text",
+          text: response,
+          chatId: `cron:${body.skill}`,
         });
-        return Response.json({ ok: true });
-      })();
+      }
+
+      return Response.json({ ok: true });
     }
 
     return new Response("not found", { status: 404 });
   },
 });
 
-const startTime = Date.now();
-process.stderr.write(`[channel] HTTP server listening on port ${PORT}\n`);
-
-// --- Start MCP transport ---
-
-await mcp.connect(new StdioServerTransport());
-process.stderr.write("[channel] MCP connected via stdio\n");
+console.log(`[channel] HTTP server listening on port ${PORT} (print mode)`);

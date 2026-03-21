@@ -1,0 +1,45 @@
+{
+  "skill_name": "sprites",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to set up a bun HTTP server on my sprite that auto-starts when the sprite wakes up. The server should listen on port 8080 and serve a health endpoint. The sprite is called pete-advisor.",
+      "expected_output": "Should create a service with --http-port 8080, use sprite-env services create, and show how to write the server code and make the URL public."
+    },
+    {
+      "id": 2,
+      "prompt": "My sprite pete-advisor keeps returning 502 when I hit its URL. It was working earlier but now it seems stuck. How do I debug this?",
+      "expected_output": "Should check service status with sprite-env services get, check logs at /.sprite/logs/services/, try sprite exec to see if the sprite is reachable, check if the service has --http-port configured, and suggest restarting the service."
+    },
+    {
+      "id": 3,
+      "prompt": "I want to delete a bunch of old sprites but I'm running from a script so I can't interact with TTY prompts. How do I delete sprites non-interactively?",
+      "expected_output": "Should suggest using sprite api /v1/sprites/<name> -- -X DELETE which bypasses the TTY confirmation, or sprite destroy --force."
+    },
+    {
+      "id": 4,
+      "prompt": "I want to save the state of my sprite before I make a risky change. How do I snapshot it and how do I roll back if things go wrong?",
+      "expected_output": "Should explain sprite checkpoint create with --comment, sprite checkpoint list to see snapshots, and sprite restore <id> to roll back. Should mention that restoring replaces the entire filesystem."
+    },
+    {
+      "id": 5,
+      "prompt": "I have a python script running on my sprite that needs environment variables like API_KEY and DATABASE_URL. How do I set those up so they persist when the sprite sleeps and wakes?",
+      "expected_output": "Should suggest creating a launcher shell script that exports the env vars then runs the python script, and registering that script as a service. Should NOT suggest just export in shell since that doesn't persist."
+    },
+    {
+      "id": 6,
+      "prompt": "I need to access a postgres database running on my sprite from my local machine. The sprite is called dev-db.",
+      "expected_output": "Should suggest sprite proxy 5432 -s dev-db to forward the postgres port to localhost, then connect with psql localhost."
+    },
+    {
+      "id": 7,
+      "prompt": "What's the difference between warm and cold sprites? My sprite is showing as warm but I haven't touched it in days. Is it costing me money?",
+      "expected_output": "Should explain warm = VM in memory, instant resume. Cold = suspended to disk, 1-2s wake. Warm is the idle resting state, not actively running. Only 'running' status consumes compute. Warm sprites are not costing compute."
+    },
+    {
+      "id": 8,
+      "prompt": "I want to run two services on my sprite — a web server on port 3000 and a background worker. How do I set that up so both auto-start?",
+      "expected_output": "Should explain that only ONE service can have --http-port. Create the web server with --http-port 3000, create the worker without --http-port. Both will auto-restart on wake. Use --needs if the worker depends on the web server."
+    }
+  ]
+}

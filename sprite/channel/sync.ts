@@ -142,7 +142,9 @@ export async function syncToR2(): Promise<void> {
   let uploaded = 0;
   for (const filePath of toUpload) {
     const relPath = relative(HOME, filePath);
-    const key = `${SPRITE_ID}/${relPath}`;
+    // Remap .claude/memory/ → memory/ so Obsidian doesn't hide dotfolders
+    const vaultPath = relPath.replace(/^\.claude\/memory\//, "memory/");
+    const key = `${SPRITE_ID}/${vaultPath}`;
 
     try {
       const content = await Bun.file(filePath).text();

@@ -22,12 +22,23 @@ const HOME = "/home/sprite";
 // Skip: node_modules, .claude/todos, .claude/settings
 const SKIP_PATTERNS = [
   "node_modules",
-  ".claude/todos",
-  ".claude/settings",
   ".cursor",
   ".gemini",
   ".codex",
+  ".claude/todos",
+  ".claude/settings",
+  ".claude/skills",  // Claude Code internal, not our skills
 ];
+
+// Map Sprite filesystem paths → clean vault paths
+// .claude/memory/ → memory/  (strip the .claude wrapper)
+// Everything else keeps its relative path as-is
+function toVaultPath(relPath: string): string {
+  if (relPath.startsWith(".claude/memory/")) {
+    return relPath.replace(/^\.claude\/memory\//, "memory/");
+  }
+  return relPath;
+}
 
 interface SyncState {
   lastSync: number; // epoch ms
@@ -131,8 +142,7 @@ export async function syncToR2(): Promise<void> {
   let uploaded = 0;
   for (const filePath of toUpload) {
     const relPath = relative(HOME, filePath);
-    // Strip leading dots from path segments so Obsidian shows them
-    const vaultPath = relPath.replace(/\/\./g, "/").replace(/^\./, "");
+    const vaultPath = toVaultPath(relPath);
     const key = `${SPRITE_ID}/${vaultPath}`;
 
     try {

@@ -1,8 +1,8 @@
 [
   {
-    "id": "swain-advisor",
-    "name": "Swain Advisor",
-    "url": "https://swain-advisor-bas32.sprites.app",
+    "id": "pete-advisor",
+    "name": "Pete's Advisor",
+    "url": "https://pete-advisor-bas32.sprites.app",
     "discordChannelIds": ["1484682945691390035"],
     "allowDMs": true,
     "phoneNumbers": ["+14156239773"]

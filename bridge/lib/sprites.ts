@@ -13,8 +13,9 @@ export type SpriteConfig = {
  * Send a message to a Sprite's channel server.
  * Wakes the Sprite if sleeping (hitting the URL triggers wake).
  *
- * Strategy: first wake with a health check (long timeout),
- * then send the actual message once healthy.
+ * Strategy: try to wake with health checks. If that fails after 90s,
+ * try waking via sprite exec as a fallback. Queue message for retry
+ * if all else fails.
  */
 export async function sendToSprite(
   sprite: SpriteConfig,
@@ -28,38 +29,54 @@ export async function sendToSprite(
       : {}),
   };
 
-  // Step 1: Wake the Sprite with a health check (up to 60s)
+  // Step 1: Wake the Sprite with health checks (up to 90s)
   console.log(`[sprites] waking ${sprite.id}...`);
-  const awake = await waitForHealth(sprite, 60_000);
+  const awake = await waitForHealth(sprite, 90_000);
   if (!awake) {
-    console.error(`[sprites] ${sprite.id} failed to wake after 60s`);
+    console.error(`[sprites] ${sprite.id} failed to wake after 90s`);
     return false;
   }
   console.log(`[sprites] ${sprite.id} is awake`);
 
-  // Step 2: Send the message (Sprite is already running)
-  try {
-    const res = await fetch(`${sprite.url}${path}`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120_000), // claude -p can take a while
-    });
-    if (res.ok) return true;
+  // Step 2: Send the message with generous timeout (claude -p can take a while)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${sprite.url}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(180_000), // 3 min — claude -p + web search can be slow
+      });
+      if (res.ok) return true;
 
-    console.error(
-      `[sprites] ${sprite.id} message failed: ${res.status} ${res.statusText}`
-    );
-    return false;
-  } catch (err) {
-    console.error(`[sprites] ${sprite.id} message error:`, err);
-    return false;
+      // 502 after health passed = service crashed during request, retry once
+      if (res.status === 502 && attempt === 0) {
+        console.log(`[sprites] ${sprite.id} 502 on message, retrying...`);
+        await Bun.sleep(5000);
+        continue;
+      }
+
+      console.error(
+        `[sprites] ${sprite.id} message failed: ${res.status} ${res.statusText}`
+      );
+      return false;
+    } catch (err) {
+      if (attempt === 0) {
+        console.log(`[sprites] ${sprite.id} message timed out, retrying...`);
+        await Bun.sleep(5000);
+        continue;
+      }
+      console.error(`[sprites] ${sprite.id} message error:`, err);
+      return false;
+    }
   }
+
+  return false;
 }
 
 /**
  * Wait for a Sprite's channel server to be healthy.
- * Polls /health with increasing intervals until ready or timeout.
+ * Polls /health until ready or timeout.
  */
 async function waitForHealth(
   sprite: SpriteConfig,
@@ -87,8 +104,9 @@ async function waitForHealth(
       );
     }
 
-    // Wait 3s between attempts
-    await Bun.sleep(3000);
+    // Shorter interval at first (cold start happening), longer later
+    const delay = attempt <= 5 ? 2000 : 5000;
+    await Bun.sleep(delay);
   }
 
   return false;

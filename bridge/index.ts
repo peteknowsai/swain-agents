@@ -102,6 +102,8 @@ Bun.serve({
         console.error(
           `[bridge] failed to reach sprite ${entry.id} for iMessage from ${parsed.address}`
         );
+        // Let the captain know we're having trouble
+        await imessageReply(parsed.address, "Hey, give me a sec — just waking up. Try again in a minute.");
       }
 
       return Response.json({ ok: true });

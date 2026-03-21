@@ -221,6 +221,32 @@ Bun.serve({
       return Response.json({ ok: true });
     }
 
+    // Reverse proxy: /data/* and /_next/* and /api/* → Stoolap Studio on port 3000
+    if (url.pathname.startsWith("/data") || url.pathname.startsWith("/_next") || url.pathname.startsWith("/api/")) {
+      const studioPath = url.pathname.startsWith("/data")
+        ? (url.pathname.replace(/^\/data/, "") || "/")
+        : url.pathname;
+      const studioUrl = `http://localhost:3000${studioPath}${url.search}`;
+      try {
+        const proxyReq = new Request(studioUrl, {
+          method: req.method,
+          headers: req.headers,
+          body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
+        });
+        const proxyRes = await fetch(proxyReq);
+        const body = await proxyRes.arrayBuffer();
+        const headers = new Headers(proxyRes.headers);
+        headers.delete("content-encoding");
+        return new Response(body, {
+          status: proxyRes.status,
+          headers,
+        });
+      } catch (err) {
+        console.error("[channel] studio proxy error:", err);
+        return Response.json({ error: "Studio unavailable" }, { status: 502 });
+      }
+    }
+
     return new Response("not found", { status: 404 });
   },
 });

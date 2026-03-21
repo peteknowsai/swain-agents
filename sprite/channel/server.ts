@@ -5,72 +5,68 @@
  * Receives messages from Bridge via HTTP, runs `claude -p` with session
  * resume for conversation continuity, sends replies back to Bridge.
  *
- * No MCP, no channels, no TTY, no interactive prompts.
- * Process per message: start → process → exit → Sprite can sleep.
+ * One persistent session per captain — resumes the same conversation
+ * every time. Session survives Sprite sleep via disk persistence.
  *
  * HTTP endpoints (called by Bridge):
- *   POST /message   — inbound message, runs claude -p, replies to Bridge
- *   POST /cron      — cron trigger
+ *   POST /message   — inbound message, runs claude -p --resume, replies to Bridge
+ *   POST /cron      — cron trigger (separate session per cron type)
  *   GET  /health    — health check
  */
-
-import { $ } from "bun";
 
 const PORT = Number(process.env.CHANNEL_PORT ?? 8080);
 const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const CLAUDE_PATH = process.env.CLAUDE_PATH ?? "/home/sprite/.local/bin/claude";
-const SESSION_DIR = "/home/sprite/.claude-sessions";
+const SESSION_FILE = "/home/sprite/.claude-sessions/sessions.json";
 const startTime = Date.now();
 
-// Track session IDs per chat for conversation continuity
-const sessions = new Map<string, string>();
-
-// Persist sessions to disk so they survive Sprite sleep
-const SESSION_MAP_FILE = `${SESSION_DIR}/sessions.json`;
+// Session map: chatId → sessionId
+let sessions: Record<string, string> = {};
 
 async function loadSessions(): Promise<void> {
   try {
-    const file = Bun.file(SESSION_MAP_FILE);
+    const file = Bun.file(SESSION_FILE);
     if (await file.exists()) {
-      const data = await file.json();
-      for (const [k, v] of Object.entries(data)) {
-        sessions.set(k, v as string);
-      }
+      sessions = await file.json();
+      console.log(`[channel] loaded ${Object.keys(sessions).length} session(s)`);
     }
   } catch {}
 }
 
 async function saveSessions(): Promise<void> {
-  await Bun.write(
-    SESSION_MAP_FILE,
-    JSON.stringify(Object.fromEntries(sessions), null, 2)
-  );
+  await Bun.write(SESSION_FILE, JSON.stringify(sessions, null, 2));
 }
 
-await $`mkdir -p ${SESSION_DIR}`.quiet();
+// Ensure session dir exists
+await Bun.spawn(["mkdir", "-p", "/home/sprite/.claude-sessions"]).exited;
 await loadSessions();
 
 /**
- * Run claude -p with optional session resume.
+ * Run claude -p with session resume.
  * Returns the response text.
  */
 async function runClaude(
   prompt: string,
-  chatId?: string
+  chatId: string
 ): Promise<string> {
   const args = [
     CLAUDE_PATH,
     "-p",
     prompt,
-    "--output-format", "text",
+    "--output-format", "json",
     "--dangerously-skip-permissions",
-    "--append-system-prompt", "You are a helpful assistant. Always use WebSearch and WebFetch tools for real-time information like scores, weather, news, prices, etc. Never say you don't have access — you DO have web access via tools.",
+    "--append-system-prompt",
+    "You are a helpful assistant communicating via iMessage. Keep replies concise — you're texting. Always use WebSearch and WebFetch tools for real-time information like scores, weather, news, prices, etc. Never say you don't have access — you DO have web access via tools.",
   ];
 
   // Resume existing session for this chat
-  if (chatId && sessions.has(chatId)) {
-    args.push("--resume", sessions.get(chatId)!);
+  const existingSession = sessions[chatId];
+  if (existingSession) {
+    args.push("--resume", existingSession);
+    console.log(`[claude] resuming session ${existingSession.slice(0, 8)}... for ${chatId}`);
+  } else {
+    console.log(`[claude] starting new session for ${chatId}`);
   }
 
   try {
@@ -81,23 +77,42 @@ async function runClaude(
       stderr: "pipe",
     });
 
-    const output = await new Response(proc.stdout).text();
+    const stdout = await new Response(proc.stdout).text();
     const stderr = await new Response(proc.stderr).text();
     const exitCode = await proc.exited;
 
     if (exitCode !== 0) {
-      console.error(`[claude] exit ${exitCode}: ${stderr.slice(0, 200)}`);
+      console.error(`[claude] exit ${exitCode}: ${stderr.slice(0, 300)}`);
+
+      // If resume failed (corrupt/missing session), try fresh
+      if (existingSession && stderr.includes("session")) {
+        console.log(`[claude] session ${existingSession.slice(0, 8)} may be invalid, retrying fresh...`);
+        delete sessions[chatId];
+        await saveSessions();
+        return runClaude(prompt, chatId);
+      }
+
+      return "Sorry, I had trouble processing that. Try again in a moment.";
     }
 
-    // Try to extract session ID from stderr for resume
-    // Claude -p outputs session info to stderr
-    const sessionMatch = stderr.match(/session_id['":\s]+([a-f0-9-]+)/i);
-    if (sessionMatch && chatId) {
-      sessions.set(chatId, sessionMatch[1]);
-      await saveSessions();
-    }
+    // Parse JSON response to get session_id and result
+    try {
+      const result = JSON.parse(stdout.trim());
+      const sessionId = result.session_id;
+      const text = result.result ?? "";
 
-    return output.trim();
+      if (sessionId) {
+        sessions[chatId] = sessionId;
+        await saveSessions();
+        console.log(`[claude] session ${sessionId.slice(0, 8)}... → ${text.slice(0, 60)}`);
+      }
+
+      return text;
+    } catch {
+      // If JSON parse fails, return raw output
+      console.error(`[claude] failed to parse JSON output, returning raw`);
+      return stdout.trim();
+    }
   } catch (err) {
     console.error(`[claude] error:`, err);
     return "Sorry, I had trouble processing that. Try again in a moment.";
@@ -145,7 +160,7 @@ Bun.serve({
         ok: true,
         mode: "print",
         uptime: Math.floor((Date.now() - startTime) / 1000),
-        sessions: sessions.size,
+        sessions: Object.keys(sessions).length,
       });
     }
 
@@ -159,10 +174,11 @@ Bun.serve({
         userId?: string;
       };
 
+      const chatId = body.chatId ?? body.userId ?? "default";
       console.log(`[channel] message from ${body.user ?? "unknown"}: ${body.text.slice(0, 80)}`);
 
-      // Run claude -p
-      const response = await runClaude(body.text, body.chatId);
+      // Run claude -p with session resume
+      const response = await runClaude(body.text, chatId);
 
       // Send reply back to Bridge
       if (response) {
@@ -176,7 +192,7 @@ Bun.serve({
       return Response.json({ ok: true });
     }
 
-    // Cron trigger from Bridge
+    // Cron trigger from Bridge (separate sessions per cron)
     if (url.pathname === "/cron" && req.method === "POST") {
       const body = (await req.json()) as {
         skill: string;

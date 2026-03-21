@@ -215,6 +215,43 @@ Install anything else with `apt`, `pip`, `npm`, `cargo`, etc. — it persists.
 - **Checkpoints count against storage quota.** Delete old ones to free space.
 - **Cold start + service auto-start can take a few seconds.** Build retry logic into anything that depends on the Sprite URL being immediately available.
 
+## Maintenance
+
+Sprites are persistent — everything stays, including the OS. Long-running Sprites need occasional updates.
+
+### Check OS version
+
+```bash
+sprite exec -s <name> -- lsb_release -d
+```
+
+### Upgrade OS in-place
+
+If destroying and recreating isn't practical (the Sprite has state you need to keep):
+
+```bash
+sprite exec -s <name> -- bash -c '
+  sudo apt update && sudo apt install -y ubuntu-release-upgrader-core
+  sudo apt upgrade -y
+  sudo do-release-upgrade
+  sudo apt upgrade -y
+'
+```
+
+Checkpoint before upgrading — `sprite checkpoint create -s <name> --comment "before OS upgrade"`.
+
+Bundled software (agents, language toolchains) must be upgraded separately after the OS upgrade.
+
+### Upgrade by replacing
+
+If the Sprite's state is reproducible (scripted setup):
+
+1. Checkpoint the old Sprite
+2. Create a new Sprite (gets latest OS)
+3. Run your setup script
+4. Update any references to the new Sprite name/URL
+5. Destroy the old one
+
 ### Creating Sprites in automation
 
 ```bash

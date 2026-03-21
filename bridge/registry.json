@@ -4,6 +4,7 @@
     "name": "Swain Advisor",
     "url": "https://swain-advisor-bas32.sprites.app",
     "discordChannelIds": ["1484682945691390035"],
-    "allowDMs": true
+    "allowDMs": true,
+    "phoneNumbers": ["+14156239773"]
   }
 ]

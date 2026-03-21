@@ -1,5 +1,5 @@
 /**
- * Registry — maps Discord channels to Sprites.
+ * Registry — maps Discord channels and phone numbers to Sprites.
  *
  * Simple JSON config for now. Move to Convex later.
  */
@@ -9,7 +9,8 @@ import type { SpriteConfig } from "./sprites.ts";
 export type RegistryEntry = SpriteConfig & {
   name: string;
   discordChannelIds: string[]; // guild channel IDs this Sprite listens to
-  allowDMs: boolean; // whether this Sprite accepts DMs
+  allowDMs: boolean; // whether this Sprite accepts Discord DMs
+  phoneNumbers: string[]; // iMessage addresses (phone or email) routed to this Sprite
 };
 
 let entries: RegistryEntry[] = [];
@@ -32,10 +33,29 @@ export function findByChannel(channelId: string): RegistryEntry | undefined {
 }
 
 /**
- * Find a Sprite that accepts DMs (for now, first one wins).
+ * Find a Sprite that accepts Discord DMs (first one wins).
  */
 export function findForDM(): RegistryEntry | undefined {
   return entries.find((e) => e.allowDMs);
+}
+
+/**
+ * Find a Sprite by phone number or iMessage address.
+ */
+export function findByPhone(address: string): RegistryEntry | undefined {
+  // Normalize: strip spaces/dashes for comparison
+  const normalized = address.replace(/[\s\-()]/g, "");
+  return entries.find((e) =>
+    e.phoneNumbers.some((p) => p.replace(/[\s\-()]/g, "") === normalized)
+  );
+}
+
+/**
+ * Find the default Sprite for unregistered iMessage senders.
+ */
+export function findDefaultForIMessage(): RegistryEntry | undefined {
+  // For now, first sprite with any phoneNumbers config gets unregistered messages
+  return entries.find((e) => e.phoneNumbers.length > 0);
 }
 
 /**

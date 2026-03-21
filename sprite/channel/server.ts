@@ -65,6 +65,7 @@ async function runClaude(
     prompt,
     "--output-format", "text",
     "--dangerously-skip-permissions",
+    "--append-system-prompt", "You are a helpful assistant. Always use WebSearch and WebFetch tools for real-time information like scores, weather, news, prices, etc. Never say you don't have access — you DO have web access via tools.",
   ];
 
   // Resume existing session for this chat
@@ -74,12 +75,7 @@ async function runClaude(
 
   try {
     const proc = Bun.spawn(args, {
-      env: {
-        ...process.env,
-        CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN ?? "",
-        PATH: process.env.PATH ?? "",
-        HOME: process.env.HOME ?? "/home/sprite",
-      },
+      env: process.env,
       cwd: "/home/sprite",
       stdout: "pipe",
       stderr: "pipe",

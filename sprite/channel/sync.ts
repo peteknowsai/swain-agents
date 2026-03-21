@@ -18,10 +18,9 @@ const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const SYNC_STATE_FILE = "/home/sprite/.sync-state.json";
 const HOME = "/home/sprite";
 
-// Directories to sync (relative to HOME)
-const SYNC_DIRS = [".claude/memory", "notes"];
-// Individual files to sync (relative to HOME)
-const SYNC_FILES = ["CLAUDE.md"];
+// Sync everything — find all .md files under HOME
+// Skip: node_modules, .claude/todos, .claude/settings
+const SKIP_PATTERNS = ["node_modules", ".claude/todos", ".claude/settings"];
 
 interface SyncState {
   lastSync: number; // epoch ms
@@ -74,9 +73,9 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
+      const relPath = relative(HOME, fullPath);
+      if (SKIP_PATTERNS.some((p) => relPath.includes(p))) continue;
       if (entry.isDirectory()) {
-        // Skip hidden dirs except .claude
-        if (entry.name.startsWith(".") && entry.name !== ".claude") continue;
         results.push(...(await findMarkdownFiles(fullPath)));
       } else if (entry.name.endsWith(".md")) {
         results.push(fullPath);
@@ -102,34 +101,17 @@ export async function syncToR2(): Promise<void> {
   const newMtimes: Record<string, number> = {};
   const toUpload: string[] = [];
 
-  // Collect files from sync directories
-  for (const dir of SYNC_DIRS) {
-    const absDir = join(HOME, dir);
-    const files = await findMarkdownFiles(absDir);
-    for (const file of files) {
-      const relPath = relative(HOME, file);
-      const fileStat = await stat(file);
-      const mtime = fileStat.mtimeMs;
-      newMtimes[relPath] = mtime;
+  // Scan all .md files under HOME
+  const files = await findMarkdownFiles(HOME);
+  for (const file of files) {
+    const relPath = relative(HOME, file);
+    const fileStat = await stat(file);
+    const mtime = fileStat.mtimeMs;
+    newMtimes[relPath] = mtime;
 
-      if (!state.mtimes[relPath] || state.mtimes[relPath] < mtime) {
-        toUpload.push(file);
-      }
+    if (!state.mtimes[relPath] || state.mtimes[relPath] < mtime) {
+      toUpload.push(file);
     }
-  }
-
-  // Check individual files
-  for (const file of SYNC_FILES) {
-    const absPath = join(HOME, file);
-    try {
-      const fileStat = await stat(absPath);
-      const mtime = fileStat.mtimeMs;
-      newMtimes[file] = mtime;
-
-      if (!state.mtimes[file] || state.mtimes[file] < mtime) {
-        toUpload.push(absPath);
-      }
-    } catch {}
   }
 
   if (toUpload.length === 0) {
@@ -142,8 +124,8 @@ export async function syncToR2(): Promise<void> {
   let uploaded = 0;
   for (const filePath of toUpload) {
     const relPath = relative(HOME, filePath);
-    // Remap .claude/memory/ → memory/ so Obsidian doesn't hide dotfolders
-    const vaultPath = relPath.replace(/^\.claude\/memory\//, "memory/");
+    // Strip leading dots from path segments so Obsidian shows them
+    const vaultPath = relPath.replace(/\/\./g, "/").replace(/^\./, "");
     const key = `${SPRITE_ID}/${vaultPath}`;
 
     try {

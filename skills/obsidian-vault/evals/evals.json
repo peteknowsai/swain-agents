@@ -1,0 +1,170 @@
+{
+  "skill_name": "obsidian-vault",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write a memory entry about a captain named Jake who just told you he has a 38' Catalina called Wind Dancer docked at Channel Islands Harbor. He's been sailing 15 years and prefers afternoon sails.",
+      "expected_output": "Should create a captain.md with YAML frontmatter containing type: captain, name, experience level, marina/boat wikilinks, tags array, and updated date. Body should use wikilinks like [[Boat|Wind Dancer]] and [[Marina|Channel Islands Harbor]]. Should NOT be plain markdown without frontmatter.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "valid-frontmatter",
+          "text": "File starts with --- and has valid YAML frontmatter block closed with ---",
+          "type": "manual"
+        },
+        {
+          "id": "correct-type",
+          "text": "Frontmatter contains type: captain",
+          "type": "manual"
+        },
+        {
+          "id": "wikilinks-present",
+          "text": "Body contains wikilinks to [[Boat]] or [[Boat|Wind Dancer]] and [[Marina]] or [[Marina|Channel Islands Harbor]]",
+          "type": "manual"
+        },
+        {
+          "id": "tags-present",
+          "text": "Frontmatter contains tags array including 'captain'",
+          "type": "manual"
+        },
+        {
+          "id": "updated-date",
+          "text": "Frontmatter contains updated field with a YYYY-MM-DD date",
+          "type": "manual"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a daily note summarizing today's conversation. The captain asked about guest dock fees at his marina (Pier 39 Marina) and mentioned his daughter Sarah is visiting next week and wants to go sailing on the boat.",
+      "expected_output": "Should create a daily note at notes/YYYY-MM-DD.md with frontmatter containing type: daily, today's date, captain wikilink, and tags. Body should link to [[Marina|Pier 39 Marina]], [[Captain]], and [[Family]]. Tags should include daily and relevant topic tags.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "valid-frontmatter",
+          "text": "File starts with --- and has valid YAML frontmatter with type: daily",
+          "type": "manual"
+        },
+        {
+          "id": "date-in-frontmatter",
+          "text": "Frontmatter contains date field with YYYY-MM-DD format",
+          "type": "manual"
+        },
+        {
+          "id": "captain-wikilink",
+          "text": "Frontmatter or body contains [[Captain]] wikilink",
+          "type": "manual"
+        },
+        {
+          "id": "marina-wikilink",
+          "text": "Body contains [[Marina]] or [[Marina|Pier 39 Marina]] wikilink",
+          "type": "manual"
+        },
+        {
+          "id": "tags-present",
+          "text": "Frontmatter tags array includes 'daily'",
+          "type": "manual"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "The captain's boat memory file already exists with basic info. He just told you the engine is a Volvo Penta D2-40 with 320 hours, and the last oil change was at 280 hours. Update the boat memory file to include this new engine information while preserving the existing frontmatter and content.",
+      "expected_output": "Should update the existing boat.md file, preserving the existing YAML frontmatter (type: boat, name, makeModel, etc.) while adding or updating engine-related fields. Should update the 'updated' date. Body should include engine details and link to [[Maintenance]] or [[Systems]] for related info.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "preserves-frontmatter",
+          "text": "Keeps existing frontmatter fields (type: boat, name, etc.) and updates the 'updated' date",
+          "type": "manual"
+        },
+        {
+          "id": "correct-type",
+          "text": "Frontmatter still has type: boat (not changed to something else)",
+          "type": "manual"
+        },
+        {
+          "id": "engine-info-added",
+          "text": "Body or frontmatter includes the Volvo Penta D2-40, 320 hours, and oil change at 280 hours",
+          "type": "manual"
+        },
+        {
+          "id": "updated-date-current",
+          "text": "Frontmatter 'updated' field reflects today's date",
+          "type": "manual"
+        },
+        {
+          "id": "related-links",
+          "text": "Includes wikilinks to related notes like [[Maintenance]] or [[Systems]]",
+          "type": "manual"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Write a memory entry for a captain's family. He mentioned his wife Maria loves sunset cruises, their son Tommy (12) is learning to sail, and their dog Max always comes aboard. The captain's boat is Blue Horizon.",
+      "expected_output": "Should create a family.md with frontmatter type: family, captain wikilink, tags including family and captain. Body should mention each family member with context, link to [[Boat|Blue Horizon]] and [[Captain]]. Should NOT use type: captain for family info.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "correct-type",
+          "text": "Frontmatter has type: family (not captain or memory)",
+          "type": "manual"
+        },
+        {
+          "id": "captain-link",
+          "text": "Frontmatter or body includes [[Captain]] wikilink",
+          "type": "manual"
+        },
+        {
+          "id": "boat-link",
+          "text": "Body includes [[Boat]] or [[Boat|Blue Horizon]] wikilink",
+          "type": "manual"
+        },
+        {
+          "id": "tags-present",
+          "text": "Frontmatter tags include 'family'",
+          "type": "manual"
+        },
+        {
+          "id": "all-members",
+          "text": "Body mentions Maria, Tommy, and Max with relevant context",
+          "type": "manual"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Create a conversation summary for a briefing you just delivered to the captain via iMessage. The briefing covered a small craft advisory for tomorrow, a new fuel dock opening at the marina, and a reminder about the boat's registration renewal next month.",
+      "expected_output": "Should create a conversation note with frontmatter type: conversation, date, channel: imessage, captain wikilink, topic, and tags. Body should summarize the briefing content and link to relevant notes like [[Weather]], [[Marina]], [[Boat]]. Tags should include conversation plus relevant topic tags.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "correct-type",
+          "text": "Frontmatter has type: conversation",
+          "type": "manual"
+        },
+        {
+          "id": "channel-field",
+          "text": "Frontmatter includes channel: imessage",
+          "type": "manual"
+        },
+        {
+          "id": "date-present",
+          "text": "Frontmatter includes date in YYYY-MM-DD format",
+          "type": "manual"
+        },
+        {
+          "id": "wikilinks-to-topics",
+          "text": "Body includes wikilinks to relevant notes (e.g., [[Weather]], [[Marina]], [[Boat]])",
+          "type": "manual"
+        },
+        {
+          "id": "conversation-tag",
+          "text": "Frontmatter tags include 'conversation'",
+          "type": "manual"
+        }
+      ]
+    }
+  ]
+}

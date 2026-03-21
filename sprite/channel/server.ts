@@ -14,6 +14,8 @@
  *   GET  /health    — health check
  */
 
+import { syncToR2 } from "./sync";
+
 const PORT = Number(process.env.CHANNEL_PORT ?? 8080);
 const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
@@ -189,6 +191,9 @@ Bun.serve({
         });
       }
 
+      // Sync vault to R2 in background — don't block the response
+      syncToR2().catch((err) => console.error("[channel] vault sync error:", err));
+
       return Response.json({ ok: true });
     }
 
@@ -209,6 +214,9 @@ Bun.serve({
           chatId: `cron:${body.skill}`,
         });
       }
+
+      // Sync vault to R2 after cron too
+      syncToR2().catch((err) => console.error("[channel] vault sync error:", err));
 
       return Response.json({ ok: true });
     }

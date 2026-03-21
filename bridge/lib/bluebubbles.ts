@@ -2,7 +2,7 @@
  * BlueBubbles API client — send/receive iMessages via the Mac mini.
  */
 
-const BB_URL = process.env.BLUEBUBBLES_URL ?? "http://100.103.58.104:1234";
+const BB_URL = process.env.BLUEBUBBLES_URL ?? "https://messages.heyswain.com";
 const BB_PASSWORD = process.env.BLUEBUBBLES_PASSWORD ?? "swain2026";
 
 /**

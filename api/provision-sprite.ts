@@ -196,7 +196,25 @@ async function setupSprite(name: string): Promise<void> {
   const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
   await writeToSprite(name, "/home/sprite/CLAUDE.md", poolClaudeMd);
 
-  // 8a. Seed MEMORY.md index
+  // 8a. Seed MEMORY.md index and implant starter yearnings
+  const yearningLines: string[] = [];
+  const YEARNINGS_TEMPLATE_DIR = join(SPRITE_TEMPLATES_DIR, "yearnings");
+  try {
+    const { readdir } = await import("fs/promises");
+    const yearningFiles = await readdir(YEARNINGS_TEMPLATE_DIR);
+    const today = new Date().toISOString().split("T")[0];
+    for (const file of yearningFiles) {
+      if (!file.endsWith(".md")) continue;
+      let content = await readFile(join(YEARNINGS_TEMPLATE_DIR, file), "utf-8");
+      content = content.replaceAll("{{today}}", today);
+      await writeToSprite(name, `/home/sprite/.claude/memory/yearnings/${file}`, content);
+      const subject = content.match(/subject: "(.+?)"/)?.[1] || file.replace(".md", "");
+      yearningLines.push(`- [yearnings/${file}](yearnings/${file}) — ${subject}`);
+    }
+  } catch (err) {
+    console.warn(`Yearning seeding failed (non-fatal): ${err}`);
+  }
+
   await writeToSprite(name, "/home/sprite/.claude/memory/MEMORY.md", [
     "# MEMORY.md",
     "",
@@ -206,7 +224,7 @@ async function setupSprite(name: string): Promise<void> {
     "",
     "## Yearnings",
     "",
-    "No yearnings yet.",
+    ...(yearningLines.length > 0 ? yearningLines : ["No yearnings yet."]),
     "",
     "## Daily Notes",
     "",

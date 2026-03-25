@@ -118,6 +118,27 @@ Append to or create `notes/YYYY-MM-DD.md`:
 - Conversation highlights
 - Observations about the captain's mood, interests, patterns
 
+## Phase 6 — Structured data & embeddings
+
+Memory files are freeform knowledge. But some things benefit from structure — and that structure should emerge from what you've learned, not be prescribed upfront.
+
+**When to create database structure:**
+- You notice you're tracking the same kind of thing repeatedly (maintenance events, trip logs, fuel stops) → that's a table
+- You have knowledge worth searching semantically (boat observations, captain preferences across many topics) → that's an embedding
+- You find yourself scanning long memory files for specific facts → the data wants structure
+
+**How:**
+- **Tables** — use `stoolap` to create tables as needed. Design the schema based on what you actually have, not what you might need someday.
+- **Embeddings** — use `swain knowledge store` to embed facts you want to search later. The knowledge DB is a vector store — semantic search across everything you've learned.
+- **Don't duplicate** — structured data and memory files serve different purposes. Memory files are narrative context (for session orientation). Database tables are queryable facts (for computation). Embeddings are for semantic search (for "do I know anything about...?").
+
+**Example emergence:**
+- First maintenance mention → goes in a memory file
+- Third maintenance mention → pattern emerging, create a `maintenance_log` table
+- Captain's boat has 20 knowledge entries → embed them for semantic search before briefings
+
+Let this happen naturally. Not every dream needs a new table. Most won't.
+
 ---
 
 Return a brief summary of what you consolidated, updated, or pruned. If nothing changed (memories are already tight), say so.

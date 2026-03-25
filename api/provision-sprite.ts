@@ -536,8 +536,17 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   }
 
   // 6. Trigger intro message (fire-and-forget)
+  //    Detect returning captains by checking onboardingStatus in Convex
   if (phone) {
-    triggerIntro(spriteUrl, agentId, input, phone);
+    let returning = false;
+    try {
+      const proc = Bun.spawn(["swain", "user", "get", input.userId, "--json"], { stdout: "pipe", stderr: "pipe" });
+      const userJson = await new Response(proc.stdout).text();
+      await proc.exited;
+      const userData = JSON.parse(userJson);
+      returning = userData?.onboardingStatus === "completed";
+    } catch {}
+    triggerIntro(spriteUrl, agentId, input, phone, returning);
   }
 
   console.log(`Advisor ${agentId} assigned to ${input.name} (${input.userId}) on sprite ${spriteName}`);
@@ -1207,14 +1216,23 @@ async function reloadBridgeRegistry(): Promise<void> {
 
 // --- Intro message ---
 
-function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, phone: string): void {
-  const introPrompt = [
-    `You've just been assigned as ${input.name}'s advisor.`,
-    `Read your CLAUDE.md for full context about who you are and how to communicate.`,
-    `Send a warm, brief intro message — 1-2 sentences max. You're texting via iMessage.`,
-    `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
-    `Don't mention anything about being assigned or activated. Just be natural — like a dock neighbor saying hey for the first time.`,
-  ].join(" ");
+function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, phone: string, returning?: boolean): void {
+  const introPrompt = returning
+    ? [
+        `You're reconnecting with ${input.name} — a returning captain.`,
+        `Read your CLAUDE.md for context. Check their profile: swain user get ${input.userId} --json`,
+        `Send a brief reconnection message via iMessage — 1-2 sentences. Acknowledge you've been away.`,
+        `Something like "Hey ${input.name}, been a minute — I'm back and keeping an eye on things for you." Reference their boat if you know it.`,
+        `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}".`,
+        `Don't over-explain. Just be natural — like running into a dock neighbor after a while.`,
+      ].join(" ")
+    : [
+        `You've just been assigned as ${input.name}'s advisor.`,
+        `Read your CLAUDE.md for full context about who you are and how to communicate.`,
+        `Send a warm, brief intro message — 1-2 sentences max. You're texting via iMessage.`,
+        `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
+        `Don't mention anything about being assigned or activated. Just be natural — like a dock neighbor saying hey for the first time.`,
+      ].join(" ");
 
   fetch(`${spriteUrl}/message`, {
     method: "POST",

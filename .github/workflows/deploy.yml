@@ -9,12 +9,15 @@ on:
       - 'skills/**'
       - 'templates/**'
       - 'sprite/**'
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6am UTC — update Claude Code on all sprites
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy API + Bridge
+        if: github.event_name == 'push'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -33,3 +36,15 @@ jobs:
             systemctl restart swain-bridge
             sleep 2
             systemctl is-active swain-bridge
+
+      - name: Update Claude Code on all sprites
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            export PATH=/root/.local/bin:/root/.bun/bin:$PATH
+            export HOME=/root
+            cd /root/clawd/swain-agents && git pull
+            bash sprite/scripts/update-claude.sh

@@ -36,6 +36,7 @@ const CHANNEL_DIR = join(__dirname, "..", "sprite", "channel");
 const SPRITE_ENV_VARS = {
   CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN || "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || "",
   BRIDGE_URL: process.env.BRIDGE_URL || "http://76.13.106.143:3848",
   SWAIN_API_TOKEN: process.env.SWAIN_API_TOKEN || "",
   R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "a18dd41e124527b88c6f76255c8ce27e",
@@ -198,6 +199,21 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
     "https://github.com/peteknowsai/swain-agents/releases/latest/download/swain-linux-x64",
     "&& chmod +x /usr/local/bin/swain",
   ].join(" "));
+
+  // Install firecrawl CLI (npm global + symlink to PATH)
+  await execOnSprite(name, "npm install -g firecrawl-cli 2>/dev/null && ln -sf /.sprite/languages/node/nvm/versions/node/*/bin/firecrawl /usr/local/bin/firecrawl || true");
+
+  // Install goplaces (copy from VPS — static Go binary)
+  try {
+    const { execSync } = await import("child_process");
+    execSync(
+      `cat /usr/local/bin/goplaces | sprite exec -s ${name} -- bash -c "cat > /usr/local/bin/goplaces && chmod +x /usr/local/bin/goplaces"`,
+      { env: { ...process.env, HOME: "/root", PATH: `/root/.local/bin:${process.env.PATH}` }, timeout: 30_000 },
+    );
+    console.log(`GoPlaces installed on ${name}`);
+  } catch (err) {
+    console.warn(`GoPlaces install failed (non-fatal): ${err}`);
+  }
 
   // Install Stoolap (copy from VPS — no release binary available)
   try {

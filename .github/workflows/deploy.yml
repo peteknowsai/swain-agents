@@ -37,14 +37,16 @@ jobs:
             sleep 2
             systemctl is-active swain-bridge
 
-      - name: Update Claude Code on all sprites
+      - name: Update all tools on all sprites
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 600s
           script: |
             export PATH=/root/.local/bin:/root/.bun/bin:$PATH
             export HOME=/root
             cd /root/clawd/swain-agents && git pull
             bash sprite/scripts/update-claude.sh
+            bash sprite/scripts/update-clis.sh

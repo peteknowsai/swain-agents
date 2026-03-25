@@ -34,18 +34,34 @@ Cover these categories:
 
 Prioritize: zero coverage → low coverage → stale timely content → request themes.
 
-### 3. Research
+### 3. Create, style, and verify cards — ONE AT A TIME
 
-Use Firecrawl, GoPlaces, and web search for real, current, local information. Cross-reference when possible. Never fabricate.
+Do not parallelize card creation. Do not spawn subagents. Work through each card sequentially:
 
-### 4. Create and style cards (one at a time)
+**For each card (complete all steps before starting the next):**
 
-For each card:
-1. Research the topic
-2. Create: `swain card create --desk=<desk> --category=<cat> --title="..." --subtext="..." --content="..." --freshness=<type> --json`
-3. Style: `swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<scene>" --json`
-4. Verify: `swain card verify <cardId> --json`
-5. Move to next card
+1. **Research** — one or two quick web searches on the topic. Don't over-research. Use WebSearch for facts, firecrawl for deeper scraping only if needed.
+
+2. **Write and create** the card:
+   ```bash
+   swain card create --desk=<desk> --category=<cat> --title="..." --subtext="..." --content="..." --freshness=<type> --json
+   ```
+
+3. **Style immediately** — pick a style, write a scene prompt, pick a dark background color:
+   ```bash
+   swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<specific scene description>" --json
+   ```
+   This generates an image via Replicate and uploads to Cloudflare. Takes ~30 seconds.
+
+4. **Verify** the card has both image and backgroundColor:
+   ```bash
+   swain card verify <cardId> --json
+   ```
+   If it fails, retry the image once. If still fails, move on.
+
+5. **Move to the next card.** Do not start the next card until this one is fully styled and verified.
+
+**Speed matters.** Each card should take 2-3 minutes total. Three cards in under 10 minutes. Don't do exhaustive multi-source research — a quick search and your own knowledge is enough.
 
 ### 5. Mark requests fulfilled
 

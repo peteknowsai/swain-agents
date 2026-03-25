@@ -202,7 +202,7 @@ async function setupSprite(name: string): Promise<void> {
   await waitForSpriteHealth(url, 60_000);
 }
 
-function generateLauncherScript(spriteName: string): string {
+function generateLauncherScript(spriteName: string, vaultPrefix?: string): string {
   const envLines = Object.entries(SPRITE_ENV_VARS)
     .filter(([_, v]) => v)
     .map(([k, v]) => `export ${k}="${v}"`)
@@ -211,12 +211,17 @@ function generateLauncherScript(spriteName: string): string {
   return `#!/bin/bash
 ${envLines}
 export SPRITE_ID="${spriteName}"
+export VAULT_PREFIX="${vaultPrefix || spriteName}"
 export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"
 export CHANNEL_PORT="8080"
 export CLAUDE_PATH="/home/sprite/.local/bin/claude"
 cd /home/sprite/channel
 exec bun run server.ts
 `;
+}
+
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 // --- Advisor assignment ---
@@ -283,6 +288,12 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
 
   // 2. Push CLAUDE.md to sprite
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", claudeMd);
+
+  // 2b. Update launcher script with captain's vault prefix
+  const vaultPrefix = slugify(input.name);
+  const launcherScript = generateLauncherScript(spriteName, vaultPrefix);
+  await writeToSprite(spriteName, "/home/sprite/start.sh", launcherScript);
+  await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
 
   // 3. Create boat in Convex
   let boatId: string | undefined;

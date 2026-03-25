@@ -15,6 +15,7 @@ import { readdir, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
+const VAULT_PREFIX = process.env.VAULT_PREFIX ?? SPRITE_ID;
 const SYNC_STATE_FILE = "/home/sprite/.sync-state.json";
 const HOME = "/home/sprite";
 
@@ -143,7 +144,7 @@ export async function syncToR2(): Promise<void> {
   for (const filePath of toUpload) {
     const relPath = relative(HOME, filePath);
     const vaultPath = toVaultPath(relPath);
-    const key = `${SPRITE_ID}/${vaultPath}`;
+    const key = `advisors/${VAULT_PREFIX}/${vaultPath}`;
 
     try {
       const content = await Bun.file(filePath).text();
@@ -171,7 +172,7 @@ export async function syncToR2(): Promise<void> {
     });
     await client.send(new PutObjectCommand({
       Bucket: bucket,
-      Key: `${SPRITE_ID}/_meta.json`,
+      Key: `advisors/${VAULT_PREFIX}/_meta.json`,
       Body: meta,
       ContentType: "application/json",
     }));

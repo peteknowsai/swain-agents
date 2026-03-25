@@ -284,8 +284,8 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   );
 
   // 7. Create launcher script with env vars
-  const launcherScript = generateLauncherScript(name);
-  await writeToSprite(name, "/home/sprite/start.sh", launcherScript);
+  const poolPrefix = type === "desk" ? `pool/desks/${name}` : `pool/advisors/${name}`;
+  const launcherScript = generateLauncherScript(name, poolPrefix);
   await execOnSprite(name, "chmod +x /home/sprite/start.sh");
 
   // 8. Write pool CLAUDE.md (type-specific)
@@ -494,7 +494,7 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", claudeMd);
 
   // 2b. Update launcher script with captain's vault prefix
-  const vaultPrefix = slugify(input.name);
+  const vaultPrefix = `advisors/${slugify(input.name)}`;
   const launcherScript = generateLauncherScript(spriteName, vaultPrefix);
   await writeToSprite(spriteName, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
@@ -562,9 +562,12 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<void> {
 
   const spriteName = entry.spriteName;
 
-  // 1. Reset CLAUDE.md to pool version
+  // 1. Reset CLAUDE.md and launcher to pool version
   const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
+  const poolLauncher = generateLauncherScript(spriteName, `pool/advisors/${spriteName}`);
+  await writeToSprite(spriteName, "/home/sprite/start.sh", poolLauncher);
+  await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
 
   // 2. Clear session data
   try {
@@ -963,7 +966,7 @@ export async function provisionSpriteDesk(input: DeskInput): Promise<{
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", claudeMd);
 
   // 2. Update launcher with vault prefix
-  const vaultPrefix = `desk-${slugify(input.name)}`;
+  const vaultPrefix = `desks/${slugify(input.name)}`;
   const launcherScript = generateLauncherScript(spriteName, vaultPrefix);
   await writeToSprite(spriteName, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
@@ -1022,9 +1025,12 @@ export async function deleteSpriteDesk(agentId: string): Promise<void> {
 
   const spriteName = entry.spriteName;
 
-  // 1. Reset CLAUDE.md
+  // 1. Reset CLAUDE.md and launcher to pool version
   const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.desk-pool"), "utf-8");
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
+  const poolLauncher = generateLauncherScript(spriteName, `pool/desks/${spriteName}`);
+  await writeToSprite(spriteName, "/home/sprite/start.sh", poolLauncher);
+  await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
 
   // 2. Clear sessions and memory
   try {

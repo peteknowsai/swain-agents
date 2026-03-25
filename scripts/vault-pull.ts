@@ -23,7 +23,7 @@ import { join, dirname } from "path";
 
 const VAULT_DIR = process.env.VAULT_DIR || join(process.env.HOME!, "Vaults", "swain");
 const BUCKET = process.env.R2_BUCKET || "swain-vaults";
-const PREFIX = "advisors/"; // only sync advisor files
+const PREFIX = ""; // sync everything — pool/, advisors/, desks/
 
 const s3 = new S3Client({
   region: "auto",

@@ -146,7 +146,7 @@ export async function syncToR2(): Promise<void> {
   for (const filePath of toUpload) {
     const relPath = relative(HOME, filePath);
     const vaultPath = toVaultPath(relPath);
-    const key = `advisors/${VAULT_PREFIX}/${vaultPath}`;
+    const key = `${VAULT_PREFIX}/${vaultPath}`;
 
     try {
       const content = await Bun.file(filePath).text();
@@ -174,7 +174,7 @@ export async function syncToR2(): Promise<void> {
     });
     await client.send(new PutObjectCommand({
       Bucket: bucket,
-      Key: `advisors/${VAULT_PREFIX}/_meta.json`,
+      Key: `${VAULT_PREFIX}/_meta.json`,
       Body: meta,
       ContentType: "application/json",
     }));

@@ -59,7 +59,7 @@ async function runClaude(
     "--output-format", "json",
     "--dangerously-skip-permissions",
     "--append-system-prompt",
-    "You are a helpful assistant communicating via iMessage. Keep replies concise — you're texting. Always use WebSearch and WebFetch tools for real-time information like scores, weather, news, prices, etc. Never say you don't have access — you DO have web access via tools.",
+    "Read your CLAUDE.md for identity and context. Use WebSearch and WebFetch tools for real-time information. You have full web access — never say you can't look something up.",
   ];
 
   // Resume existing session for this chat
@@ -204,7 +204,7 @@ Bun.serve({
         name?: string;
       };
 
-      const prompt = `Read /home/sprite/skills/${body.skill}.md and execute the task described in it. Only use the reply tool if there's something to deliver to the captain.`;
+      const prompt = `Run the ${body.skill} skill. Read your CLAUDE.md for context, then follow the skill's instructions.`;
       const response = await runClaude(prompt, `cron:${body.skill}`);
 
       if (response) {

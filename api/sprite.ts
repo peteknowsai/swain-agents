@@ -15,6 +15,7 @@ export async function sprite(args: string[]): Promise<string> {
     stderr: "pipe",
     env: {
       ...process.env,
+      HOME: process.env.HOME || "/root",
       PATH: `/root/.local/bin:${process.env.PATH}`,
     },
   });
@@ -38,6 +39,7 @@ export async function createSprite(name: string): Promise<void> {
     stderr: "pipe",
     env: {
       ...process.env,
+      HOME: process.env.HOME || "/root",
       PATH: `/root/.local/bin:${process.env.PATH}`,
     },
   });
@@ -76,7 +78,8 @@ export async function writeToSprite(name: string, path: string, content: string)
       stderr: "pipe",
       env: {
         ...process.env,
-        PATH: `/root/.local/bin:${process.env.PATH}`,
+        HOME: process.env.HOME || "/root",
+      PATH: `/root/.local/bin:${process.env.PATH}`,
       },
     },
   );

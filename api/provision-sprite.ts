@@ -36,9 +36,9 @@ const CHANNEL_DIR = join(__dirname, "..", "sprite", "channel");
 const SPRITE_ENV_VARS = {
   BRIDGE_URL: process.env.BRIDGE_URL || "http://76.13.106.143:3848",
   SWAIN_API_TOKEN: process.env.SWAIN_API_TOKEN || "",
-  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "",
-  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "",
-  R2_ENDPOINT: process.env.R2_ENDPOINT || "",
+  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "a18dd41e124527b88c6f76255c8ce27e",
+  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "c722f4980f2977a03c5d1952949452d3e2167848bfdbc2f8fb979f2bd886d8ef",
+  R2_ENDPOINT: process.env.R2_ENDPOINT || "https://5a6fef07a998d84ec047ef43d0543342.r2.cloudflarestorage.com",
   R2_BUCKET: process.env.R2_BUCKET || "swain-vaults",
 };
 

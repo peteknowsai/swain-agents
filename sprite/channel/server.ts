@@ -205,7 +205,9 @@ Bun.serve({
       };
 
       const prompt = `Run the ${body.skill} skill. Read your CLAUDE.md for context, then follow the skill's instructions.`;
-      const response = await runClaude(prompt, `cron:${body.skill}`);
+      // Fresh session per cron run — don't resume old sessions
+      const cronId = `cron:${body.skill}:${Date.now()}`;
+      const response = await runClaude(prompt, cronId);
 
       if (response) {
         await sendToBridge({

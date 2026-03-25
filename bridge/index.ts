@@ -163,6 +163,28 @@ Bun.serve({
       }
     }
 
+    // Agent-to-agent messaging — POST /agents/:agentId/message
+    const agentMsgMatch = url.pathname.match(/^\/agents\/([^/]+)\/message$/);
+    if (agentMsgMatch && req.method === "POST") {
+      const targetId = agentMsgMatch[1];
+      const entry = listAll().find((e) => e.id === targetId);
+      if (!entry) {
+        return Response.json({ ok: false, error: `Agent ${targetId} not found` }, { status: 404 });
+      }
+
+      const body = await req.json() as { text: string; from?: string; chatId?: string };
+      console.log(`[bridge] agent message: ${body.from || "unknown"} → ${targetId}: ${body.text?.slice(0, 80)}`);
+
+      const ok = await sendToSprite(entry, "/message", {
+        text: body.text,
+        chatId: body.chatId || `agent:${body.from || "unknown"}`,
+        user: body.from || "system",
+        userId: body.from,
+      });
+
+      return Response.json({ ok });
+    }
+
     // List sprites
     if (url.pathname === "/sprites" && req.method === "GET") {
       const sprites = listAll();

@@ -34,6 +34,7 @@ const CHANNEL_DIR = join(__dirname, "..", "sprite", "channel");
 
 // Env vars that get baked into each sprite's launcher script
 const SPRITE_ENV_VARS = {
+  CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN || "",
   BRIDGE_URL: process.env.BRIDGE_URL || "http://76.13.106.143:3848",
   SWAIN_API_TOKEN: process.env.SWAIN_API_TOKEN || "",
   R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "a18dd41e124527b88c6f76255c8ce27e",

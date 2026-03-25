@@ -26,7 +26,7 @@ vi.mock("../sprite", () => ({
   createSprite: vi.fn().mockResolvedValue(undefined),
   execOnSprite: vi.fn().mockResolvedValue(""),
   writeToSprite: vi.fn().mockResolvedValue(undefined),
-  getSpriteUrl: vi.fn().mockResolvedValue("https://advisor-pool-01-abc12.sprites.app"),
+  getSpriteUrl: vi.fn().mockResolvedValue("https://advisor-pool-1-abc12.sprites.app"),
   makePublic: vi.fn().mockResolvedValue(undefined),
   createService: vi.fn().mockResolvedValue(undefined),
   destroySprite: vi.fn().mockResolvedValue(undefined),
@@ -92,38 +92,38 @@ function resetState() {
   vi.clearAllMocks();
   mockRegistry = {
     agents: {
-      "advisor-pool-01": {
+      "advisor-pool-1": {
         type: "advisor",
         status: "available",
         createdAt: "2026-01-01T00:00:00Z",
         poolIndex: 1,
-        spriteName: "advisor-pool-01",
-        spriteUrl: "https://advisor-pool-01-abc12.sprites.app",
+        spriteName: "advisor-pool-1",
+        spriteUrl: "https://advisor-pool-1-abc12.sprites.app",
       },
-      "advisor-pool-02": {
+      "advisor-pool-2": {
         type: "advisor",
         status: "available",
         createdAt: "2026-01-01T00:00:00Z",
         poolIndex: 2,
-        spriteName: "advisor-pool-02",
-        spriteUrl: "https://advisor-pool-02-def34.sprites.app",
+        spriteName: "advisor-pool-2",
+        spriteUrl: "https://advisor-pool-2-def34.sprites.app",
       },
     },
     pool: { size: 2, version: 1 },
   };
   mockBridgeRegistry = [
     {
-      id: "advisor-pool-01",
-      name: "Pool advisor-pool-01",
-      url: "https://advisor-pool-01-abc12.sprites.app",
+      id: "advisor-pool-1",
+      name: "Pool advisor-pool-1",
+      url: "https://advisor-pool-1-abc12.sprites.app",
       phoneNumbers: [],
       discordChannelIds: [],
       allowDMs: false,
     },
     {
-      id: "advisor-pool-02",
-      name: "Pool advisor-pool-02",
-      url: "https://advisor-pool-02-def34.sprites.app",
+      id: "advisor-pool-2",
+      name: "Pool advisor-pool-2",
+      url: "https://advisor-pool-2-def34.sprites.app",
       phoneNumbers: [],
       discordChannelIds: [],
       allowDMs: false,
@@ -146,14 +146,14 @@ describe("provisionSpriteAdvisor", () => {
       boatName: "Test Boat",
     });
 
-    expect(result.agentId).toBe("advisor-pool-01");
+    expect(result.agentId).toBe("advisor-pool-1");
     expect(result.status).toBe("assigned");
-    expect(result.spriteUrl).toBe("https://advisor-pool-01-abc12.sprites.app");
+    expect(result.spriteUrl).toBe("https://advisor-pool-1-abc12.sprites.app");
   });
 
   it("rejects duplicate phone numbers", async () => {
-    mockRegistry.agents["advisor-pool-01"] = {
-      ...mockRegistry.agents["advisor-pool-01"],
+    mockRegistry.agents["advisor-pool-1"] = {
+      ...mockRegistry.agents["advisor-pool-1"],
       status: "active",
       phone: "+15551234567",
       captainName: "Existing Captain",
@@ -171,13 +171,13 @@ describe("provisionSpriteAdvisor", () => {
 
   it("throws when no available sprites in pool", async () => {
     mockRegistry.agents = {
-      "advisor-pool-01": {
+      "advisor-pool-1": {
         type: "advisor",
         status: "active",
         createdAt: "2026-01-01T00:00:00Z",
         poolIndex: 1,
-        spriteName: "advisor-pool-01",
-        spriteUrl: "https://advisor-pool-01-abc12.sprites.app",
+        spriteName: "advisor-pool-1",
+        spriteUrl: "https://advisor-pool-1-abc12.sprites.app",
       },
     };
 
@@ -202,7 +202,7 @@ describe("provisionSpriteAdvisor", () => {
     });
 
     expect(writeToSprite).toHaveBeenCalledWith(
-      "advisor-pool-01",
+      "advisor-pool-1",
       "/home/sprite/CLAUDE.md",
       expect.stringContaining("Captain Pete"),
     );
@@ -217,7 +217,7 @@ describe("provisionSpriteAdvisor", () => {
       phone: "+15551112222",
     });
 
-    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-01");
+    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-1");
     expect(entry.phoneNumbers).toContain("+15551112222");
     expect(entry.name).toBe("Captain Jane's Advisor");
   });
@@ -236,7 +236,7 @@ describe("provisionSpriteAdvisor", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://advisor-pool-01-abc12.sprites.app/message",
+      "https://advisor-pool-1-abc12.sprites.app/message",
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining("Captain Bob"),
@@ -254,7 +254,7 @@ describe("provisionSpriteAdvisor", () => {
       timezone: "America/Chicago",
     });
 
-    const entry = mockRegistry.agents["advisor-pool-01"];
+    const entry = mockRegistry.agents["advisor-pool-1"];
     expect(entry.status).toBe("active");
     expect(entry.userId).toBe("usr_test_007");
     expect(entry.captainName).toBe("Captain Kim");
@@ -267,13 +267,13 @@ describe("provisionSpriteAdvisor", () => {
 describe("deleteSpriteAdvisor", () => {
   beforeEach(() => {
     resetState();
-    mockRegistry.agents["advisor-pool-01"] = {
+    mockRegistry.agents["advisor-pool-1"] = {
       type: "advisor",
       status: "active",
       createdAt: "2026-01-01T00:00:00Z",
       poolIndex: 1,
-      spriteName: "advisor-pool-01",
-      spriteUrl: "https://advisor-pool-01-abc12.sprites.app",
+      spriteName: "advisor-pool-1",
+      spriteUrl: "https://advisor-pool-1-abc12.sprites.app",
       userId: "usr_test_001",
       captainName: "Test Captain",
       phone: "+15551234567",
@@ -289,23 +289,23 @@ describe("deleteSpriteAdvisor", () => {
   it("resets status to available and clears captain fields", async () => {
     const { deleteSpriteAdvisor } = await import("../provision-sprite");
 
-    await deleteSpriteAdvisor("advisor-pool-01");
+    await deleteSpriteAdvisor("advisor-pool-1");
 
-    const entry = mockRegistry.agents["advisor-pool-01"];
+    const entry = mockRegistry.agents["advisor-pool-1"];
     expect(entry.status).toBe("available");
     expect(entry.userId).toBeUndefined();
     expect(entry.captainName).toBeUndefined();
     expect(entry.phone).toBeUndefined();
-    expect(entry.spriteName).toBe("advisor-pool-01");
-    expect(entry.spriteUrl).toBe("https://advisor-pool-01-abc12.sprites.app");
+    expect(entry.spriteName).toBe("advisor-pool-1");
+    expect(entry.spriteUrl).toBe("https://advisor-pool-1-abc12.sprites.app");
   });
 
   it("removes phone from bridge registry", async () => {
     const { deleteSpriteAdvisor } = await import("../provision-sprite");
 
-    await deleteSpriteAdvisor("advisor-pool-01");
+    await deleteSpriteAdvisor("advisor-pool-1");
 
-    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-01");
+    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-1");
     expect(entry.phoneNumbers).toEqual([]);
   });
 
@@ -313,10 +313,10 @@ describe("deleteSpriteAdvisor", () => {
     const { deleteSpriteAdvisor } = await import("../provision-sprite");
     const { writeToSprite } = await import("../sprite");
 
-    await deleteSpriteAdvisor("advisor-pool-01");
+    await deleteSpriteAdvisor("advisor-pool-1");
 
     expect(writeToSprite).toHaveBeenCalledWith(
-      "advisor-pool-01",
+      "advisor-pool-1",
       "/home/sprite/CLAUDE.md",
       expect.stringContaining("Awaiting captain assignment"),
     );
@@ -385,8 +385,8 @@ describe("registry operations", () => {
     // Test the real function logic
     const registry = {
       agents: {
-        "advisor-pool-01": { userId: "usr_abc123" },
-        "advisor-pool-02": {},
+        "advisor-pool-1": { userId: "usr_abc123" },
+        "advisor-pool-2": {},
       },
     };
 
@@ -394,7 +394,7 @@ describe("registry operations", () => {
     for (const [id, entry] of Object.entries(registry.agents) as [string, any][]) {
       if (entry.userId === "usr_abc123") { found = id; break; }
     }
-    expect(found).toBe("advisor-pool-01");
+    expect(found).toBe("advisor-pool-1");
 
     let notFound: string | null = null;
     for (const [id, entry] of Object.entries(registry.agents) as [string, any][]) {
@@ -415,7 +415,7 @@ describe("phone normalization", () => {
       phone: "15551234567",
     });
 
-    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-01");
+    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-1");
     expect(entry.phoneNumbers).toContain("+15551234567");
   });
 
@@ -429,7 +429,7 @@ describe("phone normalization", () => {
       phone: "+15559999999",
     });
 
-    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-01");
+    const entry = mockBridgeRegistry.find((e: any) => e.id === "advisor-pool-1");
     expect(entry.phoneNumbers).toContain("+15559999999");
   });
 });

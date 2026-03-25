@@ -45,7 +45,7 @@ const SPRITE_ENV_VARS = {
 // --- Pool provisioning ---
 
 function poolSpriteName(index: number): string {
-  return `advisor-pool-${String(index).padStart(2, "0")}`;
+  return `advisor-pool-${index}`;
 }
 
 /**

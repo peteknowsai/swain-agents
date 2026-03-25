@@ -192,12 +192,9 @@ async function setupSprite(name: string): Promise<void> {
   await writeToSprite(name, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(name, "chmod +x /home/sprite/start.sh");
 
-  // 8. Write placeholder CLAUDE.md
-  await writeToSprite(name, "/home/sprite/CLAUDE.md", [
-    "# Swain Advisor",
-    "",
-    "Awaiting captain assignment. Stand by.",
-  ].join("\n"));
+  // 8. Write pool CLAUDE.md (gets overwritten with captain-specific version on assignment)
+  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
+  await writeToSprite(name, "/home/sprite/CLAUDE.md", poolClaudeMd);
 
   // 8b. Generate about.md — sprite manifest with tools, versions, environment
   try {
@@ -428,12 +425,9 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<void> {
 
   const spriteName = entry.spriteName;
 
-  // 1. Reset CLAUDE.md
-  await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", [
-    "# Swain Advisor",
-    "",
-    "Awaiting captain assignment. Stand by.",
-  ].join("\n"));
+  // 1. Reset CLAUDE.md to pool version
+  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
+  await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
 
   // 2. Clear session data
   try {

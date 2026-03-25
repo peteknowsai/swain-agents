@@ -171,7 +171,7 @@ async function setupSprite(name: string): Promise<void> {
   // 6. Install swain CLI (download from GitHub releases)
   await execOnSprite(name, [
     "curl -fsSL -o /usr/local/bin/swain",
-    "https://github.com/petermccarthy49/swain-agents/releases/latest/download/swain-linux-x64",
+    "https://github.com/peteknowsai/swain-agents/releases/latest/download/swain-linux-x64",
     "&& chmod +x /usr/local/bin/swain",
   ].join(" "));
 

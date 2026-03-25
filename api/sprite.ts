@@ -34,6 +34,13 @@ export async function sprite(args: string[]): Promise<string> {
  * We background it, wait for init, then kill the console process.
  */
 export async function createSprite(name: string): Promise<void> {
+  // Check if sprite already exists
+  try {
+    await execOnSprite(name, "echo ready");
+    console.log(`Sprite ${name} already exists, skipping create`);
+    return;
+  } catch {}
+
   const proc = Bun.spawn([SPRITE_BIN, "create", name], {
     stdout: "pipe",
     stderr: "pipe",

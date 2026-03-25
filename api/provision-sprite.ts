@@ -133,7 +133,7 @@ async function setupSprite(name: string): Promise<void> {
   await createSprite(name);
 
   // 2. Create directory structure
-  await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/skills /home/sprite/.claude-sessions");
+  await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/.claude-sessions /home/sprite/.claude/memory/yearnings /home/sprite/.claude/memory/notes");
 
   // 3. Copy channel server files
   const serverTs = await readFile(join(CHANNEL_DIR, "server.ts"), "utf-8");
@@ -151,8 +151,8 @@ async function setupSprite(name: string): Promise<void> {
   const SPRITE_SKILLS_DIR = join(__dirname, "..", "sprite", "skills");
   const skillDirs = [
     "onboarding", "briefing", "profile", "card-create", "boat-art",
-    "boat-scan", "knowledge", "obsidian-vault", "memory", "library",
-    "swain-cli", "firecrawl", "goplaces",
+    "boat-scan", "knowledge", "obsidian-vault", "memory", "dream",
+    "library", "swain-cli", "firecrawl", "goplaces",
   ];
 
   for (const skillDir of skillDirs) {
@@ -195,6 +195,23 @@ async function setupSprite(name: string): Promise<void> {
   // 8. Write pool CLAUDE.md (gets overwritten with captain-specific version on assignment)
   const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
   await writeToSprite(name, "/home/sprite/CLAUDE.md", poolClaudeMd);
+
+  // 8a. Seed MEMORY.md index
+  await writeToSprite(name, "/home/sprite/.claude/memory/MEMORY.md", [
+    "# MEMORY.md",
+    "",
+    "## Confirmed",
+    "",
+    "No captain assigned yet.",
+    "",
+    "## Yearnings",
+    "",
+    "No yearnings yet.",
+    "",
+    "## Daily Notes",
+    "",
+    "No conversations yet.",
+  ].join("\n"));
 
   // 8b. Generate about.md — sprite manifest with tools, versions, environment
   try {

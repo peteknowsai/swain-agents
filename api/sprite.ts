@@ -75,30 +75,25 @@ export async function execOnSprite(name: string, cmd: string): Promise<string> {
 
 /**
  * Write content to a file on a sprite.
- * Uses a temp file on the VPS + cat pipe (more reliable than Blob stdin).
+ * Uses execSync with stdin for reliability — Bun.spawn pipes were unreliable.
  */
 export async function writeToSprite(name: string, path: string, content: string): Promise<void> {
+  const { execSync } = await import("child_process");
   const { writeFileSync, unlinkSync } = await import("fs");
   const tmpFile = `/tmp/sprite-write-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   try {
     writeFileSync(tmpFile, content);
-    const proc = Bun.spawn(
-      ["bash", "-c", `cat "${tmpFile}" | ${SPRITE_BIN} exec -s ${name} -- bash -c "cat > ${path}"`],
+    execSync(
+      `cat "${tmpFile}" | sprite exec -s ${name} -- bash -c "cat > ${path}"`,
       {
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...process.env,
-          HOME: process.env.HOME || "/root",
-          PATH: `/root/.local/bin:${process.env.PATH}`,
-        },
+        env: { ...process.env, HOME: process.env.HOME || "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
+        timeout: 30_000,
+        stdio: ["pipe", "pipe", "pipe"],
       },
     );
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-    if (exitCode !== 0) {
-      throw new Error(`Failed to write ${path} on sprite ${name}: ${stderr.trim()}`);
-    }
+  } catch (err: any) {
+    const stderr = err?.stderr?.toString() || "";
+    throw new Error(`Failed to write ${path} on sprite ${name}: ${stderr.trim()}`);
   } finally {
     try { unlinkSync(tmpFile); } catch {}
   }

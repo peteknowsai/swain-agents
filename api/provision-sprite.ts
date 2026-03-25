@@ -175,12 +175,17 @@ async function setupSprite(name: string): Promise<void> {
     }
   }
 
-  // 6. Install swain CLI (download from GitHub releases)
+  // 6. Install/update CLIs
   await execOnSprite(name, [
     "curl -fsSL -o /usr/local/bin/swain",
     "https://github.com/peteknowsai/swain-agents/releases/latest/download/swain-linux-x64",
     "&& chmod +x /usr/local/bin/swain",
   ].join(" "));
+
+  // Update Claude Code to latest
+  await execOnSprite(name, "curl -fsSL https://claude.ai/install.sh | bash").catch(
+    (err) => console.warn(`Claude Code update failed (non-fatal): ${err}`),
+  );
 
   // 7. Create launcher script with env vars
   const launcherScript = generateLauncherScript(name);
@@ -193,6 +198,53 @@ async function setupSprite(name: string): Promise<void> {
     "",
     "Awaiting captain assignment. Stand by.",
   ].join("\n"));
+
+  // 8b. Generate about.md — sprite manifest with tools, versions, environment
+  try {
+    const aboutInfo = await execOnSprite(name, [
+      'echo "---"',
+      'echo "type: sprite"',
+      `echo "name: ${name}"`,
+      'echo "updated: $(date +%Y-%m-%d)"',
+      'echo "tags: [sprite, system]"',
+      'echo "---"',
+      'echo ""',
+      `echo "# ${name}"`,
+      'echo ""',
+      'echo "## System"',
+      'echo "- **OS:** $(lsb_release -d 2>/dev/null | cut -f2 || echo unknown)"',
+      'echo "- **Arch:** $(uname -m)"',
+      'echo "- **Sprite:** $(cat /.sprite/version 2>/dev/null || echo unknown)"',
+      'echo ""',
+      'echo "## CLIs"',
+      'echo "| Tool | Path | Version |"',
+      'echo "|------|------|---------|"',
+      'echo "| claude | $(which claude 2>/dev/null || echo not found) | $(claude --version 2>/dev/null || echo -) |"',
+      'echo "| swain | $(which swain 2>/dev/null || echo not found) | $(swain --version 2>/dev/null || echo -) |"',
+      'echo "| bun | $(which bun 2>/dev/null || echo not found) | $(bun --version 2>/dev/null || echo -) |"',
+      'echo "| node | $(which node 2>/dev/null || echo not found) | $(node --version 2>/dev/null || echo -) |"',
+      'echo "| python3 | $(which python3 2>/dev/null || echo not found) | $(python3 --version 2>/dev/null | cut -d\" \" -f2 || echo -) |"',
+      'echo "| firecrawl | $(which firecrawl 2>/dev/null || echo not found) | $(firecrawl --version 2>/dev/null || echo -) |"',
+      'echo "| goplaces | $(which goplaces 2>/dev/null || echo not found) | $(goplaces --version 2>/dev/null || echo -) |"',
+      'echo "| git | $(which git 2>/dev/null || echo not found) | $(git --version 2>/dev/null | cut -d\" \" -f3 || echo -) |"',
+      'echo "| curl | $(which curl 2>/dev/null || echo not found) | $(curl --version 2>/dev/null | head -1 | cut -d\" \" -f2 || echo -) |"',
+      'echo ""',
+      'echo "## Services"',
+      'echo "$(sprite-env services list 2>/dev/null | python3 -c "import json,sys; services=json.load(sys.stdin); [print(f\\"- **{s[\\\\\"name\\\\\"]}** — {s[\\\\\"cmd\\\\\"]} (port {s.get(\\\\\"http_port\\\\\",\\\\\"-\\\\\")})\\" ) for s in services]" 2>/dev/null || echo "- none")"',
+      'echo ""',
+      'echo "## Skills"',
+      'echo "$(ls /home/sprite/.claude/skills/ 2>/dev/null | while read d; do desc=$(head -3 /home/sprite/.claude/skills/$d/SKILL.md 2>/dev/null | grep description | cut -d\\\" -f2 | head -c 80); echo "- **$d** — $desc"; done)"',
+      'echo ""',
+      'echo "## MCPs"',
+      'echo "$(cat /home/sprite/.mcp.json 2>/dev/null | python3 -c "import json,sys; cfg=json.load(sys.stdin); servers=cfg.get(\\\"mcpServers\\\",{}); [print(f\\"- **{name}** — {s.get(\\\\\"command\\\\\",\\\\\"?\\\\\")}\\" ) for name,s in servers.items()]" 2>/dev/null || echo "- none configured")"',
+      'echo ""',
+      'echo "## Storage"',
+      'echo "- **Disk:** $(df -h /home/sprite 2>/dev/null | tail -1 | awk \"{print \\$3\\\"/\\\"\\$2\\\" used\"}\")"',
+    ].join(" && "));
+    await writeToSprite(name, "/home/sprite/about.md", aboutInfo);
+  } catch (err) {
+    console.warn(`About generation failed (non-fatal): ${err}`);
+  }
 
   // 9. Create channel service (auto-starts on HTTP request)
   await createService(name, "channel", {
@@ -207,6 +259,21 @@ async function setupSprite(name: string): Promise<void> {
   // 11. Wait for health check
   const url = await getSpriteUrl(name);
   await waitForSpriteHealth(url, 60_000);
+
+  // 12. Trigger initial vault sync so files appear in Obsidian immediately
+  try {
+    await fetch(`${url}/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "Stand by. Do not respond with any text. Output nothing.",
+        chatId: "system-init",
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    console.warn(`Initial sync trigger failed for ${name} (non-fatal)`);
+  }
 }
 
 function generateLauncherScript(spriteName: string, vaultPrefix?: string): string {

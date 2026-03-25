@@ -146,25 +146,31 @@ async function setupSprite(name: string): Promise<void> {
   // 4. Install channel server dependencies
   await execOnSprite(name, "cd /home/sprite/channel && bun install");
 
-  // 5. Copy skills files (flatten from swain-*/SKILL.md to skills/*.md)
-  const skillMappings: Record<string, string> = {
-    "swain-onboarding": "onboarding",
-    "swain-briefing": "briefing",
-    "swain-profile": "profile",
-    "swain-card-create": "card-create",
-    "swain-cli": "cli",
-    "swain-boat-art": "boat-art",
-    "swain-boat-scan": "boat-scan",
-    "swain-knowledge": "knowledge",
-    "obsidian-vault": "obsidian-vault",
-  };
+  // 5. Copy skills to .claude/skills/ (Claude Code auto-discovery)
+  const SPRITE_SKILLS_DIR = join(__dirname, "..", "sprite", "skills");
+  const skillDirs = [
+    "onboarding", "briefing", "profile", "card-create", "boat-art",
+    "boat-scan", "knowledge", "obsidian-vault", "memory", "library",
+    "swain-cli", "firecrawl", "goplaces",
+  ];
 
-  for (const [dir, flatName] of Object.entries(skillMappings)) {
+  for (const skillDir of skillDirs) {
+    const skillPath = join(SPRITE_SKILLS_DIR, skillDir);
     try {
-      const skillContent = await readFile(join(SKILLS_DIR, dir, "SKILL.md"), "utf-8");
-      await writeToSprite(name, `/home/sprite/skills/${flatName}.md`, skillContent);
+      // Create skill directory on sprite
+      await execOnSprite(name, `mkdir -p /home/sprite/.claude/skills/${skillDir}`);
+
+      // Copy SKILL.md
+      const skillMd = await readFile(join(skillPath, "SKILL.md"), "utf-8");
+      await writeToSprite(name, `/home/sprite/.claude/skills/${skillDir}/SKILL.md`, skillMd);
+
+      // Copy reference.md if it exists
+      try {
+        const refMd = await readFile(join(skillPath, "reference.md"), "utf-8");
+        await writeToSprite(name, `/home/sprite/.claude/skills/${skillDir}/reference.md`, refMd);
+      } catch {}
     } catch {
-      console.warn(`Skill ${dir} not found, skipping`);
+      console.warn(`Skill ${skillDir} not found, skipping`);
     }
   }
 

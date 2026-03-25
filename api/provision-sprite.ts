@@ -153,7 +153,7 @@ async function setupSprite(name: string): Promise<void> {
   const skillDirs = [
     "onboarding", "briefing", "profile", "card-create", "boat-art",
     "boat-scan", "knowledge", "obsidian-vault", "memory", "dream",
-    "library", "swain-cli", "firecrawl", "goplaces",
+    "library", "swain-cli", "stoolap", "firecrawl", "goplaces",
   ];
 
   for (const skillDir of skillDirs) {

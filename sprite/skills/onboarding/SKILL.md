@@ -85,11 +85,36 @@ Do this inline — no need for a separate agent. The briefing skill has the full
    swain user update <userId> --marinaLocation='<marina>' --primaryUse=<use> --json
    ```
 
-3. **Desk assignment** — check existing desks first:
+3. **Desk assignment** — find or create the right content desk:
+
+   First, resolve the captain's location to coordinates:
    ```bash
-   swain desk list --json
+   goplaces resolve '<marina or location>' --limit=1 --json
    ```
-   If one fits, assign. If not, create one with proper geographic scope. See the briefing skill's reference for desk creation details.
+
+   Search for existing desks near those coordinates:
+   ```bash
+   swain desk search --lat=<lat> --lon=<lon> --json
+   ```
+
+   **If an existing desk covers this area:**
+   ```bash
+   swain user update <userId> --desk=<deskName> --microlocation='<specific spot>' --json
+   ```
+   The microlocation is the captain's specific spot within the desk's region (e.g., "Tierra Verde" within tampa-bay).
+
+   **If no desk fits — create one:**
+   Think about natural boating boundaries — passes, inlets, bodies of water. A desk covers a cruising ground, not an administrative boundary. Scope should describe the geographic extent a boater cares about.
+   ```bash
+   swain desk create --name=<slug> --region='<region>' --lat=<lat> --lon=<lon> \
+     --scope='<coverage description>' --created-by-location='<what captain said>' --json
+   ```
+   Then assign:
+   ```bash
+   swain user update <userId> --desk=<slug> --microlocation='<specific spot>' --json
+   ```
+
+   Key: "Tierra Verde" is a microlocation. "Tampa Bay" is a desk. The advisor figures out the right desk for the captain's location — one desk covers many microlocations.
 
 4. **Pull card candidates**, create cards if needed (minimum 5 for first briefing):
    ```bash

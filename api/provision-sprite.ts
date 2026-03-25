@@ -597,6 +597,34 @@ export interface DeskInput {
   lon: number;
   scope?: string;     // coverage description
   description?: string;
+  createdByLocation?: string;  // raw input from captain, e.g. "Tierra Verde"
+  bounds?: { ne: { lat: number; lon: number }; sw: { lat: number; lon: number } };
+}
+
+const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+
+async function geocodeBounds(region: string): Promise<{ ne: { lat: number; lon: number }; sw: { lat: number; lon: number } }> {
+  if (!GOOGLE_PLACES_API_KEY) {
+    throw new Error("GOOGLE_PLACES_API_KEY required for geocoding bounds");
+  }
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(region)}&key=${GOOGLE_PLACES_API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json() as any;
+  if (data.results?.[0]?.geometry?.viewport) {
+    const vp = data.results[0].geometry.viewport;
+    return {
+      ne: { lat: vp.northeast.lat, lon: vp.northeast.lng },
+      sw: { lat: vp.southwest.lat, lon: vp.southwest.lng },
+    };
+  }
+  throw new Error(`Could not geocode "${region}"`);
+}
+
+function defaultBounds(lat: number, lon: number) {
+  return {
+    ne: { lat: lat + 0.36, lon: lon + 0.45 },
+    sw: { lat: lat - 0.36, lon: lon - 0.45 },
+  };
 }
 
 function deskPoolSpriteName(index: number): string {
@@ -730,16 +758,23 @@ export async function provisionSpriteDesk(input: DeskInput): Promise<{
   let deskId: string | undefined;
   try {
     const { convexRequest } = await import("./shared");
+    let bounds = input.bounds;
+    if (!bounds) {
+      try {
+        bounds = await geocodeBounds(input.region);
+      } catch {
+        bounds = defaultBounds(input.lat, input.lon);
+        console.warn(`Geocoding failed for "${input.region}", using default bounds`);
+      }
+    }
     const result = await convexRequest("POST", "/desks", {
       name: input.name,
       region: input.region,
       description: input.description || "",
       scope: input.scope || "",
       center: { lat: input.lat, lon: input.lon },
-      bounds: {
-        ne: { lat: input.lat + 0.36, lon: input.lon + 0.45 },
-        sw: { lat: input.lat - 0.36, lon: input.lon - 0.45 },
-      },
+      bounds,
+      createdByLocation: input.createdByLocation || input.region,
     });
     deskId = result.id;
     console.log(`Desk registered in Convex: ${input.name} (${deskId})`);

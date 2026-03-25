@@ -318,7 +318,7 @@ describe("deleteSpriteAdvisor", () => {
     expect(writeToSprite).toHaveBeenCalledWith(
       "advisor-pool-1",
       "/home/sprite/CLAUDE.md",
-      expect.stringContaining("Awaiting captain assignment"),
+      expect.stringContaining("Swain Advisor"),
     );
   });
 

@@ -508,6 +508,89 @@ export async function getPoolStatus(): Promise<{
   };
 }
 
+// --- Wake / cron triggers ---
+
+/**
+ * Wake an advisor sprite and trigger a skill.
+ * Used by Convex crons to trigger daily briefings, watchdogs, etc.
+ */
+export async function wakeAdvisor(
+  agentId: string,
+  skill: string,
+  options?: { message?: string; chatId?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const registry = await loadRegistry();
+  const entry = registry.agents[agentId];
+
+  if (!entry) throw new Error(`Agent ${agentId} not found`);
+  if (!entry.spriteUrl) throw new Error(`Agent ${agentId} has no sprite URL`);
+  if (entry.status !== "active") throw new Error(`Agent ${agentId} is not active (status: ${entry.status})`);
+
+  const spriteUrl = entry.spriteUrl;
+
+  // If a custom message is provided, use /message endpoint (for ad-hoc triggers)
+  // Otherwise use /cron endpoint (for scheduled skill execution)
+  if (options?.message) {
+    const res = await fetch(`${spriteUrl}/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: options.message,
+        chatId: options.chatId || `cron:${skill}`,
+        userId: entry.userId,
+      }),
+      signal: AbortSignal.timeout(180_000),
+    });
+    return { ok: res.ok };
+  }
+
+  // Standard cron trigger — runs the skill in its own session
+  const res = await fetch(`${spriteUrl}/cron`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ skill, name: `${skill} for ${entry.captainName}` }),
+    signal: AbortSignal.timeout(180_000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return { ok: false, error: `Sprite returned ${res.status}: ${text}` };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Wake all active advisors with a skill trigger.
+ * Used for batch operations like "run all morning briefings."
+ */
+export async function wakeAllAdvisors(
+  skill: string,
+): Promise<{ triggered: number; failed: number; results: Array<{ agentId: string; ok: boolean; error?: string }> }> {
+  const registry = await loadRegistry();
+  const active = Object.entries(registry.agents)
+    .filter(([_, e]) => e.type === "advisor" && e.status === "active" && e.spriteUrl);
+
+  const results: Array<{ agentId: string; ok: boolean; error?: string }> = [];
+  let triggered = 0;
+  let failed = 0;
+
+  for (const [agentId] of active) {
+    try {
+      const result = await wakeAdvisor(agentId, skill);
+      results.push({ agentId, ...result });
+      if (result.ok) triggered++;
+      else failed++;
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      results.push({ agentId, ok: false, error });
+      failed++;
+    }
+  }
+
+  return { triggered, failed, results };
+}
+
 // --- Bridge registry helpers ---
 
 interface BridgeRegistryEntry {

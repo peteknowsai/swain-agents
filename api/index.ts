@@ -6,6 +6,8 @@ import {
   lookupByUserId,
   provisionSpritePool,
   getPoolStatus,
+  wakeAdvisor,
+  wakeAllAdvisors,
 } from "./provision-sprite";
 // OpenClaw provisioning (legacy — kept for desk agents)
 import {
@@ -83,6 +85,26 @@ const server = Bun.serve({
 
     try {
       // ========== Unified /agents routes ==========
+
+      // POST /agents/:agentId/wake — wake a sprite and trigger a skill
+      const wakeMatch = matchRoute(pathname, "/agents/:agentId/wake");
+      if (wakeMatch && method === "POST") {
+        const body = await req.json() as { skill: string; message?: string; chatId?: string };
+        if (!body.skill) return error("skill is required");
+        const result = await wakeAdvisor(wakeMatch.agentId, body.skill, {
+          message: body.message,
+          chatId: body.chatId,
+        });
+        return json(result);
+      }
+
+      // POST /agents/wake-all — wake all active advisors with a skill
+      if (pathname === "/agents/wake-all" && method === "POST") {
+        const body = await req.json() as { skill: string };
+        if (!body.skill) return error("skill is required");
+        const result = await wakeAllAdvisors(body.skill);
+        return json(result);
+      }
 
       // POST /agents/:agentId/message — send a message to an agent via OpenClaw
       const messageMatch = matchRoute(pathname, "/agents/:agentId/message");

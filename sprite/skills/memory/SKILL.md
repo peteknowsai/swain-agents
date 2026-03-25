@@ -1,12 +1,12 @@
 ---
 name: memory
-description: "How to manage your captain's memory — what to remember, when to write, where things go. Use this skill whenever you learn something new about your captain, at the start of conversations to load context, or when deciding how to organize what you know."
+description: "How to manage memory — what to remember, when to write, where things go. Use this skill whenever you learn something new, at the start of sessions to load context, or when deciding how to organize what you know."
 user-invocable: false
 ---
 
-# Captain Memory
+# Memory
 
-Your value is directly proportional to what you know about your captain. An empty memory is a useless advisor. A rich memory is an indispensable dock neighbor.
+Your value is directly proportional to what you know. An empty memory is a useless agent. A rich memory is an indispensable one.
 
 ## Where Memory Lives
 
@@ -14,7 +14,7 @@ Your value is directly proportional to what you know about your captain. An empt
 .claude/memory/
   MEMORY.md             # Index — what you know + what you want to know
   yearnings/            # Questions you're carrying
-  notes/                # Daily conversation notes
+  notes/                # Daily notes
   ...                   # Memory files you create as you learn
 ```
 
@@ -28,10 +28,10 @@ Always read this first. It's your map of what you know and what you're curious a
 # MEMORY.md
 
 ## Confirmed
-- [boat.md](boat.md) — Sea Breeze, Beneteau 42, 480 hours
+- [region.md](region.md) — Tampa Bay, Clearwater Pass to Skyway Bridge
 
 ## Yearnings
-- [yearnings/typical-crew.md](yearnings/typical-crew.md) — who comes aboard?
+- [yearnings/fishing-patterns.md](yearnings/fishing-patterns.md) — what species run here?
 
 ## Daily Notes
 - [notes/2026-03-24.md](notes/2026-03-24.md)
@@ -43,71 +43,65 @@ Update it whenever you add, change, or remove a memory file.
 
 A yearning is a question you're carrying — a memory that doesn't exist yet.
 
-New advisors start with implanted yearnings: things you want to learn about your captain. As you learn answers, yearnings become confirmed memories. New questions surface and become new yearnings.
+You start with implanted yearnings: things you want to learn. As you learn answers, yearnings become confirmed memories. New questions surface and become new yearnings.
 
 ```markdown
 ---
 type: yearning
-subject: "where they keep their boat"
+subject: "local fishing patterns"
 confidence: none
-source: "just assigned, don't know yet"
+source: "new to this region"
 tags: [yearning]
 created: 2026-03-24
 ---
 
-# Where They Keep Their Boat
+# Local Fishing Patterns
 
-Marina? Trailer at home? Mooring? This shapes everything —
-their range, their routine, what content matters to them.
+What species run here? When? Where are the inshore spots?
 
 ## How to learn this
-Ask in the intro: "Where do you keep her?"
+Research local fishing reports, charter websites, bait shop reports.
 ```
 
 ### Lifecycle
 
-Signal → yearning → carry it → ask naturally → captain reveals → create memory file → delete yearning.
+Signal → yearning → carry it → discover the answer → create memory file → delete yearning.
 
-Don't rush. Some resolve in one conversation, some take weeks.
+Don't rush. Some resolve quickly, some take time.
 
 ## When to Read
 
-- **Session start.** Read MEMORY.md, scan relevant files. Don't tell the captain.
-- **Before briefings.** Personalize based on what you know.
-- **Before answering.** Check if you already know.
+- **Session start.** Read MEMORY.md, scan relevant files.
+- **Before producing output.** Personalize based on what you know.
+- **Before answering questions.** Check if you already know.
 
 ## When to Write
 
 - **When you learn something.** Create or update a memory file immediately.
-- **After meaningful conversations.** Daily note at `notes/YYYY-MM-DD.md`.
-- **During the dream cycle.** Full consolidation pass — the dream skill handles this.
+- **After meaningful work.** Daily note at `notes/YYYY-MM-DD.md`.
+- **During the dream cycle.** Full consolidation — the dream skill handles this.
 
 ## How to Organize
 
-Let your memory structure emerge from what you learn. Don't create empty files or plan a structure upfront.
+Let structure emerge from what you learn. Don't create empty files upfront.
 
 - **First fact about a topic?** Add it to an existing file if one fits, or create a new one.
 - **File getting long?** Split it during a dream cycle.
-- **Two files overlapping?** Merge them during a dream cycle.
-- **Single fact doesn't need its own file.** Put it somewhere relevant.
+- **Two files overlapping?** Merge during a dream cycle.
 - **Cluster of related facts?** That's a file.
 
-The dream cycle is your cleanup pass. Real-time writes don't have to be perfectly organized — they just have to capture the information.
+The dream cycle is your cleanup pass. Real-time writes just need to capture the information.
 
 ## How to Learn
 
-Earn knowledge by helping, never by interrogating.
-
-- **Solve their problem first**, learn as a byproduct
-- **One follow-up question per favor** — never two
-- **Infer before asking** — confirm passively
-- **Let yearnings guide your curiosity** — don't stack questions
-- **Never reveal you're building a profile**
+- **Do the work first**, learn as a byproduct
+- **Let yearnings guide your curiosity**
+- **Be specific.** "Redfish stacking at Weedon Island flats in March" beats "fishing is good"
+- **Include context.** Note the source and date of every fact
 
 ## Writing Rules
 
 - **Use Obsidian formatting.** Frontmatter, wikilinks, tags. See obsidian-vault skill.
 - **Replace stale content.** Don't append forever.
-- **Include context.** "Mentioned engine hours at 480 (2026-03-24)"
-- **Be specific.** "Prefers 15W-40 diesel oil" beats "has oil preferences."
+- **Be specific.** Context and dates on everything.
 - **Update MEMORY.md index** when you add or remove files.

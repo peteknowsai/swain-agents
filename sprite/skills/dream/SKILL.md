@@ -1,6 +1,6 @@
 ---
 name: dream
-description: "Memory consolidation — a reflective pass over memory files to synthesize what you've learned recently into durable, well-organized memories. Run nightly via cron, after rich conversations, or when asked to reflect. Covers orienting on existing memories, gathering signal, consolidating into topic files, managing yearnings, and pruning the index."
+description: "Memory consolidation — a reflective pass over memory files to synthesize what you've learned recently into durable, well-organized memories. Run nightly via cron, after rich sessions, or when asked to reflect. Covers orienting on existing memories, gathering signal, consolidating into topic files, managing yearnings, and pruning the index."
 ---
 
 # Dream: Memory Consolidation
@@ -24,10 +24,10 @@ Session transcripts: `.claude-sessions/` (session state — grep narrowly, don't
 
 Look for new information worth persisting. Sources in rough priority order:
 
-1. **Recent conversations** — you're in a session with context. What did the captain say today? What did you learn?
+1. **Recent sessions** — what did you learn? What new facts, patterns, or observations?
 2. **Daily notes** (`notes/YYYY-MM-DD.md`) — the append-only stream from recent days
-3. **Existing memories that drifted** — facts that contradict something you now know (e.g., engine hours updated, marina changed)
-4. **Yearnings resolved** — did any conversation answer a question you were carrying?
+3. **Existing memories that drifted** — facts that contradict something you now know
+4. **Yearnings resolved** — did anything answer a question you were carrying?
 5. **New yearnings surfaced** — what signals did you pick up that deserve a yearning?
 
 Don't exhaustively search. Look only for things you already suspect matter.
@@ -40,11 +40,11 @@ For each thing worth remembering, write or update a memory file in `.claude/memo
 - Merging new signal into existing topic files rather than creating near-duplicates
 - Converting relative dates ("yesterday", "last week") to absolute dates
 - Deleting contradicted facts — if you learned something that disproves an old memory, fix it at the source
-- Being specific: "Engine hours at 480 as of 2026-03-24" not "has some engine hours"
+- Being specific: "Redfish stacking at Weedon Island flats, March 2026" not "fishing is good"
 
 **Memory file rules:**
 - YAML frontmatter with `type`, `tags`, `updated` (see obsidian-vault skill)
-- Wikilinks between related notes: `[[Boat]]`, `[[Captain]]`, `[[Marina]]`
+- Wikilinks between related notes where they exist
 - Replace stale content, don't just append
 
 ### Yearnings
@@ -58,22 +58,20 @@ For each thing worth remembering, write or update a memory file in `.claude/memo
 ```markdown
 ---
 type: yearning
-subject: "towing membership"
+subject: "seasonal fishing patterns"
 confidence: low
-source: "mentioned AAA but unclear if boat towing"
-captain: "[[Captain]]"
-tags: [yearning, safety]
+source: "found conflicting reports about snook season"
+tags: [yearning, fishing]
 created: 2026-03-24
 ---
 
-# Towing Membership
+# Seasonal Fishing Patterns
 
-Captain mentioned AAA in passing. Unclear if they have boat towing
-(TowBoatUS, SeaTow) or just car AAA.
+Conflicting info on when snook season opens in this region.
+Need to verify with FWC regulations.
 
 ## How to learn this
-Ask naturally when safety comes up:
-"You got towing set up in case she leaves you stranded out there?"
+Check FWC website, local charter captain reports.
 ```
 
 **Check for implanted yearnings** — files written by an operator. Treat them as your own curiosity.
@@ -88,19 +86,16 @@ Update `.claude/memory/MEMORY.md` so it stays concise. It's an **index**, not a 
 # MEMORY.md
 
 ## Confirmed
-- [captain.md](captain.md) — Pete, experienced sailor, prefers brief messages
-- [boat.md](boat.md) — Sea Breeze, Beneteau 42, 480 hours
-- [marina.md](marina.md) — Sausalito Yacht Harbor, slip 47
-- [preferences.md](preferences.md) — early mornings, no fishing content
-- [maintenance.md](maintenance.md) — oil change due at 500 hours
+- [region.md](region.md) — Tampa Bay, Clearwater Pass to Skyway Bridge
+- [fishing.md](fishing.md) — snook, redfish, tarpon seasonal patterns
+- [businesses.md](businesses.md) — 12 marinas, 8 restaurants, 5 marine supply
 
 ## Yearnings
-- [yearnings/towing.md](yearnings/towing.md) — has boat towing?
-- [yearnings/winter-plans.md](yearnings/winter-plans.md) — haul out or keep in?
+- [yearnings/bridge-schedules.md](yearnings/bridge-schedules.md) — opening times for drawbridges
+- [yearnings/fuel-prices.md](yearnings/fuel-prices.md) — who has the cheapest fuel?
 
 ## Daily Notes
 - [notes/2026-03-24.md](notes/2026-03-24.md)
-- [notes/2026-03-23.md](notes/2026-03-23.md)
 ```
 
 **Pruning rules:**
@@ -115,27 +110,26 @@ Append to or create `notes/YYYY-MM-DD.md`:
 - What you learned today (confirmed facts)
 - Yearnings resolved
 - New yearnings created
-- Conversation highlights
-- Observations about the captain's mood, interests, patterns
+- Key observations and patterns
 
 ## Phase 6 — Structured data & embeddings
 
-Memory files are freeform knowledge. But some things benefit from structure — and that structure should emerge from what you've learned, not be prescribed upfront.
+Memory files are freeform knowledge. Some things benefit from structure — and that structure should emerge from what you've learned, not be prescribed upfront.
 
 **When to create database structure:**
-- You notice you're tracking the same kind of thing repeatedly (maintenance events, trip logs, fuel stops) → that's a table
-- You have knowledge worth searching semantically (boat observations, captain preferences across many topics) → that's an embedding
+- You notice you're tracking the same kind of thing repeatedly (card production, research sources, seasonal patterns) → that's a table
+- You have knowledge worth searching semantically (observations, facts across many topics) → that's an embedding
 - You find yourself scanning long memory files for specific facts → the data wants structure
 
 **How:**
 - **Tables** — use `stoolap` to create tables as needed. Design the schema based on what you actually have, not what you might need someday.
-- **Embeddings** — use `swain knowledge store` to embed facts you want to search later. The knowledge DB is a vector store — semantic search across everything you've learned.
-- **Don't duplicate** — structured data and memory files serve different purposes. Memory files are narrative context (for session orientation). Database tables are queryable facts (for computation). Embeddings are for semantic search (for "do I know anything about...?").
+- **Embeddings** — use Gemini embedding-002 + Stoolap for local semantic search across everything you've learned.
+- **Don't duplicate** — memory files are narrative context (for orientation). Tables are queryable facts (for computation). Embeddings are for semantic search ("do I know anything about...?").
 
 **Example emergence:**
-- First maintenance mention → goes in a memory file
-- Third maintenance mention → pattern emerging, create a `maintenance_log` table
-- Captain's boat has 20 knowledge entries → embed them for semantic search before briefings
+- First research finding → goes in a memory file
+- Third time tracking the same type of thing → pattern emerging, create a table
+- 20+ knowledge entries on a topic → embed them for semantic search
 
 Let this happen naturally. Not every dream needs a new table. Most won't.
 

@@ -95,10 +95,13 @@ export async function writeToSprite(name: string, path: string, content: string)
  */
 export async function getSpriteUrl(name: string): Promise<string> {
   const output = await sprite(["url", "-s", name]);
-  // Output is the URL, possibly with trailing newline
-  const url = output.split("\n").find(line => line.startsWith("https://"));
-  if (!url) throw new Error(`Could not parse sprite URL from: ${output}`);
-  return url.trim();
+  // Output may be multi-line: "URL: https://...\nAuth: public"
+  // or just the URL. Find the https:// part either way.
+  for (const line of output.split("\n")) {
+    const match = line.match(/(https:\/\/[^\s]+)/);
+    if (match) return match[1];
+  }
+  throw new Error(`Could not parse sprite URL from: ${output}`);
 }
 
 /**

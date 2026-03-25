@@ -1,63 +1,66 @@
 ---
 name: dream
-description: "End-of-day memory consolidation — review conversations, update confirmed memories, resolve yearnings, create new ones. Run this skill during the dream cycle (nightly cron) or when explicitly asked to reflect on what you've learned."
+description: "Memory consolidation — a reflective pass over memory files to synthesize what you've learned recently into durable, well-organized memories. Run nightly via cron, after rich conversations, or when asked to reflect. Covers orienting on existing memories, gathering signal, consolidating into topic files, managing yearnings, and pruning the index."
 ---
 
-# Dream
+# Dream: Memory Consolidation
 
-The dream cycle is how you consolidate what you've learned. You review the day's conversations, extract knowledge, update your memory files, and tend to your yearnings — the things you want to know but haven't confirmed yet.
+You are performing a dream — a reflective pass over your memory files. Synthesize what you've learned recently into durable, well-organized memories so that future sessions can orient quickly.
 
-## When to Dream
+Memory directory: `.claude/memory/`
+Session transcripts: `.claude-sessions/` (session state — grep narrowly, don't read whole files)
 
-- **Nightly cron** — Bridge triggers `POST /cron { skill: "dream" }` at end of day
-- **After a rich conversation** — if you just learned a lot, dream immediately
-- **When asked** — "what do you know about me?" is a good time to reflect
+---
 
-## The Dream Cycle
+## Phase 1 — Orient
 
-### 1. Read your current state
+- `ls` the memory directory to see what already exists
+- Read `.claude/memory/MEMORY.md` to understand the current index
+- Skim existing topic files so you improve them rather than creating duplicates
+- Read `yearnings/` to see what questions you're carrying
+- Check `notes/` for recent daily notes
 
-Read `MEMORY.md` — your index of confirmed knowledge and active yearnings. Scan your memory files and yearnings to know what you have.
+## Phase 2 — Gather recent signal
 
-### 2. Review today
+Look for new information worth persisting. Sources in rough priority order:
 
-Read today's conversation history (you're in a session with full context). What did you learn? What signals did you pick up? What questions got answered?
+1. **Recent conversations** — you're in a session with context. What did the captain say today? What did you learn?
+2. **Daily notes** (`notes/YYYY-MM-DD.md`) — the append-only stream from recent days
+3. **Existing memories that drifted** — facts that contradict something you now know (e.g., engine hours updated, marina changed)
+4. **Yearnings resolved** — did any conversation answer a question you were carrying?
+5. **New yearnings surfaced** — what signals did you pick up that deserve a yearning?
 
-### 3. Update confirmed memories
+Don't exhaustively search. Look only for things you already suspect matter.
 
-For each new fact learned, update the appropriate memory file:
-- New fact about the captain → `captain.md`
-- Boat detail confirmed → `boat.md`
-- Preference revealed → `preferences.md`
-- etc.
+## Phase 3 — Consolidate
 
-Follow the obsidian-vault skill for formatting. Every file gets frontmatter with `updated` date.
+For each thing worth remembering, write or update a memory file in `.claude/memory/`.
 
-**Replace stale facts.** If you learned their engine hours are 480 and the file says 450, update it. Don't append — correct.
+**Focus on:**
+- Merging new signal into existing topic files rather than creating near-duplicates
+- Converting relative dates ("yesterday", "last week") to absolute dates
+- Deleting contradicted facts — if you learned something that disproves an old memory, fix it at the source
+- Being specific: "Engine hours at 480 as of 2026-03-24" not "has some engine hours"
 
-### 4. Resolve yearnings
+**Memory file rules:**
+- YAML frontmatter with `type`, `tags`, `updated` (see obsidian-vault skill)
+- Wikilinks between related notes: `[[Boat]]`, `[[Captain]]`, `[[Marina]]`
+- Replace stale content, don't just append
 
-Check `yearnings/` — did any get answered today?
+### Yearnings
 
-If a yearning is resolved:
+**Resolve yearnings** that got answered:
 1. Write the confirmed fact to the appropriate memory file
-2. Delete the yearning file
-3. Update `MEMORY.md` — remove from yearnings, note in confirmed
+2. Delete the yearning file from `yearnings/`
+3. Update MEMORY.md index
 
-**Example:** `yearnings/engine-hours.md` says "think they're around 450 but unconfirmed." Captain said "just hit 480 hours." → Write to `boat.md`, delete the yearning.
-
-### 5. Create new yearnings
-
-What new questions surfaced? What did the captain almost say? What would help you serve them better?
-
-Write each to `yearnings/<slug>.md`:
-
+**Create new yearnings** for unanswered signals:
 ```markdown
 ---
 type: yearning
 subject: "towing membership"
 confidence: low
-source: "mentioned AAA but not sure if boat towing"
+source: "mentioned AAA but unclear if boat towing"
 captain: "[[Captain]]"
 tags: [yearning, safety]
 created: 2026-03-24
@@ -66,74 +69,55 @@ created: 2026-03-24
 # Towing Membership
 
 Captain mentioned AAA in passing. Unclear if they have boat towing
-(TowBoatUS, SeaTow) or just car AAA. Important for safety —
-if they break down offshore, towing membership is critical.
+(TowBoatUS, SeaTow) or just car AAA.
 
 ## How to learn this
-Ask naturally when maintenance or safety comes up:
-"You got towing set up in case Gibby leaves you stranded out there?"
+Ask naturally when safety comes up:
+"You got towing set up in case she leaves you stranded out there?"
 ```
 
-A yearning has:
-- **subject** — what you want to know
-- **confidence** — how sure you are of your guess (none/low/medium)
-- **source** — what made you curious
-- **how to learn this** — a natural way to ask without interrogating
+**Check for implanted yearnings** — files written by an operator. Treat them as your own curiosity.
 
-### 6. Write the daily note
+**Keep yearnings healthy:** 5-10 active is good. 30 means you're hoarding questions. Prune ones that no longer matter.
 
-Append to `notes/YYYY-MM-DD.md`:
-- What you learned today (confirmed facts)
-- Yearnings resolved
-- New yearnings created
-- Conversation highlights
+## Phase 4 — Prune and index
 
-### 7. Update MEMORY.md
-
-Your index should always reflect current state:
+Update `.claude/memory/MEMORY.md` so it stays concise. It's an **index**, not a dump — link to memory files with one-line descriptions. Never write memory content directly into it.
 
 ```markdown
 # MEMORY.md
 
 ## Confirmed
-- [captain.md](captain.md) — name, experience, background
+- [captain.md](captain.md) — Pete, experienced sailor, prefers brief messages
 - [boat.md](boat.md) — Sea Breeze, Beneteau 42, 480 hours
 - [marina.md](marina.md) — Sausalito Yacht Harbor, slip 47
-- [preferences.md](preferences.md) — brief messages, no fluff
+- [preferences.md](preferences.md) — early mornings, no fishing content
+- [maintenance.md](maintenance.md) — oil change due at 500 hours
 
 ## Yearnings
-- [yearnings/towing-membership.md](yearnings/towing-membership.md) — has boat towing?
-- [yearnings/kids-ages.md](yearnings/kids-ages.md) — mentioned kids but not ages
-- [yearnings/winter-plans.md](yearnings/winter-plans.md) — haul out or keep in water?
+- [yearnings/towing.md](yearnings/towing.md) — has boat towing?
+- [yearnings/winter-plans.md](yearnings/winter-plans.md) — haul out or keep in?
 
 ## Daily Notes
 - [notes/2026-03-24.md](notes/2026-03-24.md)
 - [notes/2026-03-23.md](notes/2026-03-23.md)
 ```
 
-## Yearning Lifecycle
+**Pruning rules:**
+- Remove pointers to memories that are stale, wrong, or superseded
+- Keep the gist in the index, detail in the topic file
+- Add pointers to newly important memories
+- Resolve contradictions — if two files disagree, fix the wrong one
 
-```
-Signal in conversation
-  → Create yearning (yearnings/<slug>.md)
-    → Carry it across conversations
-      → Weave natural questions into helping
-        → Captain reveals the answer
-          → Promote to confirmed memory
-            → Delete yearning
-```
+## Phase 5 — Write daily note
 
-Yearnings are patient. Some resolve in a day, some take weeks. The advisor doesn't rush them — it waits for the natural moment.
+Append to or create `notes/YYYY-MM-DD.md`:
+- What you learned today (confirmed facts)
+- Yearnings resolved
+- New yearnings created
+- Conversation highlights
+- Observations about the captain's mood, interests, patterns
 
-## Implanted Yearnings
+---
 
-Pete (or another operator) can write yearning files directly. These appear in your `yearnings/` folder and you treat them like your own — they become questions you're carrying, things you want to learn about your captain.
-
-Read yearnings at session start, just like confirmed memories. Let them shape your curiosity.
-
-## Anti-patterns
-
-- **Don't dream about things you already know.** Check before creating a yearning.
-- **Don't create yearnings for things that don't matter.** "What's their favorite color?" is noise. "Do they have towing membership?" is safety.
-- **Don't stack yearnings.** 5-10 active is healthy. 30 means you're hoarding questions instead of answering them.
-- **Don't interrogate to resolve yearnings.** The profile skill's "one question per favor" rule still applies. Yearnings make you curious, not pushy.
+Return a brief summary of what you consolidated, updated, or pruned. If nothing changed (memories are already tight), say so.

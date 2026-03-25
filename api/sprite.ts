@@ -58,9 +58,11 @@ export async function createSprite(name: string): Promise<void> {
   proc.kill();
   await proc.exited.catch(() => {});
 
-  // Verify it's reachable
+  // Verify it's reachable and stable
   try {
     await execOnSprite(name, "echo ready");
+    // Brief stabilization — sprite needs a moment after first exec before piped writes work reliably
+    await Bun.sleep(5_000);
   } catch (err) {
     throw new Error(`Sprite ${name} created but not reachable: ${err}`);
   }

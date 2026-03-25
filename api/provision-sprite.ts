@@ -128,8 +128,9 @@ export async function provisionSpritePool(count: number = 1): Promise<{
 
 /**
  * Set up a fresh sprite with channel server, skills, and tools.
+ * @param type - "advisor" or "desk" — determines CLAUDE.md, skills, and yearnings
  */
-async function setupSprite(name: string): Promise<void> {
+async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): Promise<void> {
   // 1. Create the sprite (with console init workaround)
   await createSprite(name);
 
@@ -150,10 +151,25 @@ async function setupSprite(name: string): Promise<void> {
 
   // 5. Copy skills to .claude/skills/ (Claude Code auto-discovery)
   const SPRITE_SKILLS_DIR = join(__dirname, "..", "sprite", "skills");
-  const skillDirs = [
+
+  // Shared skills for all sprite types
+  const sharedSkills = [
+    "knowledge", "obsidian-vault", "memory", "dream",
+    "swain-cli", "stoolap", "firecrawl", "goplaces",
+  ];
+
+  // Type-specific skills
+  const advisorSkills = [
     "onboarding", "briefing", "profile", "card-create", "boat-art",
-    "boat-scan", "knowledge", "obsidian-vault", "memory", "dream",
-    "library", "swain-cli", "stoolap", "firecrawl", "goplaces",
+    "boat-scan", "library",
+  ];
+  const deskSkills = [
+    "content-desk", "flyer", "card-create", "library",
+  ];
+
+  const skillDirs = [
+    ...sharedSkills,
+    ...(type === "desk" ? deskSkills : advisorSkills),
   ];
 
   for (const skillDir of skillDirs) {
@@ -219,13 +235,15 @@ async function setupSprite(name: string): Promise<void> {
   await writeToSprite(name, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(name, "chmod +x /home/sprite/start.sh");
 
-  // 8. Write pool CLAUDE.md (gets overwritten with captain-specific version on assignment)
-  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
+  // 8. Write pool CLAUDE.md (type-specific)
+  const poolTemplate = type === "desk" ? "CLAUDE.md.desk-pool" : "CLAUDE.md.pool";
+  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, poolTemplate), "utf-8");
   await writeToSprite(name, "/home/sprite/CLAUDE.md", poolClaudeMd);
 
-  // 8a. Seed MEMORY.md index and implant starter yearnings
+  // 8a. Seed MEMORY.md index and implant starter yearnings (type-specific)
   const yearningLines: string[] = [];
-  const YEARNINGS_TEMPLATE_DIR = join(SPRITE_TEMPLATES_DIR, "yearnings");
+  const yearningsDir = type === "desk" ? "desk-yearnings" : "yearnings";
+  const YEARNINGS_TEMPLATE_DIR = join(SPRITE_TEMPLATES_DIR, yearningsDir);
   try {
     const { readdir } = await import("fs/promises");
     const yearningFiles = await readdir(YEARNINGS_TEMPLATE_DIR);
@@ -247,7 +265,7 @@ async function setupSprite(name: string): Promise<void> {
     "",
     "## Confirmed",
     "",
-    "No captain assigned yet.",
+    type === "desk" ? "No region assigned yet." : "No captain assigned yet.",
     "",
     "## Yearnings",
     "",
@@ -568,6 +586,213 @@ export async function getPoolStatus(): Promise<{
       spriteUrl: e.spriteUrl,
     })),
   };
+}
+
+// --- Desk sprite provisioning ---
+
+export interface DeskInput {
+  name: string;       // slug, e.g. "tampa-bay"
+  region: string;     // human-readable, e.g. "Tampa Bay, Florida"
+  lat: number;
+  lon: number;
+  scope?: string;     // coverage description
+  description?: string;
+}
+
+function deskPoolSpriteName(index: number): string {
+  return `desk-pool-${index}`;
+}
+
+/**
+ * Pre-provision blank desk sprites into the pool.
+ */
+export async function provisionDeskSpritePool(count: number = 1): Promise<{
+  created: number;
+  failed: number;
+  sprites: Array<{ name: string; url: string; error?: string }>;
+}> {
+  const registry = await loadRegistry();
+  const results: Array<{ name: string; url: string; error?: string }> = [];
+  let created = 0;
+  let failed = 0;
+
+  let maxIndex = 0;
+  for (const entry of Object.values(registry.agents)) {
+    if (entry.type === "desk" && entry.poolIndex !== undefined && entry.poolIndex > maxIndex) {
+      maxIndex = entry.poolIndex;
+    }
+  }
+
+  for (let i = 0; i < count; i++) {
+    const index = maxIndex + 1 + i;
+    const name = deskPoolSpriteName(index);
+
+    if (registry.agents[name]) {
+      console.log(`Desk sprite ${name} already exists, skipping`);
+      continue;
+    }
+
+    try {
+      console.log(`Creating desk sprite ${name}...`);
+      await setupSprite(name, "desk");
+      const url = await getSpriteUrl(name);
+
+      registry.agents[name] = {
+        type: "desk",
+        status: "available",
+        createdAt: new Date().toISOString(),
+        poolIndex: index,
+        spriteName: name,
+        spriteUrl: url,
+      };
+
+      await addToBridgeRegistry({
+        id: name,
+        name: `Desk Pool ${name}`,
+        url,
+        phoneNumbers: [],
+        discordChannelIds: [],
+        allowDMs: false,
+      });
+
+      results.push({ name, url });
+      created++;
+      console.log(`Desk sprite ${name} ready at ${url}`);
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      console.error(`Failed to create desk sprite ${name}: ${error}`);
+      results.push({ name, url: "", error });
+      failed++;
+    }
+  }
+
+  if (created > 0) {
+    await saveRegistry(registry);
+    await reloadBridgeRegistry();
+  }
+
+  return { created, failed, sprites: results };
+}
+
+/**
+ * Assign a desk sprite to a region.
+ */
+export async function provisionSpriteDesk(input: DeskInput): Promise<{
+  agentId: string;
+  status: string;
+  spriteUrl: string;
+  deskId?: string;
+}> {
+  const registry = await loadRegistry();
+
+  // Check if desk name already exists
+  const existing = Object.entries(registry.agents).find(
+    ([_, e]) => e.type === "desk" && e.status === "active" && e.region === input.region,
+  );
+  if (existing) {
+    const [id, entry] = existing;
+    if (entry.spriteUrl) {
+      return { agentId: id, status: entry.status, spriteUrl: entry.spriteUrl };
+    }
+  }
+
+  // Grab first available desk sprite
+  const available = Object.entries(registry.agents)
+    .filter(([_, e]) => e.type === "desk" && e.status === "available" && e.spriteName)
+    .sort((a, b) => (a[1].poolIndex ?? 0) - (b[1].poolIndex ?? 0))[0];
+
+  if (!available) {
+    throw new Error("No available desk sprites in pool. Run provisionDeskSpritePool() first.");
+  }
+
+  const [agentId, entry] = available;
+  const spriteName = entry.spriteName!;
+  const spriteUrl = entry.spriteUrl!;
+
+  // 1. Render desk CLAUDE.md
+  const templateContent = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.desk"), "utf-8");
+  const claudeMd = render(templateContent, {
+    deskName: input.name,
+    region: input.region,
+    scope: input.scope || input.region,
+    lat: String(input.lat),
+    lon: String(input.lon),
+  });
+  await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", claudeMd);
+
+  // 2. Update launcher with vault prefix
+  const vaultPrefix = `desk-${slugify(input.name)}`;
+  const launcherScript = generateLauncherScript(spriteName, vaultPrefix);
+  await writeToSprite(spriteName, "/home/sprite/start.sh", launcherScript);
+  await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
+
+  // 3. Register desk in Convex
+  let deskId: string | undefined;
+  try {
+    const { convexRequest } = await import("./shared");
+    const result = await convexRequest("POST", "/desks", {
+      name: input.name,
+      region: input.region,
+      description: input.description || "",
+      scope: input.scope || "",
+      center: { lat: input.lat, lon: input.lon },
+      bounds: {
+        ne: { lat: input.lat + 0.36, lon: input.lon + 0.45 },
+        sw: { lat: input.lat - 0.36, lon: input.lon - 0.45 },
+      },
+    });
+    deskId = result.id;
+    console.log(`Desk registered in Convex: ${input.name} (${deskId})`);
+  } catch (err) {
+    console.error(`Convex desk registration failed (non-fatal): ${err}`);
+  }
+
+  // 4. Update registry
+  entry.status = "active";
+  entry.region = input.region;
+  entry.assignedAt = new Date().toISOString();
+  await saveRegistry(registry);
+  await reloadBridgeRegistry();
+
+  console.log(`Desk ${agentId} assigned to ${input.region} on sprite ${spriteName}`);
+  return { agentId, status: "assigned", spriteUrl, deskId };
+}
+
+/**
+ * Release a desk sprite back to the pool.
+ */
+export async function deleteSpriteDesk(agentId: string): Promise<void> {
+  const registry = await loadRegistry();
+  const entry = registry.agents[agentId];
+  if (!entry) throw new Error(`Agent ${agentId} not found`);
+  if (!entry.spriteName) throw new Error(`Agent ${agentId} is not a sprite-based desk`);
+
+  const spriteName = entry.spriteName;
+
+  // 1. Reset CLAUDE.md
+  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.desk-pool"), "utf-8");
+  await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
+
+  // 2. Clear sessions and memory
+  try {
+    await execOnSprite(spriteName, "rm -f /home/sprite/.claude-sessions/sessions.json");
+    await execOnSprite(spriteName, "rm -rf /home/sprite/.claude/memory/*");
+  } catch {}
+
+  // 3. Reset registry
+  entry.status = "available";
+  delete entry.region;
+  delete entry.assignedAt;
+  await saveRegistry(registry);
+
+  console.log(`Desk ${agentId} released back to pool (sprite ${spriteName} recycled)`);
+}
+
+export async function listDesks(): Promise<unknown[]> {
+  const registry = await loadRegistry();
+  return Object.entries(registry.agents)
+    .filter(([_, e]) => e.type === "desk" && e.spriteName)
+    .map(([id, e]) => ({ agentId: id, ...e }));
 }
 
 // --- Wake / cron triggers ---

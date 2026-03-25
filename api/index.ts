@@ -1,4 +1,4 @@
-// Sprite-based provisioning (new)
+// Sprite-based provisioning
 import {
   provisionSpriteAdvisor,
   deleteSpriteAdvisor,
@@ -8,16 +8,12 @@ import {
   getPoolStatus,
   wakeAdvisor,
   wakeAllAdvisors,
-} from "./provision-sprite";
-// OpenClaw provisioning (legacy — kept for desk agents)
-import {
-  provisionContentDesk,
-  type DeskProvisionInput,
+  provisionSpriteDesk,
+  deleteSpriteDesk,
+  provisionDeskSpritePool,
   listDesks,
-  deleteDesk,
-  pauseDesk,
-  unpauseDesk,
-} from "./provision";
+  type DeskInput,
+} from "./provision-sprite";
 import { type CaptainInput } from "./templates";
 import {
   listAgents,
@@ -213,40 +209,35 @@ const server = Bun.serve({
         return json(await getPoolStatus());
       }
 
-      // POST /desks — provision content desk
+      // ========== Sprite-based desk routes ==========
+
+      // POST /desks — assign desk from sprite pool
       if (pathname === "/desks" && method === "POST") {
-        const body = (await req.json()) as DeskProvisionInput;
+        const body = (await req.json()) as DeskInput;
         if (!body.name || !body.region || body.lat == null || body.lon == null) {
           return error("name, region, lat, and lon are required");
         }
-        const result = await provisionContentDesk(body);
+        const result = await provisionSpriteDesk(body);
         return json(result, 201);
       }
 
-      // GET /desks — list content desks
+      // GET /desks — list desks
       if (pathname === "/desks" && method === "GET") {
         return json({ desks: await listDesks() });
       }
 
-      // POST /desks/:name/pause — pause content desk
-      const deskPauseMatch = matchRoute(pathname, "/desks/:name/pause");
-      if (deskPauseMatch && method === "POST") {
-        await pauseDesk(deskPauseMatch.name);
-        return json({ status: "paused", name: deskPauseMatch.name });
-      }
-
-      // POST /desks/:name/unpause — unpause content desk
-      const deskUnpauseMatch = matchRoute(pathname, "/desks/:name/unpause");
-      if (deskUnpauseMatch && method === "POST") {
-        await unpauseDesk(deskUnpauseMatch.name);
-        return json({ status: "active", name: deskUnpauseMatch.name });
-      }
-
-      // DELETE /desks/:name — delete content desk
+      // DELETE /desks/:name — release desk back to pool
       const deskDeleteMatch = matchRoute(pathname, "/desks/:name");
       if (deskDeleteMatch && method === "DELETE") {
-        await deleteDesk(deskDeleteMatch.name);
+        await deleteSpriteDesk(deskDeleteMatch.name);
         return json({ status: "deleted", name: deskDeleteMatch.name });
+      }
+
+      // POST /desk-pool/provision — create desk sprite pool
+      if (pathname === "/desk-pool/provision" && method === "POST") {
+        const body = await req.json().catch(() => ({})) as { count?: number };
+        const result = await provisionDeskSpritePool(body.count || 1);
+        return json(result);
       }
 
       return error("Not found", 404);

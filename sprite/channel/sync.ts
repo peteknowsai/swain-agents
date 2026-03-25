@@ -28,7 +28,6 @@ const SKIP_PATTERNS = [
   ".codex",
   ".claude/todos",
   ".claude/settings",
-  ".claude/skills",  // Claude Code internal, not our skills
 ];
 
 // Map Sprite filesystem paths → clean vault paths
@@ -37,6 +36,9 @@ const SKIP_PATTERNS = [
 function toVaultPath(relPath: string): string {
   if (relPath.startsWith(".claude/memory/")) {
     return relPath.replace(/^\.claude\/memory\//, "memory/");
+  }
+  if (relPath.startsWith(".claude/skills/")) {
+    return relPath.replace(/^\.claude\/skills\//, "skills/");
   }
   return relPath;
 }

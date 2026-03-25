@@ -5,14 +5,16 @@ on:
     branches: [main]
     paths:
       - 'api/**'
+      - 'bridge/**'
       - 'skills/**'
       - 'templates/**'
+      - 'sprite/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy API
+      - name: Deploy API + Bridge
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -26,3 +28,8 @@ jobs:
             systemctl restart swain-agent-api
             sleep 2
             systemctl is-active swain-agent-api
+
+            # Restart Bridge
+            systemctl restart swain-bridge
+            sleep 2
+            systemctl is-active swain-bridge

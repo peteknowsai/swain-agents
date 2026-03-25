@@ -33,10 +33,15 @@ const chatAddresses = new Map<string, string>();
 
 // Load registry from config file
 const REGISTRY_PATH = process.env.REGISTRY_PATH ?? "./registry.json";
-try {
+
+async function loadRegistryFromDisk(): Promise<void> {
   const file = Bun.file(REGISTRY_PATH);
   const config = await file.json();
   loadRegistry(config);
+}
+
+try {
+  await loadRegistryFromDisk();
 } catch (err) {
   console.error(
     `[bridge] failed to load registry from ${REGISTRY_PATH}:`,
@@ -145,6 +150,17 @@ Bun.serve({
       }
 
       return Response.json({ ok: true });
+    }
+
+    // Registry reload — called by API server after provisioning
+    if (url.pathname === "/registry/reload" && req.method === "POST") {
+      try {
+        await loadRegistryFromDisk();
+        return Response.json({ ok: true, sprites: listAll().length });
+      } catch (err) {
+        console.error("[bridge] registry reload failed:", err);
+        return Response.json({ ok: false, error: String(err) }, { status: 500 });
+      }
     }
 
     // List sprites

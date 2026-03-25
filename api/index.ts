@@ -1,11 +1,14 @@
+// Sprite-based provisioning (new)
 import {
-  provisionAdvisor,
-  deleteAdvisor,
+  provisionSpriteAdvisor,
+  deleteSpriteAdvisor,
   listAdvisors,
   lookupByUserId,
-  provisionPool,
+  provisionSpritePool,
   getPoolStatus,
-  expandPool,
+} from "./provision-sprite";
+// OpenClaw provisioning (legacy — kept for desk agents)
+import {
   provisionContentDesk,
   type DeskProvisionInput,
   listDesks,
@@ -152,20 +155,13 @@ const server = Bun.serve({
 
       // ========== Pool routes ==========
 
-      // POST /pool/expand — add more pool agents
-      if (pathname === "/pool/expand" && method === "POST") {
-        const body = await req.json().catch(() => ({})) as { count?: number };
-        const result = await expandPool(body.count || 20);
-        return json(result);
-      }
+      // ========== Sprite-based advisor routes ==========
 
-      // ========== Legacy routes (backward compat) ==========
-
-      // POST /advisors — assign from pool
+      // POST /advisors — assign from sprite pool
       if (pathname === "/advisors" && method === "POST") {
         const body = (await req.json()) as CaptainInput;
         if (!body.userId || !body.name) return error("userId and name are required");
-        const result = await provisionAdvisor(body);
+        const result = await provisionSpriteAdvisor(body);
         return json(result, 201);
       }
 
@@ -179,13 +175,15 @@ const server = Bun.serve({
       // DELETE /advisors/:agentId — release back to pool
       const deleteMatch = matchRoute(pathname, "/advisors/:agentId");
       if (deleteMatch && method === "DELETE") {
-        await deleteAdvisor(deleteMatch.agentId);
+        await deleteSpriteAdvisor(deleteMatch.agentId);
         return json({ status: "deleted", agentId: deleteMatch.agentId });
       }
 
-      // POST /pool/provision — create pool agents
+      // POST /pool/provision — create sprite pool
       if (pathname === "/pool/provision" && method === "POST") {
-        return json(await provisionPool());
+        const body = await req.json().catch(() => ({})) as { count?: number };
+        const result = await provisionSpritePool(body.count || 1);
+        return json(result);
       }
 
       // GET /pool/status

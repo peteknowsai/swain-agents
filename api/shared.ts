@@ -33,6 +33,10 @@ export interface AgentEntry {
   // Desk-specific
   region?: string;
 
+  // Sprite fields
+  spriteName?: string;    // e.g. "advisor-pool-01"
+  spriteUrl?: string;     // e.g. "https://advisor-pool-01-xxx.sprites.app"
+
   // Pause state
   pausedAt?: string;
   pauseSnapshot?: {

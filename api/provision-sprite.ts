@@ -35,6 +35,7 @@ const CHANNEL_DIR = join(__dirname, "..", "sprite", "channel");
 // Env vars that get baked into each sprite's launcher script
 const SPRITE_ENV_VARS = {
   CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN || "",
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   BRIDGE_URL: process.env.BRIDGE_URL || "http://76.13.106.143:3848",
   SWAIN_API_TOKEN: process.env.SWAIN_API_TOKEN || "",
   R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "a18dd41e124527b88c6f76255c8ce27e",
@@ -181,6 +182,32 @@ async function setupSprite(name: string): Promise<void> {
     "https://github.com/peteknowsai/swain-agents/releases/latest/download/swain-linux-x64",
     "&& chmod +x /usr/local/bin/swain",
   ].join(" "));
+
+  // Install Stoolap (copy from VPS — no release binary available)
+  try {
+    const { execSync } = await import("child_process");
+    execSync(`sprite exec -s ${name} -- bash -c "test -f /usr/local/bin/stoolap" 2>/dev/null`, {
+      env: { ...process.env, HOME: "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
+    });
+  } catch {
+    // Not installed yet — copy from VPS
+    const { execSync } = await import("child_process");
+    try {
+      execSync(
+        `cat /usr/local/bin/stoolap | sprite exec -s ${name} -- bash -c "cat > /usr/local/bin/stoolap && chmod +x /usr/local/bin/stoolap"`,
+        {
+          env: { ...process.env, HOME: "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
+          timeout: 120_000,
+        },
+      );
+      console.log(`Stoolap installed on ${name}`);
+    } catch (err) {
+      console.warn(`Stoolap install failed (non-fatal): ${err}`);
+    }
+  }
+
+  // Create stoolap data directory
+  await execOnSprite(name, "mkdir -p /home/sprite/stoolap");
 
   // Update Claude Code to latest
   await execOnSprite(name, "curl -fsSL https://claude.ai/install.sh | bash").catch(

@@ -560,6 +560,163 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<void> {
   console.log(`Advisor ${agentId} released back to pool (sprite ${spriteName} recycled)`);
 }
 
+// --- Promote: rename a pool sprite to a permanent name ---
+
+/**
+ * Promote a pool sprite to a permanent name.
+ * Creates a new sprite with the real name, copies the brain,
+ * swaps routing, and recycles the pool sprite.
+ *
+ * Run this in the background after the advisor/desk has had its
+ * first conversation — the captain never notices the swap.
+ *
+ * @param agentId - current pool agent ID (e.g., "advisor-pool-1")
+ * @param newName - permanent sprite name (e.g., "pete-advisor", "tampa-bay-desk")
+ */
+export async function promoteSprite(agentId: string, newName: string): Promise<{
+  oldSprite: string;
+  newSprite: string;
+  newUrl: string;
+}> {
+  const registry = await loadRegistry();
+  const entry = registry.agents[agentId];
+  if (!entry) throw new Error(`Agent ${agentId} not found`);
+  if (!entry.spriteName) throw new Error(`Agent ${agentId} has no sprite`);
+  if (entry.status !== "active") throw new Error(`Agent ${agentId} is not active`);
+
+  const oldSprite = entry.spriteName;
+  const agentType = entry.type;
+
+  console.log(`Promoting ${oldSprite} → ${newName}...`);
+
+  // 1. Create new sprite with base infra
+  await setupSprite(newName, agentType);
+  const newUrl = await getSpriteUrl(newName);
+
+  // 2. Copy the brain from old sprite to new sprite
+  //    - CLAUDE.md (personalized)
+  //    - .claude/memory/ (all memories, yearnings, notes)
+  //    - .claude-sessions/ (conversation continuity)
+  //    - stoolap/ (structured data + embeddings)
+  //    - start.sh (env vars including vault prefix)
+  //    - about.md
+  const filesToCopy = [
+    "CLAUDE.md",
+    "start.sh",
+    "about.md",
+  ];
+
+  for (const file of filesToCopy) {
+    try {
+      const content = await execOnSprite(oldSprite, `cat /home/sprite/${file}`);
+      await writeToSprite(newName, `/home/sprite/${file}`, content);
+    } catch {
+      console.warn(`Failed to copy ${file} (non-fatal)`);
+    }
+  }
+
+  // Copy directories recursively via tar
+  const dirsToSync = [
+    ".claude/memory",
+    ".claude-sessions",
+    "stoolap",
+  ];
+
+  for (const dir of dirsToSync) {
+    try {
+      // Tar on old sprite, pipe to new sprite, untar
+      const { execSync } = await import("child_process");
+      execSync(
+        `sprite exec -s ${oldSprite} -- tar cf - -C /home/sprite ${dir} 2>/dev/null | sprite exec -s ${newName} -- tar xf - -C /home/sprite`,
+        {
+          env: { ...process.env, HOME: "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
+          timeout: 60_000,
+        },
+      );
+      console.log(`  Copied ${dir}`);
+    } catch {
+      console.warn(`  Failed to copy ${dir} (non-fatal)`);
+    }
+  }
+
+  // 3. Make executable and restart service on new sprite
+  await execOnSprite(newName, "chmod +x /home/sprite/start.sh");
+  try {
+    await execOnSprite(newName, "sprite-env services stop channel");
+    await Bun.sleep(2000);
+    await execOnSprite(newName, "sprite-env services start channel");
+  } catch {}
+
+  // 4. Wait for new sprite to be healthy
+  await waitForSpriteHealth(newUrl, 60_000);
+
+  // 5. Swap registry — update the agent entry to point to new sprite
+  entry.spriteName = newName;
+  entry.spriteUrl = newUrl;
+
+  // 6. Update bridge registry
+  const bridgeEntries = await loadBridgeRegistry();
+  const bridgeEntry = bridgeEntries.find(e => e.id === agentId);
+  if (bridgeEntry) {
+    bridgeEntry.url = newUrl;
+  }
+  // Also add new sprite entry if it was registered during setupSprite
+  const newBridgeEntry = bridgeEntries.find(e => e.id === newName);
+  if (newBridgeEntry) {
+    // Remove the setup entry — we use the original agentId
+    const idx = bridgeEntries.indexOf(newBridgeEntry);
+    if (idx >= 0) bridgeEntries.splice(idx, 1);
+  }
+  await saveBridgeRegistry(bridgeEntries);
+  await reloadBridgeRegistry();
+  await saveRegistry(registry);
+
+  // 7. Recycle the old pool sprite
+  //    Clear its state and mark available for reuse
+  const poolTemplate = agentType === "desk" ? "CLAUDE.md.desk-pool" : "CLAUDE.md.pool";
+  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, poolTemplate), "utf-8");
+  await writeToSprite(oldSprite, "/home/sprite/CLAUDE.md", poolClaudeMd);
+  try {
+    await execOnSprite(oldSprite, "rm -rf /home/sprite/.claude/memory/* /home/sprite/.claude-sessions/* /home/sprite/stoolap/*");
+  } catch {}
+
+  // Re-seed yearnings on the recycled pool sprite
+  const yearningsDir = agentType === "desk" ? "desk-yearnings" : "yearnings";
+  try {
+    const { readdir } = await import("fs/promises");
+    const yearningFiles = await readdir(join(SPRITE_TEMPLATES_DIR, yearningsDir));
+    const today = new Date().toISOString().split("T")[0];
+    for (const file of yearningFiles) {
+      if (!file.endsWith(".md")) continue;
+      let content = await readFile(join(SPRITE_TEMPLATES_DIR, yearningsDir, file), "utf-8");
+      content = content.replaceAll("{{today}}", today);
+      await writeToSprite(oldSprite, `/home/sprite/.claude/memory/yearnings/${file}`, content);
+    }
+  } catch {}
+
+  // Create a new available entry for the recycled pool sprite
+  const oldUrl = await getSpriteUrl(oldSprite);
+  const nextIndex = Math.max(
+    ...Object.values(registry.agents)
+      .filter(e => e.type === agentType && e.poolIndex !== undefined)
+      .map(e => e.poolIndex!),
+    0,
+  ) + 1;
+
+  registry.agents[oldSprite] = {
+    type: agentType,
+    status: "available",
+    createdAt: new Date().toISOString(),
+    poolIndex: nextIndex,
+    spriteName: oldSprite,
+    spriteUrl: oldUrl,
+  };
+  await saveRegistry(registry);
+
+  console.log(`Promoted ${oldSprite} → ${newName} at ${newUrl}. Pool sprite recycled.`);
+  return { oldSprite, newSprite: newName, newUrl };
+}
+
 // --- Queries ---
 
 export async function lookupByUserId(userId: string): Promise<string | null> {

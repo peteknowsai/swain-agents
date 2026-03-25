@@ -48,10 +48,44 @@ const SPRITE_ENV_VARS = {
   R2_BUCKET: process.env.R2_BUCKET || "swain-vaults",
 };
 
+// --- Pool config ---
+
+const POOL_MIN_AVAILABLE = {
+  advisor: 3,
+  desk: 2,
+};
+
 // --- Pool provisioning ---
 
 function poolSpriteName(index: number): string {
   return `advisor-pool-${index}`;
+}
+
+/**
+ * Check pool levels and provision more if below minimum.
+ * Fire-and-forget — runs in background after each assignment.
+ */
+async function replenishPool(type: "advisor" | "desk"): Promise<void> {
+  const registry = await loadRegistry();
+  const available = Object.values(registry.agents)
+    .filter(e => e.type === type && e.status === "available" && e.spriteName)
+    .length;
+
+  const min = POOL_MIN_AVAILABLE[type];
+  const deficit = min - available;
+
+  if (deficit <= 0) {
+    console.log(`[pool] ${type} pool healthy: ${available} available (min ${min})`);
+    return;
+  }
+
+  console.log(`[pool] ${type} pool low: ${available} available, need ${min}. Provisioning ${deficit}...`);
+
+  if (type === "advisor") {
+    await provisionSpritePool(deficit);
+  } else {
+    await provisionDeskSpritePool(deficit);
+  }
 }
 
 /**
@@ -507,6 +541,10 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   }
 
   console.log(`Advisor ${agentId} assigned to ${input.name} (${input.userId}) on sprite ${spriteName}`);
+
+  // Auto-replenish pool in background
+  replenishPool("advisor").catch(err => console.warn(`Pool replenish failed: ${err}`));
+
   return { agentId, status: "assigned", spriteUrl };
 }
 
@@ -966,6 +1004,10 @@ export async function provisionSpriteDesk(input: DeskInput): Promise<{
   await reloadBridgeRegistry();
 
   console.log(`Desk ${agentId} assigned to ${input.region} on sprite ${spriteName}`);
+
+  // Auto-replenish pool in background
+  replenishPool("desk").catch(err => console.warn(`Desk pool replenish failed: ${err}`));
+
   return { agentId, status: "assigned", spriteUrl, deskId };
 }
 

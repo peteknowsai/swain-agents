@@ -14,24 +14,25 @@ Read `.claude/memory/` for personality, preferences, recent conversations.
 swain briefing previous --user=<userId> --json
 ```
 
-### 3. Check liked flyers
-```bash
-swain flyer list --user=<userId> --status=liked --json
-```
-For each liked flyer, research deeper and create a personalized card.
-
-### 4. Pull card candidates
+### 3. Pull content cards (THE CORE)
 ```bash
 swain card pull --user=<userId> --exclude-served --json
 ```
+This is the backbone of the briefing — weather, fishing, safety, events, navigation, maintenance. You need at least 5-6 real content cards before considering anything else.
 
-### 5. Fill gaps (if fewer than 9 candidates)
+### 4. Fill gaps (if fewer than 6 content candidates)
 Research topics the captain cares about, create cards one at a time:
 ```bash
 swain card create --desk=<desk> --user=<userId> \
   --category=<cat> --title="..." --subtext="..." \
   --content="..." --freshness=<type> --json
 ```
+
+### 5. Check liked flyers (1-2 MAX)
+```bash
+swain flyer list --user=<userId> --status=liked --json
+```
+Only if there are liked flyers, pick 1-2 that are genuinely relevant today. Create a card for each. Do NOT create cards for every liked flyer — be selective.
 
 ### 6. Generate boat art
 ```bash

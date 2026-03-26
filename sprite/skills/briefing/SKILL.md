@@ -11,9 +11,9 @@ Build a personalized daily briefing for your captain.
 
 1. **Get captain context** — read memory files and check profile
 2. **Check yesterday's briefing** — avoid repeating content
-3. **Check liked flyers** — strongest interest signals from your captain
-4. **Pull card candidates** — personalized, ranked selection
-5. **Fill gaps** — create cards if fewer than 9 candidates
+3. **Pull content cards** — the core of the briefing (weather, fishing, safety, events, etc.)
+4. **Fill gaps** — create cards if fewer than 6 content candidates
+5. **Check liked flyers** — sprinkle in 1-2 flyer-based cards if relevant
 6. **Generate boat art**
 7. **Style every card** — image + backgroundColor
 8. **Select 8-10 cards** and write commentary
@@ -24,14 +24,24 @@ For the detailed step-by-step workflow, card styling process, and briefing item 
 
 ## Card Selection Priority
 
-1. **Liked-flyer cards** — captain explicitly said they want this
-2. **User-tagged cards** — cards you created for this captain
-3. **Timely cards** — still valid today (check `expires_at`)
-4. **Evergreen cards** — haven't been served yet
-5. Match captain's interests from memory
+**Content first, flyers as garnish.**
+
+1. **Timely content cards** — weather, tides, fishing reports, safety advisories, events
+2. **User-tagged cards** — cards created specifically for this captain
+3. **Evergreen content** — maintenance tips, navigation guides, local knowledge
+4. Match captain's interests from memory
+5. **1-2 liked-flyer cards MAX** — only if genuinely relevant to the captain today
 6. Avoid repeating yesterday's cards
 
+**Target mix for an 8-10 card briefing:**
+- 5-7 content cards (weather, fishing, safety, events, navigation, etc.)
+- 1 boat art
+- 0-2 flyer cards (local businesses — only when they add real value)
+- Commentary text items woven between cards
+
 **Hard floor: at least 8 items total** (including boat art).
+
+**Do NOT** build the briefing primarily from flyers. Flyers are promotional — they're garnish, not the meal. A captain opens their briefing for conditions, reports, and useful knowledge, not a list of local businesses.
 
 ## Commentary Guidelines
 

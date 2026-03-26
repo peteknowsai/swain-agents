@@ -21,12 +21,17 @@ swain card pull --user=<userId> --exclude-served --json
 This is the backbone of the briefing — weather, fishing, safety, events, navigation, maintenance. You need at least 5-6 real content cards before considering anything else.
 
 ### 4. Fill gaps (if fewer than 6 content candidates)
-Research topics the captain cares about, create cards one at a time:
+Research topics the captain cares about, create cards one at a time.
+
+**Always include `--desk` and `--user`** — cards without a desk are orphaned and can't be found by other agents. The captain's desk is in their profile or your CLAUDE.md.
+
 ```bash
 swain card create --desk=<desk> --user=<userId> \
   --category=<cat> --title="..." --subtext="..." \
   --content="..." --freshness=<type> --json
 ```
+
+Cards you create here also contribute to the desk's content library — other captains on the same desk benefit from your research.
 
 ### 5. Check liked flyers (1-2 MAX)
 ```bash

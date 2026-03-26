@@ -43,6 +43,15 @@ export const SCHEDULES: ScheduleEntry[] = [
     description: "Daily flyer generation",
   },
 
+  {
+    id: "desk-card-hygiene",
+    skill: "card-hygiene",
+    agentType: "desk",
+    cron: "0 14 * * *",
+    timezone: "UTC",
+    description: "Fix cards missing images or styles",
+  },
+
   // --- Advisors: agent-local timezone, staggered ---
   {
     id: "advisor-briefing",

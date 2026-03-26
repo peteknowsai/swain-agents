@@ -21,7 +21,21 @@ const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const CLAUDE_PATH = process.env.CLAUDE_PATH ?? "/home/sprite/.local/bin/claude";
 const SESSION_FILE = "/home/sprite/.claude-sessions/sessions.json";
+const IDLE_TIMEOUT_MS = 5 * 60_000; // 5 minutes — exit so sprite goes cold
 const startTime = Date.now();
+let lastActivity = Date.now();
+
+// Idle shutdown timer — resets on every real request (not health checks)
+function resetIdleTimer(): void {
+  lastActivity = Date.now();
+}
+
+setInterval(() => {
+  if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) {
+    console.log(`[channel] idle for ${IDLE_TIMEOUT_MS / 1000}s — shutting down`);
+    process.exit(0);
+  }
+}, 30_000);
 
 // Session map: chatId → sessionId
 let sessions: Record<string, string> = {};
@@ -177,6 +191,7 @@ Bun.serve({
       };
 
       const chatId = body.chatId ?? body.userId ?? "default";
+      resetIdleTimer();
       console.log(`[channel] message from ${body.user ?? "unknown"}: ${body.text.slice(0, 80)}`);
 
       // Run claude -p with session resume
@@ -204,6 +219,7 @@ Bun.serve({
         name?: string;
       };
 
+      resetIdleTimer();
       const prompt = `Run the ${body.skill} skill. Read your CLAUDE.md for context, then follow the skill's instructions.`;
       // Fresh session per cron run — don't resume old sessions
       const cronId = `cron:${body.skill}:${Date.now()}`;
@@ -225,6 +241,7 @@ Bun.serve({
 
     // Reverse proxy: /data/* and /_next/* and /api/* → Stoolap Studio on port 3000
     if (url.pathname.startsWith("/data") || url.pathname.startsWith("/_next") || url.pathname.startsWith("/api/")) {
+      resetIdleTimer();
       const studioPath = url.pathname.startsWith("/data")
         ? (url.pathname.replace(/^\/data/, "") || "/")
         : url.pathname;

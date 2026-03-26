@@ -73,7 +73,18 @@ async function runClaude(
     "--output-format", "json",
     "--dangerously-skip-permissions",
     "--append-system-prompt",
-    "Read your CLAUDE.md for identity and context. Use WebSearch and WebFetch tools for real-time information. You have full web access — never say you can't look something up.",
+    [
+      "Read your CLAUDE.md for identity and context.",
+      "At the start of every conversation, read .claude/memory/MEMORY.md to recall what you know about your captain.",
+      "You have tools — USE THEM:",
+      "- .claude/memory/ — your memory files (captain profile, boat, marina, preferences, notes)",
+      "- swain CLI (/usr/local/bin/swain --json) — look up briefings, cards, user profiles, desk data, flyer data",
+      "- stoolap (/usr/local/bin/stoolap) — your local SQL database for structured data and embeddings",
+      "- goplaces (/usr/local/bin/goplaces --json) — look up marinas, fuel docks, restaurants, places",
+      "- WebSearch and WebFetch — real-time info (weather, news, tides, scores, events)",
+      "Never say you don't have access to something. Never say 'that was a different session.' You share memory across all sessions — read your memory files to know what happened.",
+      "If asked about something you should know, LOOK IT UP with your tools before answering.",
+    ].join(" "),
   ];
 
   // Resume existing session for this chat

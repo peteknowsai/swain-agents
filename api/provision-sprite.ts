@@ -1096,7 +1096,7 @@ export async function wakeAdvisor(
         chatId: options.chatId || `cron:${skill}`,
         userId: entry.userId,
       }),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(600_000),
     });
     return { ok: res.ok };
   }
@@ -1106,7 +1106,7 @@ export async function wakeAdvisor(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ skill, name: `${skill} for ${entry.captainName}` }),
-    signal: AbortSignal.timeout(180_000),
+    signal: AbortSignal.timeout(600_000),
   });
 
   if (!res.ok) {
@@ -1244,7 +1244,7 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
       chatId: `im:${phone}`,
       userId: input.userId,
     }),
-    signal: AbortSignal.timeout(180_000),
+    signal: AbortSignal.timeout(600_000),
   }).then(async (res) => {
     if (res.ok) {
       console.log(`Intro triggered for ${agentId}`);

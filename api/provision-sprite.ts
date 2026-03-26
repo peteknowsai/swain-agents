@@ -700,20 +700,22 @@ export async function promoteSprite(agentId: string, newName: string): Promise<{
   // 4. Wait for new sprite to be healthy
   await waitForSpriteHealth(newUrl, 60_000);
 
-  // 5. Swap registry — update the agent entry to point to new sprite
+  // 5. Swap registry — update the agent entry and re-key from pool name to promoted name
   entry.spriteName = newName;
   entry.spriteUrl = newUrl;
+  delete registry.agents[agentId];
+  registry.agents[newName] = entry;
 
   // 6. Update bridge registry
   const bridgeEntries = await loadBridgeRegistry();
   const bridgeEntry = bridgeEntries.find(e => e.id === agentId);
   if (bridgeEntry) {
+    bridgeEntry.id = newName;
     bridgeEntry.url = newUrl;
   }
-  // Also add new sprite entry if it was registered during setupSprite
-  const newBridgeEntry = bridgeEntries.find(e => e.id === newName);
+  // Also remove any new sprite entry created during setupSprite
+  const newBridgeEntry = bridgeEntries.find(e => e.id === newName && e !== bridgeEntry);
   if (newBridgeEntry) {
-    // Remove the setup entry — we use the original agentId
     const idx = bridgeEntries.indexOf(newBridgeEntry);
     if (idx >= 0) bridgeEntries.splice(idx, 1);
   }

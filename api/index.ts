@@ -27,6 +27,7 @@ import {
   listAgentCrons,
   sendAgentMessage,
 } from "./agents";
+import { startScheduler, triggerSchedule, getSchedulerStatus, getSchedulerLog } from "./scheduler";
 
 const PORT = 3847;
 const TOKEN = process.env.SWAIN_AGENT_API_TOKEN;
@@ -250,6 +251,27 @@ const server = Bun.serve({
         return json(result);
       }
 
+      // ========== Scheduler routes ==========
+
+      if (pathname === "/scheduler/status" && method === "GET") {
+        return json(getSchedulerStatus());
+      }
+
+      if (pathname === "/scheduler/trigger" && method === "POST") {
+        const body = await req.json() as { scheduleId: string; agentId?: string };
+        if (!body.scheduleId) return error("scheduleId is required");
+        const result = await triggerSchedule(body.scheduleId, body.agentId);
+        return json(result);
+      }
+
+      if (pathname === "/scheduler/log" && method === "GET") {
+        const limit = parseInt(url.searchParams.get("limit") || "100", 10);
+        const agentId = url.searchParams.get("agentId") || undefined;
+        const scheduleId = url.searchParams.get("scheduleId") || undefined;
+        const entries = await getSchedulerLog({ limit, agentId, scheduleId });
+        return json({ entries });
+      }
+
       return error("Not found", 404);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -263,3 +285,4 @@ const server = Bun.serve({
 });
 
 console.log(`swain-agent-api running on http://localhost:${PORT}`);
+startScheduler();

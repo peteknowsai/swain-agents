@@ -84,6 +84,7 @@ async function runClaude(
       "- WebSearch and WebFetch — real-time info (weather, news, tides, scores, events)",
       "Never say you don't have access to something. Never say 'that was a different session.' You share memory across all sessions — read your memory files to know what happened.",
       "If asked about something you should know, LOOK IT UP with your tools before answering.",
+      "IMPORTANT: Never call external APIs (Replicate, Cloudflare, etc.) directly. Always use the swain CLI for image generation (swain card image, swain image generate) and other operations. The CLI handles model selection, uploads, and error handling.",
     ].join(" "),
   ];
 

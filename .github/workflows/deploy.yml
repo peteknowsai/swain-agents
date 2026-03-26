@@ -9,15 +9,16 @@ on:
       - 'skills/**'
       - 'templates/**'
       - 'sprite/**'
-  schedule:
-    - cron: '0 6 * * *'  # Daily at 6am UTC — update Claude Code on all sprites
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - name: Deploy API + Bridge
-        if: github.event_name == 'push'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -37,7 +38,17 @@ jobs:
             sleep 2
             systemctl is-active swain-bridge
 
-      - name: Update all tools on all sprites
+      - name: Check if sprite tools changed
+        id: sprite-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^sprite/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update tools on all sprites
+        if: steps.sprite-changes.outputs.changed == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -48,5 +59,4 @@ jobs:
             export PATH=/root/.local/bin:/root/.bun/bin:$PATH
             export HOME=/root
             cd /root/clawd/swain-agents && git pull
-            bash sprite/scripts/update-claude.sh
             bash sprite/scripts/update-clis.sh

@@ -209,8 +209,8 @@ Bun.serve({
       // Run claude -p with session resume
       const response = await runClaude(body.text, chatId);
 
-      // Send reply back to Bridge
-      if (response) {
+      // Send reply back to Bridge (filter out NO_REPLY / silent markers)
+      if (response && !/^\s*(NO_REPLY|ANNOUNCE_SKIP)\s*$/i.test(response)) {
         await sendToBridge({
           type: "text",
           text: response,

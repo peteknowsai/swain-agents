@@ -526,6 +526,20 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
     }
   }
 
+  // 3b. Initialize boat scan progression
+  if (boatId) {
+    try {
+      const scanProc = Bun.spawn([
+        "swain", "scan", "initialize",
+        `--user=${input.userId}`, `--boat=${boatId}`, "--json",
+      ], { stdout: "pipe", stderr: "pipe" });
+      await scanProc.exited;
+      console.log(`Scan initialized for ${agentId}`);
+    } catch (err) {
+      console.error(`Scan init failed (non-fatal): ${err}`);
+    }
+  }
+
   // 4. Update agent registry
   entry.status = "active";
   entry.userId = input.userId;
@@ -1231,15 +1245,17 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `Read your CLAUDE.md for context. Check their profile: swain user get ${input.userId} --json`,
         `Send a brief reconnection message via iMessage — 1-2 sentences. Acknowledge you've been away.`,
         `Something like "Hey ${input.name}, been a minute — I'm back and keeping an eye on things for you." Reference their boat if you know it.`,
-        `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}".`,
+        `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
         `Don't over-explain. Just be natural — like running into a dock neighbor after a while.`,
+        `After sending, run: swain user update ${input.userId} --onboardingStep=contacting --json`,
       ].join(" ")
     : [
         `You've just been assigned as ${input.name}'s advisor.`,
-        `Read your CLAUDE.md for full context about who you are and how to communicate.`,
-        `Send a warm, brief intro message — 1-2 sentences max. You're texting via iMessage.`,
+        `Read the onboarding skill in .claude/skills/onboarding/SKILL.md and follow Phase 1 exactly.`,
         `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
-        `Don't mention anything about being assigned or activated. Just be natural — like a dock neighbor saying hey for the first time.`,
+        `Your text output goes directly to the captain as an iMessage — write ONLY what you want them to see.`,
+        `After the intro, run: swain user update ${input.userId} --onboardingStep=contacting --json`,
+        `Then reply NO_REPLY.`,
       ].join(" ");
 
   fetch(`${spriteUrl}/message`, {

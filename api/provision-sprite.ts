@@ -1254,9 +1254,17 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `After sending, run: swain user update ${input.userId} --onboardingStep=contacting --json`,
       ].join(" ")
     : [
-        `Run the onboarding skill. Read .claude/skills/onboarding/SKILL.md and execute Phase 1.`,
-        `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
+        `You're a boating advisor. Send a first intro text to ${input.name}.`,
+        `They have a ${input.boatMakeModel || input.boatName || "boat"}${input.boatName ? ` called "${input.boatName}"` : ""}.`,
+        `Lead with something real about their boat. Then briefly say you keep an eye on their waters and send them good stuff each morning.`,
+        `End with one question: where do they keep their boat?`,
+        `2-3 sentences. Casual, like a dock neighbor. Just output the message — nothing else.`,
       ].join(" ");
+
+  // Update onboarding status on the API side — don't make Claude do it
+  Bun.spawn(["swain", "user", "update", input.userId, "--onboardingStep=contacting", "--json"], {
+    stdout: "pipe", stderr: "pipe",
+  }).exited.catch(() => {});
 
   // Sprite was pre-warmed at the start of assignment — retry if still waking
   (async () => {

@@ -13,9 +13,9 @@ export type SpriteConfig = {
  * Send a message to a Sprite's channel server.
  * Wakes the Sprite if sleeping (hitting the URL triggers wake).
  *
- * Strategy: try to wake with health checks. If that fails after 90s,
- * try waking via sprite exec as a fallback. Queue message for retry
- * if all else fails.
+ * Strategy: send the message directly — the request itself wakes the
+ * Sprite. If it fails (502, connection error), retry with backoff.
+ * Falls back to health-poll only if direct attempts keep failing.
  */
 export async function sendToSprite(
   sprite: SpriteConfig,
@@ -28,87 +28,45 @@ export async function sendToSprite(
       ? { Authorization: `Bearer ${SPRITE_API_TOKEN}` }
       : {}),
   };
+  const payload = JSON.stringify(body);
+  const start = Date.now();
+  const TIMEOUT_MS = 90_000; // total time budget for wake + delivery
 
-  // Step 1: Wake the Sprite with health checks (up to 90s)
-  console.log(`[sprites] waking ${sprite.id}...`);
-  const awake = await waitForHealth(sprite, 90_000);
-  if (!awake) {
-    console.error(`[sprites] ${sprite.id} failed to wake after 90s`);
-    return false;
-  }
-  console.log(`[sprites] ${sprite.id} is awake`);
+  console.log(`[sprites] sending to ${sprite.id}...`);
 
-  // Step 2: Send the message with generous timeout (claude -p can take a while)
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // Try sending directly with retries — the request itself triggers wake
+  for (let attempt = 1; Date.now() - start < TIMEOUT_MS; attempt++) {
     try {
       const res = await fetch(`${sprite.url}${path}`, {
         method: "POST",
         headers,
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(180_000), // 3 min — claude -p + web search can be slow
+        body: payload,
+        signal: AbortSignal.timeout(180_000), // 3 min — claude -p can be slow
       });
-      if (res.ok) return true;
 
-      // 502 after health passed = service crashed during request, retry once
-      if (res.status === 502 && attempt === 0) {
-        console.log(`[sprites] ${sprite.id} 502 on message, retrying...`);
-        await Bun.sleep(5000);
+      if (res.ok) {
+        if (attempt > 1) console.log(`[sprites] ${sprite.id} delivered on attempt ${attempt}`);
+        return true;
+      }
+
+      // 502/503 = sprite still waking, retry
+      if (res.status === 502 || res.status === 503) {
+        console.log(`[sprites] ${sprite.id} waking (${res.status}), attempt ${attempt}...`);
+        await Bun.sleep(attempt <= 3 ? 2000 : 5000);
         continue;
       }
 
-      console.error(
-        `[sprites] ${sprite.id} message failed: ${res.status} ${res.statusText}`
-      );
+      // Any other error status is not recoverable
+      console.error(`[sprites] ${sprite.id} failed: ${res.status} ${res.statusText}`);
       return false;
     } catch (err) {
-      if (attempt === 0) {
-        console.log(`[sprites] ${sprite.id} message timed out, retrying...`);
-        await Bun.sleep(5000);
-        continue;
-      }
-      console.error(`[sprites] ${sprite.id} message error:`, err);
-      return false;
+      // Connection refused / timeout = sprite not up yet
+      console.log(`[sprites] ${sprite.id} not reachable, attempt ${attempt}...`);
+      await Bun.sleep(attempt <= 3 ? 2000 : 5000);
     }
   }
 
-  return false;
-}
-
-/**
- * Wait for a Sprite's channel server to be healthy.
- * Polls /health until ready or timeout.
- */
-async function waitForHealth(
-  sprite: SpriteConfig,
-  timeoutMs: number
-): Promise<boolean> {
-  const start = Date.now();
-  let attempt = 0;
-
-  while (Date.now() - start < timeoutMs) {
-    attempt++;
-    try {
-      const res = await fetch(`${sprite.url}/health`, {
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (res.ok) return true;
-
-      if (res.status === 502 || res.status === 503) {
-        console.log(
-          `[sprites] ${sprite.id} waking (${res.status}), attempt ${attempt}...`
-        );
-      }
-    } catch {
-      console.log(
-        `[sprites] ${sprite.id} not reachable yet, attempt ${attempt}...`
-      );
-    }
-
-    // Shorter interval at first (cold start happening), longer later
-    const delay = attempt <= 5 ? 2000 : 5000;
-    await Bun.sleep(delay);
-  }
-
+  console.error(`[sprites] ${sprite.id} failed to respond after ${Math.floor((Date.now() - start) / 1000)}s`);
   return false;
 }
 

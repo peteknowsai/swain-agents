@@ -1234,11 +1234,9 @@ function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, 
         `Don't over-explain. Just be natural — like running into a dock neighbor after a while.`,
       ].join(" ")
     : [
-        `You're a boating advisor. Send a first intro text to ${input.name}.`,
-        `They have a ${input.boatMakeModel || input.boatName || "boat"}${input.boatName ? ` called "${input.boatName}"` : ""}.`,
-        `Lead with something real about their boat. Then briefly say you keep an eye on their waters and send them good stuff each morning.`,
-        `End with one question: where do they keep their boat?`,
-        `2-3 sentences. Casual, like a dock neighbor. Just output the message — nothing else.`,
+        `Run the onboarding skill. Read .claude/skills/onboarding/SKILL.md and execute Phase 1.`,
+        `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}"${input.boatMakeModel ? `, make/model="${input.boatMakeModel}"` : ""}, phone="${phone}", userId="${input.userId}".`,
+        `Your text output is the iMessage that gets sent to the captain. Output ONLY the intro message.`,
       ].join(" ");
 
   // Update onboarding status on the API side

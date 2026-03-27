@@ -127,7 +127,7 @@ export function parseBBQueryMessage(msg: any): {
   if (!address) return null;
   const text = msg.text;
   if (!text) return null;
-  const chatGuid = msg.chats?.[0]?.guid ?? `any;-;${address}`;
+  const chatGuid = msg.chats?.[0]?.guid ?? `iMessage;-;${address}`;
   return {
     text,
     address,
@@ -165,7 +165,7 @@ export function parseWebhook(body: any): {
   const text = data.text;
   if (!text) return null;
 
-  const chatGuid = data.chats?.[0]?.guid ?? `any;-;${address}`;
+  const chatGuid = data.chats?.[0]?.guid ?? `iMessage;-;${address}`;
 
   return {
     text,

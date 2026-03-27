@@ -83,7 +83,7 @@ export async function runOnSprite(
 
   try {
     const proc = Bun.spawn(execArgs, {
-      env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}` },
+      env: { ...process.env, HOME: process.env.HOME || "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
       stdout: "pipe",
       stderr: "pipe",
     });

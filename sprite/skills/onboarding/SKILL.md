@@ -9,13 +9,13 @@ Three phases: intro message, get-to-know-you conversation, first briefing build.
 
 ## HOW MESSAGING WORKS
 
-**Your text output is sent directly to the captain as an iMessage.** There is no
-separate "send message" tool. Every word of plain text you write goes straight
-to their phone. Think of it as texting.
+**Use the `reply` tool to send messages to the captain.** Every call to `reply`
+sends an iMessage immediately. You can send multiple messages during a single
+task — call `reply` whenever you need to communicate.
 
-- To send a message: just write the text as your response
-- To stay silent (do backend work without messaging): produce no text output — only use tools
-- NEVER write status updates, thinking, or tool-call commentary as text — it goes to iMessage
+- To send a message: call the `reply` tool with `chat_id` (from the inbound channel tag) and `text`
+- You can send a message AND keep working — `reply` doesn't end your turn
+- This means you can say "give me a few minutes" and then continue building a briefing in the same turn
 
 ## THE CAPTAIN RULE
 
@@ -103,16 +103,13 @@ Once you understand their boating life, wrap up:
 - Never say "morning report" or mention time of day
 - Say "first report" or just "report"
 
-Then move to Phase 3. After sending the wrap-up message, all Phase 3 work is
-silent — only use tools, produce no text output until you're ready to send
-the "all set" message in step 8.
+Send the wrap-up message via the `reply` tool (e.g. "Give me about five minutes to pull everything together"), then immediately continue to Phase 3 — no need to wait for a new message.
 
 ---
 
 ## Phase 3: Build First Briefing
 
-Do this inline. All steps below are backend work — only use tools, produce no
-text output until you're ready to send the "all set" message in step 8.
+Do this in the same turn. Use `reply` to send the wrap-up, then do all the backend work below. Use `reply` again at step 8 to send the "all set" message.
 
 1. Update status:
    ```bash
@@ -180,13 +177,12 @@ text output until you're ready to send the "all set" message in step 8.
    ```bash
    swain user update <userId> --onboardingStep=done --onboardingStatus=completed --json
    ```
-   Now send (this is your text output — it goes to iMessage):
-   > You're all set — first one's ready for you 🤙 https://www.heyswain.com/app
+   Send via `reply` tool: "You're all set — first one's ready for you 🤙 https://www.heyswain.com/app"
 
 9. Write everything you learned to memory files.
 
-10. Send a casual nudge that they can text you anytime — questions about their
-    boat, want different stuff in their reports, whatever. Keep it short.
+10. Send a casual nudge via `reply` tool — that they can text you anytime,
+    questions about their boat, want different stuff in their reports, whatever. Keep it short.
 
 ---
 

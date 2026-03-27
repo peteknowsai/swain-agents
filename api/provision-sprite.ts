@@ -174,16 +174,30 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   await createSprite(name);
 
   // 2. Create directory structure
-  await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/.claude-sessions /home/sprite/.claude/memory/yearnings /home/sprite/.claude/memory/notes");
+  await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/.channel/inbox /home/sprite/.claude-sessions /home/sprite/.claude/memory/yearnings /home/sprite/.claude/memory/notes");
 
   // 3. Copy channel server files
-  const serverTs = await readFile(join(CHANNEL_DIR, "server.ts"), "utf-8");
+  const channelTs = await readFile(join(CHANNEL_DIR, "swain-channel.ts"), "utf-8");
   const syncTs = await readFile(join(CHANNEL_DIR, "sync.ts"), "utf-8");
   const packageJson = await readFile(join(CHANNEL_DIR, "package.json"), "utf-8");
+  const channelSend = await readFile(join(CHANNEL_DIR, "swain-channel-send"), "utf-8");
 
-  await writeToSprite(name, "/home/sprite/channel/server.ts", serverTs);
+  await writeToSprite(name, "/home/sprite/channel/swain-channel.ts", channelTs);
   await writeToSprite(name, "/home/sprite/channel/sync.ts", syncTs);
   await writeToSprite(name, "/home/sprite/channel/package.json", packageJson);
+  await writeToSprite(name, "/usr/local/bin/swain-channel-send", channelSend);
+  await execOnSprite(name, "chmod +x /usr/local/bin/swain-channel-send");
+
+  // 3b. Write .mcp.json for Claude Code to discover the channel
+  const mcpJson = JSON.stringify({
+    mcpServers: {
+      "swain-channel": {
+        command: "bun",
+        args: ["/home/sprite/channel/swain-channel.ts"],
+      },
+    },
+  }, null, 2);
+  await writeToSprite(name, "/home/sprite/.mcp.json", mcpJson);
 
   // 4. Install channel server dependencies
   await execOnSprite(name, "cd /home/sprite/channel && bun install");
@@ -421,8 +435,8 @@ export VAULT_PREFIX="${vaultPrefix || spriteName}"
 export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"
 export CHANNEL_PORT="8080"
 export CLAUDE_PATH="/home/sprite/.local/bin/claude"
-cd /home/sprite/channel
-exec bun run server.ts
+cd /home/sprite
+exec claude --dangerously-load-development-channels server:swain-channel --dangerously-skip-permissions
 `;
 }
 
@@ -1113,13 +1127,15 @@ export async function wakeAdvisor(
     ? options.message
     : `Run the ${skill} skill. Read your CLAUDE.md for context, then follow the skill's instructions.`;
 
-  const result = await runClaudeOnSprite(spriteName, prompt);
+  const chatId = options?.chatId || `cron:${skill}`;
 
-  if (result.error) {
-    return { ok: false, error: result.error };
+  try {
+    await execOnSprite(spriteName, `swain-channel-send '${prompt.replace(/'/g, "'\\''")}' '${chatId}'`);
+    return { ok: true };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return { ok: false, error };
   }
-
-  return { ok: true, result: result.result };
 }
 
 /**
@@ -1239,51 +1255,16 @@ function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, 
         `Your text output is the iMessage that gets sent to the captain. Output ONLY the intro message.`,
       ].join(" ");
 
-  // Update onboarding status on the API side
-  Bun.spawn(["swain", "user", "update", input.userId, "--onboardingStep=contacting", "--json"], {
-    stdout: "pipe", stderr: "pipe",
-  }).exited.catch(() => {});
-
-  // Run Claude on sprite, send result via BlueBubbles
-  (async () => {
-    const result = await runClaudeOnSprite(spriteName, introPrompt);
-
-    if (result.error) {
-      console.error(`Intro failed for ${agentId}: ${result.error}`);
-      return;
-    }
-
-    if (!result.result.trim()) {
-      console.error(`Intro empty for ${agentId} — Claude produced no text`);
-      return;
-    }
-
-    // Save session so the Bridge can resume when captain replies
-    if (result.sessionId) {
-      const sessionDir = "/root/swain-agent-api/chat-sessions";
-      const chatId = `im:${phone}`;
-      const safeName = chatId.replace(/[^a-zA-Z0-9_+-]/g, "_");
-      await Bun.spawn(["mkdir", "-p", sessionDir]).exited;
-      await Bun.write(`${sessionDir}/${safeName}.session`, result.sessionId);
-      console.log(`Session saved for ${chatId}: ${result.sessionId.slice(0, 8)}...`);
-    }
-
-    // Send via Bridge's reply endpoint
-    try {
-      await fetch(`${BRIDGE_RELOAD_URL.replace("/registry/reload", "")}/sprites/${agentId}/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "text",
-          text: result.result,
-          chatId: `im:${phone}`,
-        }),
-      });
-      console.log(`Intro delivered for ${agentId}: ${result.result.slice(0, 60)}`);
-    } catch (err) {
-      console.error(`Intro send failed for ${agentId}: ${err}`);
-    }
-  })();
+  // Drop intro message into sprite's channel inbox.
+  // Claude Code on the sprite picks it up, runs the onboarding skill,
+  // and sends the intro via the reply tool.
+  const chatId = `im:${phone}`;
+  try {
+    await execOnSprite(spriteName, `swain-channel-send '${introPrompt.replace(/'/g, "'\\''")}' '${chatId}'`);
+    console.log(`Intro delivered to ${agentId} inbox`);
+  } catch (err) {
+    console.error(`Intro delivery failed for ${agentId}: ${err}`);
+  }
 }
 
 // --- Helpers ---

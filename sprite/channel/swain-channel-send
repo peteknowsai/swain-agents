@@ -1,0 +1,23 @@
+#!/bin/bash
+# Drop a message into the channel inbox for Claude to pick up.
+# Usage: swain-channel-send "message text" "chat_id" [user] [messageId] [type]
+#
+# Called via: sprite exec -s <name> -- swain-channel-send "hello" "im:+1234"
+
+INBOX_DIR="/home/sprite/.channel/inbox"
+mkdir -p "$INBOX_DIR"
+
+TEXT="$1"
+CHAT_ID="${2:-default}"
+USER="${3:-}"
+MESSAGE_ID="${4:-}"
+TYPE="${5:-}"
+
+# Timestamp-based filename for ordering
+FILENAME="$(date +%s%N).json"
+
+cat > "$INBOX_DIR/$FILENAME" << ENDJSON
+{"text":"$(echo "$TEXT" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')","chatId":"$CHAT_ID","user":"$USER","messageId":"$MESSAGE_ID","type":"$TYPE","ts":$(date +%s%3N)}
+ENDJSON
+
+echo "ok"

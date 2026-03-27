@@ -47,8 +47,8 @@ try {
 }
 
 /**
- * Process an inbound iMessage — run Claude on the sprite, send reply.
- * Returns true if successfully processed.
+ * Process an inbound iMessage — deliver to sprite, reply comes async.
+ * Returns true if message was successfully delivered to the sprite's inbox.
  */
 async function processInboundIMessage(parsed: {
   text: string;
@@ -68,31 +68,21 @@ async function processInboundIMessage(parsed: {
 
   const chatId = `im:${parsed.address}`;
 
-  // Show typing indicator, refresh every 30s
+  // Show typing indicator
   void bbStartTyping(parsed.chatGuid);
-  const typingInterval = setInterval(() => bbStartTyping(parsed.chatGuid), 30_000);
 
-  try {
-    const result = await sendMessageToSprite(entry.id, parsed.text, chatId);
+  // Drop message into sprite's channel inbox — reply comes async via /sprites/:name/reply
+  const ok = await sendMessageToSprite(entry.id, parsed.text, chatId, {
+    user: parsed.address,
+    messageId: parsed.messageGuid,
+  });
 
-    clearInterval(typingInterval);
-
-    if (result.error) {
-      console.error(`[bridge] sprite ${entry.id} error: ${result.error}`);
-      await imessageReply(parsed.address, "Hey, give me a sec — just waking up. Try again in a minute.");
-      return false;
-    }
-
-    if (result.result.trim()) {
-      await imessageReply(parsed.address, result.result);
-    }
-
-    return true;
-  } catch (err) {
-    clearInterval(typingInterval);
-    console.error(`[bridge] error processing iMessage for ${entry.id}:`, err);
-    return false;
+  if (!ok) {
+    console.error(`[bridge] failed to deliver to sprite ${entry.id}`);
+    await imessageReply(parsed.address, "Hey, give me a sec — just waking up. Try again in a minute.");
   }
+
+  return ok;
 }
 
 // HTTP server
@@ -180,9 +170,9 @@ Bun.serve({
       console.log(`[bridge] agent message: ${body.from || "unknown"} → ${targetId}: ${body.text?.slice(0, 80)}`);
 
       const chatId = body.chatId || `agent:${body.from || "unknown"}`;
-      const result = await sendMessageToSprite(entry.id, body.text, chatId);
+      const ok = await sendMessageToSprite(entry.id, body.text, chatId, { user: body.from });
 
-      return Response.json({ ok: !result.error, result: result.result?.slice(0, 200) });
+      return Response.json({ ok });
     }
 
     // List sprites

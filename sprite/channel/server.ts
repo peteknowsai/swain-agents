@@ -90,7 +90,8 @@ async function countSessions(): Promise<number> {
  */
 async function runClaude(
   prompt: string,
-  chatId: string
+  chatId: string,
+  options?: { light?: boolean }
 ): Promise<string> {
   const args = [
     CLAUDE_PATH,
@@ -98,7 +99,11 @@ async function runClaude(
     prompt,
     "--output-format", "json",
     "--dangerously-skip-permissions",
-    "--append-system-prompt",
+  ];
+
+  // Light mode: no system prompt, no file reading — just respond to the prompt
+  if (!options?.light) {
+    args.push("--append-system-prompt");
     [
       "Read your CLAUDE.md for identity and context.",
       "At the start of every conversation, read .claude/memory/MEMORY.md to recall what you know about your captain.",
@@ -112,8 +117,8 @@ async function runClaude(
       "If asked about something you should know, LOOK IT UP with your tools before answering.",
       "For image generation, ALWAYS use the swain CLI (swain card image, swain image generate) — never call Replicate directly. The CLI uses the correct model and handles uploads.",
       "Your text output is sent to the captain as an iMessage. Only output text you want them to see. If you have nothing to say (backend work only), output nothing.",
-    ].join(" "),
-  ];
+    ].join(" "));
+  }
 
   // Resume existing session for this chat
   const existingSession = await getSession(chatId);
@@ -202,11 +207,11 @@ async function sendToBridge(
 /**
  * Process a message in the background — run claude, send reply, sync vault.
  */
-async function processMessage(text: string, chatId: string, chatIdForReply?: string): Promise<void> {
+async function processMessage(text: string, chatId: string, chatIdForReply?: string, options?: { light?: boolean }): Promise<void> {
   activeRequests++;
   lastActivity = Date.now();
   try {
-    const response = await runClaude(text, chatId);
+    const response = await runClaude(text, chatId, options);
 
     // Send reply if Claude produced text output
     if (response.trim()) {
@@ -253,13 +258,14 @@ Bun.serve({
         messageId?: string;
         user?: string;
         userId?: string;
+        light?: boolean;
       };
 
       const chatId = body.chatId ?? body.userId ?? "default";
-      console.log(`[channel] message from ${body.user ?? "unknown"}: ${body.text.slice(0, 80)}`);
+      console.log(`[channel] message from ${body.user ?? "unknown"}: ${body.text.slice(0, 80)}${body.light ? " (light)" : ""}`);
 
       // Fire and forget — process in background
-      processMessage(body.text, chatId, body.chatId);
+      processMessage(body.text, chatId, body.chatId, { light: body.light });
 
       return Response.json({ ok: true, async: true });
     }

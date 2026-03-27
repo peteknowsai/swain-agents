@@ -1277,6 +1277,7 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
             text: introPrompt,
             chatId: `im:${phone}`,
             userId: input.userId,
+            light: true,
           }),
           signal: AbortSignal.timeout(600_000),
         });

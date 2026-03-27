@@ -1254,14 +1254,8 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `After sending, run: swain user update ${input.userId} --onboardingStep=contacting --json`,
       ].join(" ")
     : [
-        `You've just been assigned as ${input.name}'s advisor.`,
-        `Read your CLAUDE.md for context, then read .claude/skills/onboarding/SKILL.md Phase 1 for guidance on what to say.`,
+        `Run the onboarding skill. Read .claude/skills/onboarding/SKILL.md and execute Phase 1.`,
         `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
-        ``,
-        `IMPORTANT: Your text output goes directly to the captain as an iMessage.`,
-        `First, use bash to run: swain user update ${input.userId} --onboardingStep=contacting --json`,
-        `Then write your captain memory to .claude/memory/captain.md.`,
-        `Then output ONLY the intro message text — 2-3 sentences, casual, lead with the boat. This is what gets sent to their phone.`,
       ].join(" ");
 
   // Sprite was pre-warmed at the start of assignment — retry if still waking

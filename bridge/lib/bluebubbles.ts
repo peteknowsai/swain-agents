@@ -24,6 +24,7 @@ export async function sendMessage(
           chatGuid,
           tempGuid: `bridge-${Date.now()}`,
           message: text,
+          method: "private-api",
         }),
       }
     );

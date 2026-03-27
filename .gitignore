@@ -9,6 +9,7 @@ cli/bin/
 .sprite
 bun.lock
 last-processed.json
+bridge/registry.json
 index.ts
 package.json
 tsconfig.json

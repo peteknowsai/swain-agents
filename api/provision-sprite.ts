@@ -286,6 +286,7 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   // 7. Create launcher script with env vars
   const poolPrefix = type === "desk" ? `pool/desks/${name}` : `pool/advisors/${name}`;
   const launcherScript = generateLauncherScript(name, poolPrefix);
+  await writeToSprite(name, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(name, "chmod +x /home/sprite/start.sh");
 
   // 8. Write pool CLAUDE.md (type-specific)

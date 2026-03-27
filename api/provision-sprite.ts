@@ -480,6 +480,10 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   if (!entry.spriteName) entry.spriteName = spriteName;
   if (!entry.spriteUrl) entry.spriteUrl = spriteUrl;
 
+  // 0. Wake the sprite now — file writes take several seconds, so the channel
+  //    service will be warm by the time we need to send the intro
+  fetch(`${spriteUrl}/health`, { signal: AbortSignal.timeout(10_000) }).catch(() => {});
+
   // 1. Render CLAUDE.md with captain data
   const templateContent = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.template"), "utf-8");
   const claudeMd = render(templateContent, {
@@ -1258,16 +1262,8 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `Then reply NO_REPLY.`,
       ].join(" ");
 
+  // Sprite was pre-warmed at the start of assignment — retry if still waking
   (async () => {
-    // Wait for sprite to be healthy before sending intro
-    try {
-      await waitForSpriteHealth(spriteUrl, 90_000);
-    } catch {
-      console.error(`Intro skipped for ${agentId}: sprite not healthy`);
-      return;
-    }
-
-    // Retry up to 3 times on failure
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const res = await fetch(`${spriteUrl}/message`, {
@@ -1288,7 +1284,7 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
       } catch (err) {
         console.error(`Intro attempt ${attempt} error for ${agentId}: ${err}`);
       }
-      if (attempt < 3) await Bun.sleep(5000);
+      if (attempt < 3) await Bun.sleep(3000);
     }
     console.error(`Intro failed for ${agentId} after 3 attempts`);
   })();

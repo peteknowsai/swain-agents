@@ -1258,24 +1258,40 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `Then reply NO_REPLY.`,
       ].join(" ");
 
-  fetch(`${spriteUrl}/message`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: introPrompt,
-      chatId: `im:${phone}`,
-      userId: input.userId,
-    }),
-    signal: AbortSignal.timeout(600_000),
-  }).then(async (res) => {
-    if (res.ok) {
-      console.log(`Intro triggered for ${agentId}`);
-    } else {
-      console.error(`Intro failed for ${agentId}: ${res.status}`);
+  (async () => {
+    // Wait for sprite to be healthy before sending intro
+    try {
+      await waitForSpriteHealth(spriteUrl, 90_000);
+    } catch {
+      console.error(`Intro skipped for ${agentId}: sprite not healthy`);
+      return;
     }
-  }).catch((err) => {
-    console.error(`Intro error for ${agentId}: ${err}`);
-  });
+
+    // Retry up to 3 times on failure
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(`${spriteUrl}/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: introPrompt,
+            chatId: `im:${phone}`,
+            userId: input.userId,
+          }),
+          signal: AbortSignal.timeout(600_000),
+        });
+        if (res.ok) {
+          console.log(`Intro triggered for ${agentId}`);
+          return;
+        }
+        console.error(`Intro attempt ${attempt} failed for ${agentId}: ${res.status}`);
+      } catch (err) {
+        console.error(`Intro attempt ${attempt} error for ${agentId}: ${err}`);
+      }
+      if (attempt < 3) await Bun.sleep(5000);
+    }
+    console.error(`Intro failed for ${agentId} after 3 attempts`);
+  })();
 }
 
 // --- Helpers ---

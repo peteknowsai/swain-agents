@@ -11,7 +11,7 @@ import {
   type TextBasedChannel,
 } from "discord.js";
 import { findByChannel, findForDM } from "./registry.ts";
-import { sendToSprite } from "./sprites.ts";
+import { sendMessageToSprite } from "./sprites.ts";
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 if (!DISCORD_BOT_TOKEN) {
@@ -71,18 +71,16 @@ async function handleMessage(msg: Message): Promise<void> {
   // Start typing indicator
   startTyping(msg.channel as TextBasedChannel);
 
-  // Forward to Sprite's channel server
-  const ok = await sendToSprite(entry, "/message", {
-    text: msg.content,
-    chatId: msg.channelId,
-    messageId: msg.id,
-    user: msg.author.username,
-    userId: msg.author.id,
-  });
+  // Run Claude on the sprite
+  const chatId = msg.channelId;
+  const result = await sendMessageToSprite(entry.id, msg.content, chatId);
 
-  if (!ok) {
-    stopTyping(msg.channelId);
+  stopTyping(chatId);
+
+  if (result.error) {
     await msg.reply("Sorry, I couldn't reach that advisor right now.").catch(() => {});
+  } else if (result.result.trim()) {
+    await sendReply(chatId, result.result).catch(() => {});
   }
 }
 

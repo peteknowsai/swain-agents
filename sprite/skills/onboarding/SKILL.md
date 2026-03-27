@@ -14,7 +14,7 @@ separate "send message" tool. Every word of plain text you write goes straight
 to their phone. Think of it as texting.
 
 - To send a message: just write the text as your response
-- To stay silent (do backend work without messaging): reply with exactly `NO_REPLY`
+- To stay silent (do backend work without messaging): produce no text output — only use tools
 - NEVER write status updates, thinking, or tool-call commentary as text — it goes to iMessage
 
 ## THE CAPTAIN RULE
@@ -51,7 +51,7 @@ After sending the intro, update onboarding step:
 swain user update <userId> --onboardingStep=contacting --json
 ```
 
-Write what you know so far to `.claude/memory/captain.md`. Then reply `NO_REPLY`.
+Write what you know so far to `.claude/memory/captain.md`.
 
 ---
 
@@ -104,14 +104,15 @@ Once you understand their boating life, wrap up:
 - Say "first report" or just "report"
 
 Then move to Phase 3. After sending the wrap-up message, all Phase 3 work is
-silent — reply `NO_REPLY` for every turn while you're building.
+silent — only use tools, produce no text output until you're ready to send
+the "all set" message in step 8.
 
 ---
 
 ## Phase 3: Build First Briefing
 
-Do this inline. All steps below are backend work — reply `NO_REPLY` after each
-turn until you're ready to send the "all set" message in step 8.
+Do this inline. All steps below are backend work — only use tools, produce no
+text output until you're ready to send the "all set" message in step 8.
 
 1. Update status:
    ```bash
@@ -184,7 +185,8 @@ turn until you're ready to send the "all set" message in step 8.
 
 9. Write everything you learned to memory files.
 
-10. Wait ~5 minutes, then send a casual nudge that they can text you anytime.
+10. Send a casual nudge that they can text you anytime — questions about their
+    boat, want different stuff in their reports, whatever. Keep it short.
 
 ---
 

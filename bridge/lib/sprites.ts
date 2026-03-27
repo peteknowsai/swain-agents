@@ -13,9 +13,10 @@ export type SpriteConfig = {
  * Send a message to a Sprite's channel server.
  * Wakes the Sprite if sleeping (hitting the URL triggers wake).
  *
- * Strategy: send the message directly — the request itself wakes the
- * Sprite. If it fails (502, connection error), retry with backoff.
- * Falls back to health-poll only if direct attempts keep failing.
+ * The sprite accepts the message and returns 200 immediately — it
+ * processes in the background and sends the reply later via
+ * POST /sprites/:id/reply. So we only need to wait long enough
+ * for the sprite to wake and accept the request (~5-15s).
  */
 export async function sendToSprite(
   sprite: SpriteConfig,
@@ -30,18 +31,17 @@ export async function sendToSprite(
   };
   const payload = JSON.stringify(body);
   const start = Date.now();
-  const TIMEOUT_MS = 90_000; // total time budget for wake + delivery
+  const TIMEOUT_MS = 30_000; // 30s — just need sprite to wake and accept
 
   console.log(`[sprites] sending to ${sprite.id}...`);
 
-  // Try sending directly with retries — the request itself triggers wake
   for (let attempt = 1; Date.now() - start < TIMEOUT_MS; attempt++) {
     try {
       const res = await fetch(`${sprite.url}${path}`, {
         method: "POST",
         headers,
         body: payload,
-        signal: AbortSignal.timeout(180_000), // 3 min — claude -p can be slow
+        signal: AbortSignal.timeout(10_000),
       });
 
       if (res.ok) {
@@ -49,24 +49,21 @@ export async function sendToSprite(
         return true;
       }
 
-      // 502/503 = sprite still waking, retry
       if (res.status === 502 || res.status === 503) {
         console.log(`[sprites] ${sprite.id} waking (${res.status}), attempt ${attempt}...`);
-        await Bun.sleep(attempt <= 3 ? 2000 : 5000);
+        await Bun.sleep(2000);
         continue;
       }
 
-      // Any other error status is not recoverable
       console.error(`[sprites] ${sprite.id} failed: ${res.status} ${res.statusText}`);
       return false;
     } catch (err) {
-      // Connection refused / timeout = sprite not up yet
       console.log(`[sprites] ${sprite.id} not reachable, attempt ${attempt}...`);
-      await Bun.sleep(attempt <= 3 ? 2000 : 5000);
+      await Bun.sleep(2000);
     }
   }
 
-  console.error(`[sprites] ${sprite.id} failed to respond after ${Math.floor((Date.now() - start) / 1000)}s`);
+  console.error(`[sprites] ${sprite.id} failed to accept after ${Math.floor((Date.now() - start) / 1000)}s`);
   return false;
 }
 

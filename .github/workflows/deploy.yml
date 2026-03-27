@@ -47,8 +47,31 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Update tools on all sprites
+      - name: Update skills + channel server on all sprites
         if: steps.sprite-changes.outputs.changed == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 600s
+          script: |
+            export PATH=/root/.local/bin:/root/.bun/bin:$PATH
+            export HOME=/root
+            cd /root/clawd/swain-agents && git pull
+            bash sprite/scripts/update-skills.sh
+
+      - name: Check if sprite CLIs changed
+        id: cli-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^sprite/scripts/update-clis'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update CLIs on all sprites
+        if: steps.cli-changes.outputs.changed == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}

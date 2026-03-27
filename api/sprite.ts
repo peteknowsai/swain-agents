@@ -102,6 +102,69 @@ export async function writeToSprite(name: string, path: string, content: string)
 }
 
 /**
+ * Run claude -p on a sprite. Returns parsed result.
+ * Env vars are sourced from the sprite's start.sh.
+ */
+export async function runClaudeOnSprite(
+  name: string,
+  prompt: string,
+  options?: {
+    sessionId?: string;
+    light?: boolean;
+    systemPrompt?: string;
+  }
+): Promise<{ result: string; sessionId: string; cost: number; error?: string }> {
+  const claudeArgs = [
+    "claude", "-p",
+    prompt.replace(/'/g, "'\\''"),
+    "--output-format", "json",
+    "--dangerously-skip-permissions",
+  ];
+
+  if (!options?.light && options?.systemPrompt) {
+    claudeArgs.push("--append-system-prompt", options.systemPrompt.replace(/'/g, "'\\''"));
+  }
+
+  if (options?.sessionId) {
+    claudeArgs.push("--resume", options.sessionId);
+  }
+
+  const shellCmd = `eval $(grep "^export" /home/sprite/start.sh) && ${claudeArgs.map((a) => `'${a}'`).join(" ")}`;
+
+  console.log(`[sprite-claude] ${name}: ${prompt.slice(0, 80)}${options?.light ? " (light)" : ""}`);
+  const start = Date.now();
+
+  try {
+    const stdout = await sprite(["exec", "-s", name, "--", "bash", "-c", shellCmd]);
+    const json = JSON.parse(stdout);
+    const durationMs = Date.now() - start;
+    console.log(`[sprite-claude] ${name} done (${durationMs}ms): ${(json.result ?? "").slice(0, 80)}`);
+    return {
+      result: json.result ?? "",
+      sessionId: json.session_id ?? "",
+      cost: json.total_cost_usd ?? 0,
+    };
+  } catch (err) {
+    const durationMs = Date.now() - start;
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[sprite-claude] ${name} error (${durationMs}ms): ${errMsg.slice(0, 200)}`);
+
+    // Try to parse JSON from error output (claude returns JSON even on some failures)
+    try {
+      const jsonMatch = errMsg.match(/\{.*\}/s);
+      if (jsonMatch) {
+        const json = JSON.parse(jsonMatch[0]);
+        if (json.result) {
+          return { result: json.result, sessionId: json.session_id ?? "", cost: 0 };
+        }
+      }
+    } catch {}
+
+    return { result: "", sessionId: "", cost: 0, error: errMsg.slice(0, 300) };
+  }
+}
+
+/**
  * Get a sprite's public URL.
  */
 export async function getSpriteUrl(name: string): Promise<string> {

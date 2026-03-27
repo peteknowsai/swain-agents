@@ -21,6 +21,7 @@ import {
   getSpriteUrl,
   makePublic,
   createService,
+  runClaudeOnSprite,
 } from "./sprite";
 
 // --- Constants ---
@@ -570,7 +571,7 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
       const userData = JSON.parse(userJson);
       returning = userData?.onboardingStatus === "completed";
     } catch {}
-    triggerIntro(spriteUrl, agentId, input, phone, returning);
+    triggerIntro(spriteName, agentId, input, phone, returning);
   }
 
   console.log(`Advisor ${agentId} assigned to ${input.name} (${input.userId}) on sprite ${spriteName}`);
@@ -1099,46 +1100,26 @@ export async function wakeAdvisor(
   agentId: string,
   skill: string,
   options?: { message?: string; chatId?: string },
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; result?: string }> {
   const registry = await loadRegistry();
   const entry = registry.agents[agentId];
 
   if (!entry) throw new Error(`Agent ${agentId} not found`);
-  if (!entry.spriteUrl) throw new Error(`Agent ${agentId} has no sprite URL`);
+  if (!entry.spriteName) throw new Error(`Agent ${agentId} has no sprite name`);
   if (entry.status !== "active") throw new Error(`Agent ${agentId} is not active (status: ${entry.status})`);
 
-  const spriteUrl = entry.spriteUrl;
+  const spriteName = entry.spriteName;
+  const prompt = options?.message
+    ? options.message
+    : `Run the ${skill} skill. Read your CLAUDE.md for context, then follow the skill's instructions.`;
 
-  // If a custom message is provided, use /message endpoint (for ad-hoc triggers)
-  // Otherwise use /cron endpoint (for scheduled skill execution)
-  if (options?.message) {
-    const res = await fetch(`${spriteUrl}/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: options.message,
-        chatId: options.chatId || `cron:${skill}`,
-        userId: entry.userId,
-      }),
-      signal: AbortSignal.timeout(600_000),
-    });
-    return { ok: res.ok };
+  const result = await runClaudeOnSprite(spriteName, prompt);
+
+  if (result.error) {
+    return { ok: false, error: result.error };
   }
 
-  // Standard cron trigger — runs the skill in its own session
-  const res = await fetch(`${spriteUrl}/cron`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ skill, name: `${skill} for ${entry.captainName}` }),
-    signal: AbortSignal.timeout(600_000),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    return { ok: false, error: `Sprite returned ${res.status}: ${text}` };
-  }
-
-  return { ok: true };
+  return { ok: true, result: result.result };
 }
 
 /**
@@ -1242,7 +1223,7 @@ async function reloadBridgeRegistry(): Promise<void> {
 
 // --- Intro message ---
 
-function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, phone: string, returning?: boolean): void {
+function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, phone: string, returning?: boolean): void {
   const introPrompt = returning
     ? [
         `You're reconnecting with ${input.name} — a returning captain.`,
@@ -1251,7 +1232,6 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `Something like "Hey ${input.name}, been a minute — I'm back and keeping an eye on things for you." Reference their boat if you know it.`,
         `Captain info: name="${input.name}", boat="${input.boatName || "their boat"}", phone="${phone}", userId="${input.userId}".`,
         `Don't over-explain. Just be natural — like running into a dock neighbor after a while.`,
-        `After sending, run: swain user update ${input.userId} --onboardingStep=contacting --json`,
       ].join(" ")
     : [
         `You're a boating advisor. Send a first intro text to ${input.name}.`,
@@ -1261,37 +1241,40 @@ function triggerIntro(spriteUrl: string, agentId: string, input: CaptainInput, p
         `2-3 sentences. Casual, like a dock neighbor. Just output the message — nothing else.`,
       ].join(" ");
 
-  // Update onboarding status on the API side — don't make Claude do it
+  // Update onboarding status on the API side
   Bun.spawn(["swain", "user", "update", input.userId, "--onboardingStep=contacting", "--json"], {
     stdout: "pipe", stderr: "pipe",
   }).exited.catch(() => {});
 
-  // Sprite was pre-warmed at the start of assignment — retry if still waking
+  // Run Claude on sprite, send result via BlueBubbles
   (async () => {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const res = await fetch(`${spriteUrl}/message`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: introPrompt,
-            chatId: `im:${phone}`,
-            userId: input.userId,
-            light: true,
-          }),
-          signal: AbortSignal.timeout(600_000),
-        });
-        if (res.ok) {
-          console.log(`Intro triggered for ${agentId}`);
-          return;
-        }
-        console.error(`Intro attempt ${attempt} failed for ${agentId}: ${res.status}`);
-      } catch (err) {
-        console.error(`Intro attempt ${attempt} error for ${agentId}: ${err}`);
-      }
-      if (attempt < 3) await Bun.sleep(3000);
+    const result = await runClaudeOnSprite(spriteName, introPrompt, { light: true });
+
+    if (result.error) {
+      console.error(`Intro failed for ${agentId}: ${result.error}`);
+      return;
     }
-    console.error(`Intro failed for ${agentId} after 3 attempts`);
+
+    if (!result.result.trim()) {
+      console.error(`Intro empty for ${agentId} — Claude produced no text`);
+      return;
+    }
+
+    // Send via Bridge's reply endpoint
+    try {
+      await fetch(`${BRIDGE_RELOAD_URL.replace("/registry/reload", "")}/sprites/${agentId}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "text",
+          text: result.result,
+          chatId: `im:${phone}`,
+        }),
+      });
+      console.log(`Intro delivered for ${agentId}: ${result.result.slice(0, 60)}`);
+    } catch (err) {
+      console.error(`Intro send failed for ${agentId}: ${err}`);
+    }
   })();
 }
 

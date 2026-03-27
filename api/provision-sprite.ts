@@ -1248,7 +1248,7 @@ function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, 
 
   // Run Claude on sprite, send result via BlueBubbles
   (async () => {
-    const result = await runClaudeOnSprite(spriteName, introPrompt, { light: true });
+    const result = await runClaudeOnSprite(spriteName, introPrompt);
 
     if (result.error) {
       console.error(`Intro failed for ${agentId}: ${result.error}`);
@@ -1258,6 +1258,16 @@ function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, 
     if (!result.result.trim()) {
       console.error(`Intro empty for ${agentId} — Claude produced no text`);
       return;
+    }
+
+    // Save session so the Bridge can resume when captain replies
+    if (result.sessionId) {
+      const sessionDir = "/root/swain-agent-api/chat-sessions";
+      const chatId = `im:${phone}`;
+      const safeName = chatId.replace(/[^a-zA-Z0-9_+-]/g, "_");
+      await Bun.spawn(["mkdir", "-p", sessionDir]).exited;
+      await Bun.write(`${sessionDir}/${safeName}.session`, result.sessionId);
+      console.log(`Session saved for ${chatId}: ${result.sessionId.slice(0, 8)}...`);
     }
 
     // Send via Bridge's reply endpoint

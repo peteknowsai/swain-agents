@@ -8,6 +8,7 @@ cli/bin/
 .claude/worktrees/
 .sprite
 bun.lock
+last-processed.json
 index.ts
 package.json
 tsconfig.json

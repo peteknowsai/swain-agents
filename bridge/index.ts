@@ -23,6 +23,7 @@ import {
   findDefaultForIMessage,
 } from "./lib/registry.ts";
 import { sendToSprite, checkHealth } from "./lib/sprites.ts";
+import { runCatchUp, saveLastProcessed } from "./lib/catchup.ts";
 
 const PORT = Number(process.env.BRIDGE_PORT ?? 3847);
 
@@ -51,6 +52,57 @@ try {
   process.exit(1);
 }
 
+/**
+ * Process an inbound iMessage — shared by webhook handler and catch-up.
+ * Returns true if successfully forwarded to a Sprite.
+ */
+async function processInboundIMessage(parsed: {
+  text: string;
+  address: string;
+  chatGuid: string;
+  messageGuid: string;
+}): Promise<boolean> {
+  console.log(
+    `[bridge] iMessage from ${parsed.address}: ${parsed.text.slice(0, 80)}`
+  );
+
+  const entry = findByPhone(parsed.address) ?? findDefaultForIMessage();
+  if (!entry) {
+    console.log(`[bridge] no sprite for ${parsed.address}, ignoring`);
+    return false;
+  }
+
+  const chatId = `im:${parsed.address}`;
+  chatSources.set(chatId, "imessage");
+  chatAddresses.set(chatId, parsed.address);
+
+  // Refresh typing indicator every 30s so it doesn't vanish during long responses
+  void bbStartTyping(parsed.chatGuid);
+  const typingInterval = setInterval(() => bbStartTyping(parsed.chatGuid), 30_000);
+
+  const ok = await sendToSprite(entry, "/message", {
+    text: parsed.text,
+    chatId,
+    messageId: parsed.messageGuid,
+    user: parsed.address,
+    userId: parsed.address,
+  });
+
+  clearInterval(typingInterval);
+
+  if (!ok) {
+    console.error(
+      `[bridge] failed to reach sprite ${entry.id} for iMessage from ${parsed.address}`
+    );
+    await imessageReply(
+      parsed.address,
+      "Hey, give me a sec — just waking up. Try again in a minute."
+    );
+  }
+
+  return ok;
+}
+
 // HTTP server
 Bun.serve({
   port: PORT,
@@ -72,44 +124,8 @@ Bun.serve({
         return Response.json({ ok: true, skipped: true });
       }
 
-      console.log(
-        `[bridge] iMessage from ${parsed.address}: ${parsed.text.slice(0, 80)}`
-      );
-
-      // Find the Sprite for this sender
-      const entry =
-        findByPhone(parsed.address) ?? findDefaultForIMessage();
-      if (!entry) {
-        console.log(
-          `[bridge] no sprite for ${parsed.address}, ignoring`
-        );
-        return Response.json({ ok: true, skipped: true });
-      }
-
-      // Track source for reply routing
-      const chatId = `im:${parsed.address}`;
-      chatSources.set(chatId, "imessage");
-      chatAddresses.set(chatId, parsed.address);
-
-      // Send typing indicator
-      void bbStartTyping(parsed.chatGuid);
-
-      // Forward to Sprite
-      const ok = await sendToSprite(entry, "/message", {
-        text: parsed.text,
-        chatId,
-        messageId: parsed.messageGuid,
-        user: parsed.address,
-        userId: parsed.address,
-      });
-
-      if (!ok) {
-        console.error(
-          `[bridge] failed to reach sprite ${entry.id} for iMessage from ${parsed.address}`
-        );
-        // Let the captain know we're having trouble
-        await imessageReply(parsed.address, "Hey, give me a sec — just waking up. Try again in a minute.");
-      }
+      await processInboundIMessage(parsed);
+      await saveLastProcessed(Date.now());
 
       return Response.json({ ok: true });
     }
@@ -202,6 +218,9 @@ Bun.serve({
 });
 
 console.log(`[bridge] HTTP server listening on port ${PORT}`);
+
+// Catch up on any iMessages missed while Bridge was down
+await runCatchUp(processInboundIMessage);
 
 // Start Discord bot
 await startBot();

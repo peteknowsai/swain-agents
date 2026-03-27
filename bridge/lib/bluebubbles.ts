@@ -73,6 +73,72 @@ export async function stopTyping(chatGuid: string): Promise<void> {
 }
 
 /**
+ * Query recent messages from BlueBubbles (for catch-up after restart).
+ */
+export async function queryRecentMessages(
+  afterMs: number
+): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `${BB_URL}/api/v1/message/query?password=${BB_PASSWORD}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          after: afterMs,
+          sort: "ASC",
+          limit: 100,
+          with: ["chat", "handle"],
+          where: [
+            {
+              statement: "message.is_from_me = :value",
+              args: { value: 0 },
+            },
+          ],
+        }),
+        signal: AbortSignal.timeout(15_000),
+      }
+    );
+
+    if (!res.ok) {
+      console.error(`[bluebubbles] query failed: ${res.status}`);
+      return [];
+    }
+
+    const json = await res.json();
+    return json.data ?? json ?? [];
+  } catch (err) {
+    console.error(`[bluebubbles] query error:`, err);
+    return [];
+  }
+}
+
+/**
+ * Parse a BlueBubbles query API message into the same shape as parseWebhook.
+ */
+export function parseBBQueryMessage(msg: any): {
+  text: string;
+  address: string;
+  chatGuid: string;
+  messageGuid: string;
+  dateCreated: number;
+} | null {
+  if (msg.isFromMe) return null;
+  const address = msg.handle?.address;
+  if (!address) return null;
+  const text = msg.text;
+  if (!text) return null;
+  const chatGuid = msg.chats?.[0]?.guid ?? `any;-;${address}`;
+  return {
+    text,
+    address,
+    chatGuid,
+    messageGuid: msg.guid ?? "",
+    dateCreated: msg.dateCreated ?? Date.now(),
+  };
+}
+
+/**
  * Parse an inbound BlueBubbles webhook payload.
  * Returns null if the message should be ignored (e.g. from us).
  */

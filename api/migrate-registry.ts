@@ -92,6 +92,7 @@ async function migrate() {
         status: agent.status === "assigned" ? "active" : "available",
         createdAt: agent.assignedAt || new Date().toISOString(),
         poolIndex: agent.index,
+        spriteName: agent.agentId,
       };
 
       if (agent.userId) entry.userId = agent.userId;

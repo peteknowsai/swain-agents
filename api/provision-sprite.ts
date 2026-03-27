@@ -463,7 +463,7 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
 
   // Grab first available pool sprite
   const available = Object.entries(registry.agents)
-    .filter(([_, e]) => e.type === "advisor" && e.status === "available" && e.spriteName)
+    .filter(([_, e]) => e.type === "advisor" && e.status === "available")
     .sort((a, b) => (a[1].poolIndex ?? 0) - (b[1].poolIndex ?? 0))[0];
 
   if (!available) {
@@ -471,8 +471,13 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   }
 
   const [agentId, entry] = available;
-  const spriteName = entry.spriteName!;
-  const spriteUrl = entry.spriteUrl!;
+  // Fall back to registry key as sprite name (they're the same for pool sprites)
+  const spriteName = entry.spriteName || agentId;
+  const spriteUrl = entry.spriteUrl || await getSpriteUrl(spriteName);
+
+  // Backfill missing sprite fields so future lookups don't need fallback
+  if (!entry.spriteName) entry.spriteName = spriteName;
+  if (!entry.spriteUrl) entry.spriteUrl = spriteUrl;
 
   // 1. Render CLAUDE.md with captain data
   const templateContent = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.template"), "utf-8");

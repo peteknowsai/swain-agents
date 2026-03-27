@@ -4,3 +4,10 @@ dist/
 cli/bin/
 .DS_Store
 .env
+.cursor/
+.claude/worktrees/
+.sprite
+bun.lock
+index.ts
+package.json
+tsconfig.json

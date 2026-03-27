@@ -12,8 +12,7 @@ export async function sendMessage(
   address: string,
   text: string
 ): Promise<boolean> {
-  // macOS 26 uses "any" prefix instead of "iMessage"
-  const chatGuid = `any;-;${address}`;
+  const chatGuid = `iMessage;-;${address}`;
 
   try {
     const res = await fetch(

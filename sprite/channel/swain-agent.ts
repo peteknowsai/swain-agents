@@ -221,4 +221,20 @@ if (initial.length > 0) {
   processQueue();
 }
 
-console.log(`[agent] running — ${SPRITE_ID} — session: ${currentSessionId?.slice(0, 8) ?? "new"}`);
+// Health endpoint — sprite service manager expects something on port 8080
+const PORT = Number(process.env.CHANNEL_PORT ?? 8080);
+Bun.serve({
+  port: PORT,
+  hostname: "0.0.0.0",
+  fetch(req) {
+    return Response.json({
+      ok: true,
+      mode: "agent-sdk",
+      session: currentSessionId?.slice(0, 8) ?? null,
+      queueLength: messageQueue.length,
+      processing,
+    });
+  },
+});
+
+console.log(`[agent] running — ${SPRITE_ID} — session: ${currentSessionId?.slice(0, 8) ?? "new"} — health on :${PORT}`);

@@ -149,6 +149,7 @@ async function processMessage(msg: InboxMessage): Promise<void> {
       options: {
         model: "claude-sonnet-4-6",
         permissionMode: "bypassPermissions",
+        allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch"],
         systemPrompt: SYSTEM_PROMPT,
         mcpServers: [mcpServer],
         ...(currentSessionId ? { resume: currentSessionId } : {}),
@@ -157,8 +158,10 @@ async function processMessage(msg: InboxMessage): Promise<void> {
 
     for await (const event of result) {
       // Save session ID
-      if (event.type === "result" && (event as any).session_id) {
-        currentSessionId = (event as any).session_id;
+      // Session ID comes from system/init event or result event
+      const eventSessionId = (event as any).session_id;
+      if (eventSessionId && eventSessionId !== currentSessionId) {
+        currentSessionId = eventSessionId;
         await saveSessionId(currentSessionId!);
         console.log(`[agent] session: ${currentSessionId!.slice(0, 8)}...`);
       }

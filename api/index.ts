@@ -6,8 +6,8 @@ import {
   lookupByUserId,
   provisionSpritePool,
   getPoolStatus,
-  wakeAdvisor,
-  wakeAllAdvisors,
+  wakeAgent,
+  wakeAllAgents,
   provisionSpriteDesk,
   deleteSpriteDesk,
   provisionDeskSpritePool,
@@ -96,20 +96,19 @@ const server = Bun.serve({
       // POST /agents/:agentId/wake — wake a sprite and trigger a skill
       const wakeMatch = matchRoute(pathname, "/agents/:agentId/wake");
       if (wakeMatch && method === "POST") {
-        const body = await req.json() as { skill: string; message?: string; chatId?: string };
+        const body = await req.json() as { skill: string; message?: string };
         if (!body.skill) return error("skill is required");
-        const result = await wakeAdvisor(wakeMatch.agentId, body.skill, {
+        const result = await wakeAgent(wakeMatch.agentId, body.skill, {
           message: body.message,
-          chatId: body.chatId,
         });
         return json(result);
       }
 
-      // POST /agents/wake-all — wake all active advisors with a skill
+      // POST /agents/wake-all — wake all active agents with a skill
       if (pathname === "/agents/wake-all" && method === "POST") {
-        const body = await req.json() as { skill: string };
+        const body = await req.json() as { skill: string; agentType?: "advisor" | "desk" };
         if (!body.skill) return error("skill is required");
-        const result = await wakeAllAdvisors(body.skill);
+        const result = await wakeAllAgents(body.skill, body.agentType);
         return json(result);
       }
 

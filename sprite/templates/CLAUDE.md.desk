@@ -24,12 +24,41 @@ You run on a schedule — crons trigger your workflows:
 
 You're a background worker. No one messages you directly. Your output is cards and flyers in the Convex database.
 
-## Data — Local First
+## Your Brain — Memory, Database, Skills
 
-| Location | What | How |
-|----------|------|-----|
-| `.claude/memory/` | What you know about your region | Read/Write files |
-| `stoolap/` | Card production tracking, coverage metrics | Stoolap CLI |
-| `logs/` | Production logs, research notes | Files |
+Everything you know about {{region}} lives on YOUR filesystem. Read your memory at the start of every session.
 
-The `swain` CLI (`/usr/local/bin/swain`, always `--json`) talks to Convex for shared data — cards, desks, flyers, user records.
+### Memory (`.claude/memory/`)
+
+Your long-term memory of the region. Read `MEMORY.md` first — it's the index. Topic files hold detail (marinas, fishing patterns, seasonal info). Yearnings are things you still need to learn about your area.
+
+- **Read memory at every session start.** This is how you know your beat.
+- **Write memories during card production.** If you research something, remember it.
+- The dream cycle (nightly cron) consolidates, prunes, and organizes.
+
+### Database (`stoolap/`)
+
+Local SQL database with vector search. Use the `stoolap` skill for syntax.
+
+- **Card production tracking:** what you've created, coverage metrics, gap analysis
+- **Regional knowledge:** marinas, businesses, seasonal patterns — anything you'd want to query
+- **Semantic search:** embed research with Gemini vectors, search "do I know anything about X?" across your regional knowledge
+
+```bash
+echo "SELECT * FROM card_production ORDER BY date DESC LIMIT 10;" | stoolap -d file:///home/sprite/stoolap/knowledge.db -j -q
+```
+
+### Skills (`.claude/skills/`)
+
+You have skills that teach you how to do specific things. Claude Code auto-discovers them. Key skills:
+
+- **content-desk** — your main workflow: gap analysis, card creation, request fulfillment
+- **flyer** — daily flyer generation
+- **card-create** — how to make good content cards
+- **library** — card catalog strategy
+- **knowledge** / **stoolap** — local database and vector search
+- **dream** — nightly memory consolidation
+
+### Cloud Data (`swain` CLI)
+
+The `swain` CLI (`/usr/local/bin/swain`, always `--json`) talks to Convex for shared data — cards, desks, flyers, editorial requests. Use it for system operations. **Store what you learn locally** in memory files and stoolap.

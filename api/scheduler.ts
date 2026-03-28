@@ -7,7 +7,7 @@
 
 import { loadRegistry } from "./shared";
 import type { AgentEntry } from "./shared";
-import { wakeAdvisor } from "./provision-sprite";
+import { wakeAgent } from "./provision-sprite";
 import { SCHEDULES, type ScheduleEntry } from "./schedules";
 import { matchesCron, toLocalTime, formatMinuteKey } from "./cron-utils";
 import {
@@ -54,7 +54,7 @@ async function fireWake(schedule: ScheduleEntry, agentId: string): Promise<void>
   const start = Date.now();
 
   try {
-    const result = await wakeAdvisor(agentId, schedule.skill);
+    const result = await wakeAgent(agentId, schedule.skill);
     const durationMs = Date.now() - start;
 
     if (result.ok) {
@@ -119,7 +119,7 @@ async function tick(): Promise<void> {
   for (const schedule of SCHEDULES) {
     // Find matching agents
     const agents = Object.entries(registry.agents).filter(
-      ([_, e]) => e.type === schedule.agentType && e.status === "active" && e.spriteUrl,
+      ([_, e]) => e.type === schedule.agentType && e.status === "active" && e.spriteName,
     );
 
     for (let i = 0; i < agents.length; i++) {
@@ -171,7 +171,7 @@ export async function triggerSchedule(scheduleId: string, agentId?: string): Pro
     agents = [[agentId, entry]];
   } else {
     agents = Object.entries(registry.agents).filter(
-      ([_, e]) => e.type === schedule.agentType && e.status === "active" && e.spriteUrl,
+      ([_, e]) => e.type === schedule.agentType && e.status === "active" && e.spriteName,
     );
   }
 

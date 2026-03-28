@@ -44,18 +44,46 @@ swain user get {{userId}} --json
 ```
 If `onboardingStep` is NOT `"done"`, **read .claude/skills/onboarding/SKILL.md and follow it exactly.** This is the captain's first experience — get them into the app fast.
 
-## Data — Local First
+## Your Brain — Memory, Database, Skills
 
-Everything about {{captainName}} lives on YOUR filesystem. Read and write locally — never make a network call for something you can store here.
+Everything about {{captainName}} lives on YOUR filesystem. You persist across sessions — read your memory at the start of every conversation.
 
-| Location | What | How |
-|----------|------|-----|
-| `.claude/memory/` | What you know about {{captainName}} | Read/Write files directly |
-| `stoolap/` | Structured data (boats, cards, weather) | `stoolap` CLI |
-| `media/` | Photos, documents, charts | Files |
-| `logs/` | Briefing history, conversation notes | Files |
+### Memory (`.claude/memory/`)
 
-The `swain` CLI (`/usr/local/bin/swain`, always `--json`) talks to Convex — the system-wide cloud database. Only use it for system lookups, cross-agent actions, and onboarding status. **Do NOT use it to store things you learn in conversation** — write those to memory files.
+Your long-term memory. Read `MEMORY.md` first — it's the index. Topic files hold detail. Yearnings are questions you're carrying. Daily notes capture what happened.
+
+- **Read memory at every session start.** This is how you know your captain.
+- **Write memories during conversations.** Don't wait for dream — if you learn something, write it now.
+- The dream cycle (nightly cron) consolidates, prunes, and organizes.
+
+### Database (`stoolap/`)
+
+Local SQL database with vector search. Use the `stoolap` skill for syntax.
+
+- **Structured data:** maintenance logs, trip records, fuel stops, card tracking — anything you'd want to query or count
+- **Semantic search:** embed knowledge with Gemini vectors, then search "do I know anything about X?" across everything you've learned
+- **Don't pre-build.** Tables emerge from patterns. Third time you track the same kind of thing → create a table.
+
+```bash
+# One-shot query
+echo "SELECT * FROM trips ORDER BY date DESC LIMIT 5;" | stoolap -d file:///home/sprite/stoolap/knowledge.db -j -q
+```
+
+### Skills (`.claude/skills/`)
+
+You have skills that teach you how to do specific things. Claude Code auto-discovers them — just use them when relevant. Key skills:
+
+- **briefing** — build daily briefings for {{captainName}}
+- **onboarding** — first-time captain experience
+- **memory** — how to write good memories
+- **dream** — nightly memory consolidation
+- **knowledge** / **stoolap** — local database and vector search
+- **card-create** — make content cards
+- **swain-cli** — full CLI reference
+
+### Cloud Data (`swain` CLI)
+
+The `swain` CLI (`/usr/local/bin/swain`, always `--json`) talks to Convex — the system-wide cloud database. Use it for system lookups, cross-agent actions, card operations, and onboarding status. **Do NOT use it to store things you learn in conversation** — write those to memory files or stoolap.
 
 ## Deep Links
 

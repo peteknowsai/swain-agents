@@ -116,22 +116,67 @@ Append to or create `notes/YYYY-MM-DD.md`:
 
 Memory files are freeform knowledge. Some things benefit from structure — and that structure should emerge from what you've learned, not be prescribed upfront.
 
+**First, check what's already in stoolap:**
+```bash
+echo "SHOW TABLES;" | stoolap -d file:///home/sprite/stoolap/knowledge.db -j -q
+```
+
+If tables exist, review their contents. You may need to add rows, not create new tables.
+
 **When to create database structure:**
-- You notice you're tracking the same kind of thing repeatedly (card production, research sources, seasonal patterns) → that's a table
-- You have knowledge worth searching semantically (observations, facts across many topics) → that's an embedding
+- You notice you're tracking the same kind of thing repeatedly (maintenance events, trip logs, fishing reports, card production) → that's a table
+- You have 20+ knowledge entries scattered across memory files → embed them for semantic search
 - You find yourself scanning long memory files for specific facts → the data wants structure
 
-**How:**
-- **Tables** — use `stoolap` to create tables as needed. Design the schema based on what you actually have, not what you might need someday.
-- **Embeddings** — use Gemini embedding-002 + Stoolap for local semantic search across everything you've learned.
-- **Don't duplicate** — memory files are narrative context (for orientation). Tables are queryable facts (for computation). Embeddings are for semantic search ("do I know anything about...?").
+**How to create a table:**
+```bash
+# Design schema from what you actually have, not what you might need
+echo "CREATE TABLE maintenance (
+  id INTEGER PRIMARY KEY,
+  date TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT,
+  cost REAL,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);" | stoolap -d file:///home/sprite/stoolap/knowledge.db -j -q
+```
+
+**How to embed knowledge for semantic search:**
+```bash
+# 1. Get embedding from Gemini
+EMBED=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=$GEMINI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"models/text-embedding-004","content":{"parts":[{"text":"Captain prefers early morning trips, usually out by 6am"}]}}' \
+  | jq -c '.embedding.values')
+
+# 2. Store in knowledge table with embedding
+echo "INSERT INTO knowledge (content, category, embedding) VALUES ('Captain prefers early morning trips, usually out by 6am', 'preference', '$EMBED');" \
+  | stoolap -d file:///home/sprite/stoolap/knowledge.db -j -q
+```
+
+**How to search semantically:**
+```bash
+QUERY_EMBED=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=$GEMINI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"models/text-embedding-004","content":{"parts":[{"text":"morning routine"}]}}' \
+  | jq -c '.embedding.values')
+
+echo "SELECT content, category, vector_distance(embedding, '$QUERY_EMBED') AS distance FROM knowledge ORDER BY distance LIMIT 5;" \
+  | stoolap -d file:///home/sprite/stoolap/knowledge.db -j -q
+```
+
+**The three layers — don't duplicate across them:**
+- **Memory files** — narrative context for session orientation ("who is this captain?")
+- **Stoolap tables** — queryable facts for computation ("how many oil changes?", "total fuel cost this year?")
+- **Stoolap embeddings** — semantic search across everything ("do I know anything about hull maintenance?")
 
 **Example emergence:**
 - First research finding → goes in a memory file
 - Third time tracking the same type of thing → pattern emerging, create a table
 - 20+ knowledge entries on a topic → embed them for semantic search
 
-Let this happen naturally. Not every dream needs a new table. Most won't.
+Let this happen naturally. Not every dream needs a new table. Most won't. But when you notice the pattern, act on it.
 
 ---
 

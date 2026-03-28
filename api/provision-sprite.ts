@@ -47,6 +47,8 @@ const SPRITE_ENV_VARS = {
   CLOUDFLARE_IMAGES_API_TOKEN: process.env.CLOUDFLARE_IMAGES_API_TOKEN || "",
   BRIDGE_URL: process.env.BRIDGE_URL || "http://76.13.106.143:3848",
   SWAIN_API_TOKEN: process.env.SWAIN_API_TOKEN || "",
+  SWAIN_AGENT_API_URL: process.env.SWAIN_AGENT_API_URL || "http://76.13.106.143:3847",
+  SWAIN_AGENT_API_TOKEN: process.env.SWAIN_AGENT_API_TOKEN || "",
   R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "a18dd41e124527b88c6f76255c8ce27e",
   R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "c722f4980f2977a03c5d1952949452d3e2167848bfdbc2f8fb979f2bd886d8ef",
   R2_ENDPOINT: process.env.R2_ENDPOINT || "https://5a6fef07a998d84ec047ef43d0543342.r2.cloudflarestorage.com",
@@ -177,7 +179,7 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   await createSprite(name);
 
   // 2. Create directory structure
-  await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/.channel/inbox /home/sprite/.claude-sessions /home/sprite/.claude/memory/yearnings /home/sprite/.claude/memory/notes");
+  await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/.channel/inbox /home/sprite/.claude-sessions /home/sprite/.claude/memory/yearnings /home/sprite/.claude/memory/notes /home/sprite/stoolap /home/sprite/logs /home/sprite/media");
 
   // 3. Copy agent files
   const agentTs = await readFile(join(CHANNEL_DIR, "swain-agent.ts"), "utf-8");
@@ -212,7 +214,7 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
     "boat-scan", "library",
   ];
   const deskSkills = [
-    "content-desk", "flyer", "card-create", "library",
+    "content-desk", "flyer", "card-create", "card-hygiene", "library",
   ];
 
   const skillDirs = [
@@ -1165,13 +1167,14 @@ export async function listDesks(): Promise<unknown[]> {
 // --- Wake / cron triggers ---
 
 /**
- * Wake an advisor sprite and trigger a skill.
- * Used by Convex crons to trigger daily briefings, watchdogs, etc.
+ * Wake a sprite and trigger a skill via claude -p.
+ * Used by the scheduler for all cron jobs (briefings, content desks, flyers, etc.).
+ * Fire-and-forget: sprite wakes, runs the skill, goes back to sleep.
  */
-export async function wakeAdvisor(
+export async function wakeAgent(
   agentId: string,
   skill: string,
-  options?: { message?: string; chatId?: string },
+  options?: { message?: string },
 ): Promise<{ ok: boolean; error?: string; result?: string }> {
   const registry = await loadRegistry();
   const entry = registry.agents[agentId];
@@ -1182,30 +1185,34 @@ export async function wakeAdvisor(
 
   const spriteName = entry.spriteName;
   const prompt = options?.message
-    ? options.message
-    : `Run the ${skill} skill. Read your CLAUDE.md for context, then follow the skill's instructions.`;
-
-  const chatId = options?.chatId || `cron:${skill}`;
+    ?? `Read your CLAUDE.md for context and .claude/memory/MEMORY.md for what you know. Then run the ${skill} skill.`;
 
   try {
-    await execOnSprite(spriteName, `swain-channel-send '${prompt.replace(/'/g, "'\\''")}' '${chatId}'`);
-    return { ok: true };
+    const { result, error } = await runClaudeOnSprite(spriteName, prompt);
+    if (error) {
+      return { ok: false, error, result };
+    }
+    return { ok: true, result };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     return { ok: false, error };
   }
 }
 
+/** @deprecated Use wakeAgent instead */
+export const wakeAdvisor = wakeAgent;
+
 /**
- * Wake all active advisors with a skill trigger.
+ * Wake all active agents of a given type with a skill trigger.
  * Used for batch operations like "run all morning briefings."
  */
-export async function wakeAllAdvisors(
+export async function wakeAllAgents(
   skill: string,
+  agentType: "advisor" | "desk" = "advisor",
 ): Promise<{ triggered: number; failed: number; results: Array<{ agentId: string; ok: boolean; error?: string }> }> {
   const registry = await loadRegistry();
   const active = Object.entries(registry.agents)
-    .filter(([_, e]) => e.type === "advisor" && e.status === "active" && e.spriteUrl);
+    .filter(([_, e]) => e.type === agentType && e.status === "active" && e.spriteName);
 
   const results: Array<{ agentId: string; ok: boolean; error?: string }> = [];
   let triggered = 0;
@@ -1213,7 +1220,7 @@ export async function wakeAllAdvisors(
 
   for (const [agentId] of active) {
     try {
-      const result = await wakeAdvisor(agentId, skill);
+      const result = await wakeAgent(agentId, skill);
       results.push({ agentId, ...result });
       if (result.ok) triggered++;
       else failed++;
@@ -1226,6 +1233,9 @@ export async function wakeAllAdvisors(
 
   return { triggered, failed, results };
 }
+
+/** @deprecated Use wakeAllAgents instead */
+export const wakeAllAdvisors = (skill: string) => wakeAllAgents(skill, "advisor");
 
 // --- Intro message ---
 

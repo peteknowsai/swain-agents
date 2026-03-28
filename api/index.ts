@@ -28,6 +28,7 @@ import {
   sendAgentMessage,
 } from "./agents";
 import { startScheduler, triggerSchedule, getSchedulerStatus, getSchedulerLog } from "./scheduler";
+import { renderDashboard, renderAgentLog, renderAllLogs } from "./dashboard";
 
 const PORT = 3847;
 const TOKEN = process.env.SWAIN_AGENT_API_TOKEN;
@@ -77,6 +78,18 @@ const server = Bun.serve({
     // Health (no auth)
     if (pathname === "/health" && method === "GET") {
       return json({ status: "ok", service: "swain-agent-api", uptime: process.uptime() });
+    }
+
+    // Dashboard (no auth — read-only operational view)
+    if (pathname === "/dashboard" && method === "GET") {
+      return new Response(renderDashboard(), { headers: { "Content-Type": "text/html" } });
+    }
+    if (pathname === "/dashboard/logs" && method === "GET") {
+      return new Response(renderAllLogs(), { headers: { "Content-Type": "text/html" } });
+    }
+    const dashMatch = matchRoute(pathname, "/dashboard/:agentId");
+    if (dashMatch && method === "GET") {
+      return new Response(renderAgentLog(dashMatch.agentId), { headers: { "Content-Type": "text/html" } });
     }
 
     if (!auth(req)) return error("Unauthorized", 401);

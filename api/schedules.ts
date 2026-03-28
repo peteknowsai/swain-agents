@@ -9,8 +9,7 @@ export interface ScheduleEntry {
 }
 
 export const SCHEDULES: ScheduleEntry[] = [
-  // --- Desks: UTC, all desks simultaneously ---
-  // One content run per day is enough. Add more when user base grows.
+  // --- Desks: UTC, once per day each ---
   {
     id: "desk-content-morning",
     skill: "content-desk",
@@ -37,6 +36,16 @@ export const SCHEDULES: ScheduleEntry[] = [
   },
 
   // --- Advisors: agent-local timezone, staggered ---
+  // Each advisor wakes 4x/day: liked-flyers → briefing → profile → dream
+  {
+    id: "advisor-liked-flyers",
+    skill: "library",
+    agentType: "advisor",
+    cron: "30 5 * * *",
+    timezone: "agent",
+    stagger: 2,
+    description: "Check for liked flyers and create personalized cards (before briefing)",
+  },
   {
     id: "advisor-briefing",
     skill: "briefing",
@@ -47,29 +56,12 @@ export const SCHEDULES: ScheduleEntry[] = [
     description: "Daily morning briefing",
   },
   {
-    id: "advisor-briefing-watchdog",
-    skill: "briefing",
-    agentType: "advisor",
-    cron: "30 6 * * *",
-    timezone: "agent",
-    stagger: 2,
-    description: "Briefing watchdog — catch any missed morning briefings",
-  },
-  {
-    id: "advisor-liked-flyers",
-    skill: "library",
-    agentType: "advisor",
-    cron: "0 8,12,16,20 * * *",
-    timezone: "agent",
-    description: "Check for liked flyers and create personalized cards",
-  },
-  {
     id: "advisor-profile-maintenance",
     skill: "profile",
     agentType: "advisor",
     cron: "0 14 * * *",
     timezone: "agent",
-    description: "Review captain profile completeness and plan follow-ups",
+    description: "Review captain profile completeness",
   },
   {
     id: "advisor-dream",

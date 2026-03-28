@@ -30,10 +30,13 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|pete-|joe-|austin-|m
   done
   echo "  skills: $(ls -d "$SKILLS_DIR"/*/ | wc -l | tr -d ' ') updated"
 
-  # Update channel server
-  cat "$CHANNEL_DIR/server.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/server.ts > /dev/null 2>&1
+  # Update agent + sync
+  cat "$CHANNEL_DIR/swain-agent.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/swain-agent.ts > /dev/null 2>&1
   cat "$CHANNEL_DIR/sync.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/sync.ts > /dev/null 2>&1
-  echo "  channel server: updated"
+  cat "$CHANNEL_DIR/swain-channel-send" | sprite exec -s "$name" -- tee /usr/local/bin/swain-channel-send > /dev/null 2>&1
+  sprite exec -s "$name" -- chmod +x /usr/local/bin/swain-channel-send 2>/dev/null
+  sprite exec -s "$name" -- mkdir -p /home/sprite/.channel/inbox 2>/dev/null
+  echo "  agent: updated"
 done
 echo ""
 echo "Done."

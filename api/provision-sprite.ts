@@ -176,31 +176,23 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   // 2. Create directory structure
   await execOnSprite(name, "mkdir -p /home/sprite/channel /home/sprite/.channel/inbox /home/sprite/.claude-sessions /home/sprite/.claude/memory/yearnings /home/sprite/.claude/memory/notes");
 
-  // 3. Copy channel server files
-  const channelTs = await readFile(join(CHANNEL_DIR, "swain-channel.ts"), "utf-8");
+  // 3. Copy agent files
+  const agentTs = await readFile(join(CHANNEL_DIR, "swain-agent.ts"), "utf-8");
   const syncTs = await readFile(join(CHANNEL_DIR, "sync.ts"), "utf-8");
   const packageJson = await readFile(join(CHANNEL_DIR, "package.json"), "utf-8");
   const channelSend = await readFile(join(CHANNEL_DIR, "swain-channel-send"), "utf-8");
 
-  await writeToSprite(name, "/home/sprite/channel/swain-channel.ts", channelTs);
+  await writeToSprite(name, "/home/sprite/channel/swain-agent.ts", agentTs);
   await writeToSprite(name, "/home/sprite/channel/sync.ts", syncTs);
   await writeToSprite(name, "/home/sprite/channel/package.json", packageJson);
   await writeToSprite(name, "/usr/local/bin/swain-channel-send", channelSend);
   await execOnSprite(name, "chmod +x /usr/local/bin/swain-channel-send");
 
-  // 3b. Write .mcp.json for Claude Code to discover the channel
-  const mcpJson = JSON.stringify({
-    mcpServers: {
-      "swain-channel": {
-        command: "bun",
-        args: ["/home/sprite/channel/swain-channel.ts"],
-      },
-    },
-  }, null, 2);
-  await writeToSprite(name, "/home/sprite/.mcp.json", mcpJson);
+  // 3b. Create inbox directory
+  await execOnSprite(name, "mkdir -p /home/sprite/.channel/inbox");
 
-  // 4. Install channel server dependencies
-  await execOnSprite(name, "cd /home/sprite/channel && bun install");
+  // 4. Install agent dependencies (includes Agent SDK)
+  await execOnSprite(name, "cd /home/sprite/channel && bun add @anthropic-ai/claude-agent-sdk && bun install");
 
   // 5. Copy skills to .claude/skills/ (Claude Code auto-discovery)
   const SPRITE_SKILLS_DIR = join(__dirname, "..", "sprite", "skills");
@@ -436,7 +428,7 @@ export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"
 export CHANNEL_PORT="8080"
 export CLAUDE_PATH="/home/sprite/.local/bin/claude"
 cd /home/sprite
-exec claude --dangerously-load-development-channels server:swain-channel --dangerously-skip-permissions
+exec bun run channel/swain-agent.ts
 `;
 }
 

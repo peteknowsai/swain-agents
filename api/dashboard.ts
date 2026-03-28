@@ -18,9 +18,13 @@ interface AgentView {
   lastCron?: { skill: string; status: string; ts: string; durationMs?: number };
 }
 
+function last24h(): string {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+}
+
 function buildAgentViews(): AgentView[] {
   const agents = listAgents();
-  const recentCrons = getCronLog({ limit: 200 });
+  const recentCrons = getCronLog({ limit: 200, since: last24h() });
 
   // Index last cron per agent
   const lastCronByAgent = new Map<string, CronLogEntry>();
@@ -81,7 +85,7 @@ export function renderAgentLog(agentId: string): string {
   const agent = agents.find((a) => a.id === agentId);
   if (!agent) return renderError(`Agent "${agentId}" not found`);
 
-  const crons = getCronLog({ limit: 50, agentId });
+  const crons = getCronLog({ limit: 50, agentId, since: last24h() });
   const name = agent.captain_name || agent.region || agent.id;
 
   const cronRows = crons.map((c) => {
@@ -94,7 +98,7 @@ export function renderAgentLog(agentId: string): string {
 # Captain: ${agent.captain_name || "—"} | Phone: ${agent.phone || "—"} | Region: ${agent.region || "—"}
 # Timezone: ${agent.timezone || "—"} | Assigned: ${agent.assigned_at || "—"}
 
-## Recent Cron Log (last 50)
+## Cron Log (last 24h)
 ${"Timestamp".padEnd(22)}  ${"Status".padEnd(8)}  ${"Skill".padEnd(20)}  Duration
 ${"-".repeat(80)}
 ${cronRows || "(no cron history)"}`;
@@ -125,14 +129,14 @@ ${cronRows || "(no cron history)"}`;
 }
 
 export function renderAllLogs(): string {
-  const crons = getCronLog({ limit: 100 });
+  const crons = getCronLog({ limit: 100, since: last24h() });
 
   const logText = crons.map((c) => {
     const duration = c.duration_ms ? `${(c.duration_ms / 1000).toFixed(1)}s` : "—";
     return `${c.ts.slice(0, 19)}Z  ${c.status.padEnd(8)}  ${c.agent_id.padEnd(25)}  ${c.skill.padEnd(20)}  ${duration}${c.error ? `  ERROR: ${c.error.slice(0, 100)}` : ""}`;
   }).join("\n");
 
-  const header = `## All Agent Activity (last 100)
+  const header = `## All Agent Activity (last 24h)
 ${"Timestamp".padEnd(22)}  ${"Status".padEnd(8)}  ${"Agent".padEnd(25)}  ${"Skill".padEnd(20)}  Duration
 ${"-".repeat(100)}
 ${logText || "(no activity)"}`;

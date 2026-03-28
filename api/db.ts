@@ -332,11 +332,12 @@ export function logCron(entry: CronLogEntry): void {
   stmtLogCron.run(entry.ts, entry.schedule_id, entry.agent_id, entry.skill, entry.status, entry.error ?? null, entry.duration_ms ?? null);
 }
 
-export function getCronLog(options?: { limit?: number; agentId?: string; scheduleId?: string }): CronLogEntry[] {
+export function getCronLog(options?: { limit?: number; agentId?: string; scheduleId?: string; since?: string }): CronLogEntry[] {
   let sql = "SELECT * FROM cron_log WHERE 1=1";
   const params: any[] = [];
   if (options?.agentId) { sql += " AND agent_id = ?"; params.push(options.agentId); }
   if (options?.scheduleId) { sql += " AND schedule_id = ?"; params.push(options.scheduleId); }
+  if (options?.since) { sql += " AND ts >= ?"; params.push(options.since); }
   sql += " ORDER BY id DESC";
   if (options?.limit) { sql += " LIMIT ?"; params.push(options.limit); }
   return db.prepare(sql).all(...params) as CronLogEntry[];

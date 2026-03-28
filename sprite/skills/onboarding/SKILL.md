@@ -168,7 +168,30 @@ Do this in the same turn. Use `reply` to send the wrap-up, then do all the backe
    swain card boat-art --user=<userId> --best --json
    ```
 
-7. **Assemble the briefing** (greeting → cards with commentary → boat art → photo upload → closing):
+7. **Assemble the briefing** — this is a conversation, not a list. Weave commentary between every card:
+
+   **Required ordering:**
+   ```
+   greeting → text + card → text + card → text + card → ... → boat_art → text (bridge to photo) → photo_upload → closing
+   ```
+
+   **Every card MUST have a text item before it** with 1-2 sentences of commentary.
+   The commentary makes it personal — reference what the captain told you, connect
+   it to their boating life. Don't just describe the card.
+
+   **Item types:**
+   - `{ "type": "greeting", "content": "Hey Steve! Here's what's worth knowing..." }`
+   - `{ "type": "text", "content": "Your commentary about the next card" }`
+   - `{ "type": "card", "id": "card_xxx" }`
+   - `{ "type": "boat_art", "image": "<url>", "styleName": "Art Deco", "boatName": "Lil Rig" }`
+   - `{ "type": "text", "content": "Here's Lil Rig in [style]. Every day you get a new one. Send me a photo and these get way better." }`
+   - `{ "type": "photo_upload" }`
+   - `{ "type": "closing", "content": "More tomorrow. Enjoy the water, Steve." }`
+
+   **photo_upload is required in the first briefing** — this is how we get the captain's
+   boat photo for better art. The text before it should bridge from the boat art to
+   the ask naturally.
+
    ```bash
    swain briefing assemble --user=<userId> --items='<json_array>' --json
    ```

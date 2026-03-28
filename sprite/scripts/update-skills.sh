@@ -28,9 +28,10 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
   done
   echo "  skills: $(ls -d "$SKILLS_DIR"/*/ | wc -l | tr -d ' ') updated"
 
-  # Update agent + channel-send
+  # Update agent + channel-send + package.json
   cat "$CHANNEL_DIR/swain-agent.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/swain-agent.ts > /dev/null 2>&1
   cat "$CHANNEL_DIR/sync.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/sync.ts > /dev/null 2>&1
+  cat "$CHANNEL_DIR/package.json" | sprite exec -s "$name" -- tee /home/sprite/channel/package.json > /dev/null 2>&1
   cat "$CHANNEL_DIR/swain-channel-send" | sprite exec -s "$name" -- tee /usr/local/bin/swain-channel-send > /dev/null 2>&1
   sprite exec -s "$name" -- chmod +x /usr/local/bin/swain-channel-send 2>/dev/null
   echo "  agent: updated"
@@ -57,10 +58,17 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     echo "  launcher: set to Agent SDK service"
   fi
 
+  # Ensure Agent SDK is installed
+  if ! sprite exec -s "$name" -- test -d /home/sprite/channel/node_modules/@anthropic-ai/claude-agent-sdk 2>/dev/null; then
+    sprite exec -s "$name" -- bash -c "cd /home/sprite/channel && bun add @anthropic-ai/claude-agent-sdk 2>/dev/null && bun install 2>/dev/null" 2>/dev/null
+    echo "  sdk: installed"
+  fi
+
   # Kill stale processes so the service can take over on next wake
   sprite exec -s "$name" -- pkill -f 'bun run channel/' 2>/dev/null
   sprite exec -s "$name" -- pkill -f 'bun run server' 2>/dev/null
   sprite exec -s "$name" -- pkill -f 'sleep infinity' 2>/dev/null
+  sprite exec -s "$name" -- pkill -f 'claude setup-token' 2>/dev/null
 
   # Recreate service without httpPort (idempotent — overwrites existing)
   sprite exec -s "$name" -- sprite-env services create channel --cmd /home/sprite/start.sh 2>/dev/null

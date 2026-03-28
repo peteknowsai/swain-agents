@@ -425,10 +425,10 @@ function generateLauncherScript(spriteName: string, vaultPrefix?: string): strin
     .map(([k, v]) => `export ${k}="${v}"`)
     .join("\n");
 
-  // All sprites: env vars only, no persistent process.
+  // All sprites: env vars + sleep. No active process, but start.sh doesn't exit
+  // so the platform service manager doesn't restart-loop.
   // Agent SDK starts on demand via swain-channel-send when a message arrives.
-  // claude -p (crons) sources env vars from this file.
-  // Sprite sleeps when idle.
+  // claude -p (crons) sources env vars via grep from this file.
   return `#!/bin/bash
 ${envLines}
 export SPRITE_ID="${spriteName}"
@@ -436,7 +436,8 @@ export VAULT_PREFIX="${vaultPrefix || spriteName}"
 export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"
 export CHANNEL_PORT="8080"
 export CLAUDE_PATH="/home/sprite/.local/bin/claude"
-# No persistent process — agent starts on demand, sprite sleeps when idle
+# Keep service alive so platform doesn't restart-loop. Sprite still sleeps.
+exec sleep infinity
 `;
 }
 

@@ -50,15 +50,15 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     fi
   fi
 
-  # Remove any persistent process from start.sh — all sprites sleep now.
-  # Agent SDK starts on demand via swain-channel-send.
-  if sprite exec -s "$name" -- grep -q "exec bun run\|exec bun channel" /home/sprite/start.sh 2>/dev/null; then
-    sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d' /home/sprite/start.sh 2>/dev/null
-    echo "# No persistent process — agent starts on demand, sprite sleeps when idle" | sprite exec -s "$name" -- tee -a /home/sprite/start.sh > /dev/null 2>&1
-    echo "  launcher: removed persistent process (on-demand now)"
+  # Ensure start.sh ends with sleep infinity (not exec bun, not exit 0, not bare comment)
+  # This keeps the platform service manager happy without running anything.
+  if ! sprite exec -s "$name" -- grep -q "exec sleep infinity" /home/sprite/start.sh 2>/dev/null; then
+    sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d; /^exit 0/d; /^# No persistent/d; /^# Desk.pool/d' /home/sprite/start.sh 2>/dev/null
+    echo "exec sleep infinity" | sprite exec -s "$name" -- tee -a /home/sprite/start.sh > /dev/null 2>&1
+    echo "  launcher: set to sleep infinity"
   fi
 
-  # Kill any running agent/server processes so the sprite can sleep
+  # Kill any running agent/server processes so the sprite can settle
   sprite exec -s "$name" -- pkill -f 'bun run channel/' 2>/dev/null
   sprite exec -s "$name" -- pkill -f 'bun run server' 2>/dev/null
 done

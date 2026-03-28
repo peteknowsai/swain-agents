@@ -82,7 +82,7 @@ const server = Bun.serve({
 
     // Dashboard (no auth — read-only operational view)
     if (pathname === "/dashboard" && method === "GET") {
-      return new Response(renderDashboard(), { headers: { "Content-Type": "text/html" } });
+      return new Response(await renderDashboard(), { headers: { "Content-Type": "text/html" } });
     }
     if (pathname === "/dashboard/logs" && method === "GET") {
       return new Response(renderAllLogs(), { headers: { "Content-Type": "text/html" } });

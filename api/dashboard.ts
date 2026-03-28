@@ -5,11 +5,49 @@
 
 import { listAgents, getCronLog, getSummaries, type Agent, type CronLogEntry, type Summary } from "./db";
 
+interface SpriteStatus {
+  name: string;
+  status: "running" | "warm" | "cold" | "unknown";
+  lastRunningAt?: string;
+}
+
+let spriteStatusCache: { data: Map<string, SpriteStatus>; ts: number } = { data: new Map(), ts: 0 };
+
+async function fetchSpriteStatuses(): Promise<Map<string, SpriteStatus>> {
+  // Cache for 10 seconds to avoid hammering the API
+  if (Date.now() - spriteStatusCache.ts < 10_000) return spriteStatusCache.data;
+
+  try {
+    const SPRITE_CLI = process.env.SPRITE_BIN || "sprite";
+    const proc = Bun.spawn([SPRITE_CLI, "api", "/sprites"], {
+      stdout: "pipe", stderr: "pipe",
+      env: { ...process.env, HOME: process.env.HOME || "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
+    });
+    const stdout = await new Response(proc.stdout).text();
+    await proc.exited;
+    const data = JSON.parse(stdout);
+    const map = new Map<string, SpriteStatus>();
+    for (const s of data.sprites || []) {
+      map.set(s.name, {
+        name: s.name,
+        status: s.status || "unknown",
+        lastRunningAt: s.last_running_at,
+      });
+    }
+    spriteStatusCache = { data: map, ts: Date.now() };
+    return map;
+  } catch {
+    return spriteStatusCache.data;
+  }
+}
+
 interface AgentView {
   id: string;
   type: string;
   status: string;
   spriteName: string;
+  spriteStatus?: string;
+  lastRunningAt?: string;
   captainName?: string;
   phone?: string;
   region?: string;
@@ -22,9 +60,10 @@ function last24h(): string {
   return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 }
 
-function buildAgentViews(): AgentView[] {
+async function buildAgentViews(): Promise<AgentView[]> {
   const agents = listAgents();
   const recentCrons = getCronLog({ limit: 200, since: last24h() });
+  const spriteStatuses = await fetchSpriteStatuses();
 
   // Index last cron per agent
   const lastCronByAgent = new Map<string, CronLogEntry>();
@@ -36,11 +75,14 @@ function buildAgentViews(): AgentView[] {
 
   return agents.map((a) => {
     const cron = lastCronByAgent.get(a.id);
+    const sprite = spriteStatuses.get(a.sprite_name || a.id);
     return {
       id: a.id,
       type: a.type,
       status: a.status,
       spriteName: a.sprite_name || a.id,
+      spriteStatus: sprite?.status,
+      lastRunningAt: sprite?.lastRunningAt,
       captainName: a.captain_name || undefined,
       phone: a.phone || undefined,
       region: a.region || undefined,
@@ -178,8 +220,19 @@ function renderError(msg: string): string {
   return `<!DOCTYPE html><html><head><title>Error</title></head><body style="font-family:sans-serif;background:#0a0a0a;color:#e5e5e5;padding:24px"><a href="/dashboard" style="color:#22c55e">&larr; Dashboard</a><h1 style="color:#ef4444;margin-top:16px">${msg}</h1></body></html>`;
 }
 
-export function renderDashboard(): string {
-  const agents = buildAgentViews();
+function spriteStatusBadge(status?: string): string {
+  const colors: Record<string, string> = {
+    running: "#22c55e",
+    warm: "#eab308",
+    cold: "#6b7280",
+  };
+  if (!status) return `<span style="color:#666">—</span>`;
+  const color = colors[status] || "#a3a3a3";
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${color}20;color:${color};font-size:12px;font-weight:600">${status}</span>`;
+}
+
+export async function renderDashboard(): Promise<string> {
+  const agents = await buildAgentViews();
 
   const advisors = agents.filter((a) => a.type === "advisor" && a.status === "active");
   const desks = agents.filter((a) => a.type === "desk" && a.status === "active");
@@ -194,6 +247,7 @@ export function renderDashboard(): string {
       : "<span style='color:#666'>no crons yet</span>";
     return `<tr>
       <td><a href="/dashboard/${a.id}" style="color:#fff;text-decoration:none"><strong>${name}</strong></a><br><span style="color:#888;font-size:12px">${a.spriteName}</span></td>
+      <td>${spriteStatusBadge(a.spriteStatus)}</td>
       <td>${a.phone || "—"}</td>
       <td>${a.timezone || "—"}</td>
       <td>${cronInfo}</td>
@@ -207,6 +261,7 @@ export function renderDashboard(): string {
       : "<span style='color:#666'>no crons yet</span>";
     return `<tr>
       <td><a href="/dashboard/${a.id}" style="color:#fff;text-decoration:none"><strong>${a.region || a.id}</strong></a><br><span style="color:#888;font-size:12px">${a.spriteName}</span></td>
+      <td>${spriteStatusBadge(a.spriteStatus)}</td>
       <td>${cronInfo}</td>
     </tr>`;
   }
@@ -215,6 +270,7 @@ export function renderDashboard(): string {
     return `<tr>
       <td>${a.spriteName}</td>
       <td>${a.type}</td>
+      <td>${spriteStatusBadge(a.spriteStatus)}</td>
     </tr>`;
   }
 
@@ -240,22 +296,30 @@ export function renderDashboard(): string {
 </head>
 <body>
   <h1>Swain Agents</h1>
+  <p style="margin-bottom:24px;font-size:14px">
+    ${(() => {
+      const running = agents.filter(a => a.spriteStatus === "running").length;
+      const warm = agents.filter(a => a.spriteStatus === "warm").length;
+      const cold = agents.filter(a => a.spriteStatus === "cold").length;
+      return `<span style="color:#22c55e">${running} running</span> &middot; <span style="color:#eab308">${warm} warm</span> &middot; <span style="color:#6b7280">${cold} cold</span>`;
+    })()}
+  </p>
 
   <h2>Advisors <span class="count">${advisors.length}</span></h2>
   ${advisors.length ? `<table>
-    <tr><th>Captain</th><th>Phone</th><th>Timezone</th><th>Last Cron</th></tr>
+    <tr><th>Captain</th><th>Sprite</th><th>Phone</th><th>Timezone</th><th>Last Cron</th></tr>
     ${advisors.map(advisorRow).join("")}
   </table>` : "<p style='color:#666'>No active advisors</p>"}
 
   <h2>Content Desks <span class="count">${desks.length}</span></h2>
   ${desks.length ? `<table>
-    <tr><th>Region</th><th>Last Cron</th></tr>
+    <tr><th>Region</th><th>Sprite</th><th>Last Cron</th></tr>
     ${desks.map(deskRow).join("")}
   </table>` : "<p style='color:#666'>No active desks</p>"}
 
   <h2>Pool <span class="count">${pool.length}</span></h2>
   ${pool.length ? `<table>
-    <tr><th>Sprite</th><th>Type</th></tr>
+    <tr><th>Sprite</th><th>Type</th><th>Status</th></tr>
     ${pool.map(poolRow).join("")}
   </table>` : "<p style='color:#666'>Pool empty</p>"}
 

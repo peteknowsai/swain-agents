@@ -149,8 +149,10 @@ async function processMessage(msg: InboxMessage): Promise<void> {
       options: {
         model: "claude-sonnet-4-6",
         permissionMode: "bypassPermissions",
-        allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch"],
-        systemPrompt: SYSTEM_PROMPT,
+        cwd: "/home/sprite",
+        settingSources: ["user", "project"],
+        allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill"],
+        systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append: SYSTEM_PROMPT },
         mcpServers: [mcpServer],
         ...(currentSessionId ? { resume: currentSessionId } : {}),
       },

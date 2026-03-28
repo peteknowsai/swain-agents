@@ -51,6 +51,14 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|pete-|joe-|austin-|m
       echo "  env: SWAIN_AGENT_API_TOKEN not set on VPS, skipping"
     fi
   fi
+
+  # Desk and pool sprites should NOT run a persistent process — let them sleep
+  if echo "$name" | grep -qE '(desk|pool)'; then
+    if sprite exec -s "$name" -- grep -q "exec bun run" /home/sprite/start.sh 2>/dev/null; then
+      sprite exec -s "$name" -- sed -i 's|^cd /home/sprite.*||; s|^exec bun run.*|# No persistent process — sprite sleeps between cron runs\nexit 0|' /home/sprite/start.sh 2>/dev/null
+      echo "  launcher: removed persistent process (sprite will sleep)"
+    fi
+  fi
 done
 echo ""
 echo "Done."

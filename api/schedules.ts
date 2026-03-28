@@ -10,44 +10,28 @@ export interface ScheduleEntry {
 
 export const SCHEDULES: ScheduleEntry[] = [
   // --- Desks: UTC, all desks simultaneously ---
+  // One content run per day is enough. Add more when user base grows.
   {
     id: "desk-content-morning",
     skill: "content-desk",
     agentType: "desk",
     cron: "0 10 * * *",
     timezone: "UTC",
-    description: "Morning content generation",
-  },
-  {
-    id: "desk-content-afternoon",
-    skill: "content-desk",
-    agentType: "desk",
-    cron: "0 16 * * *",
-    timezone: "UTC",
-    description: "Afternoon content generation",
-  },
-  {
-    id: "desk-content-evening",
-    skill: "content-desk",
-    agentType: "desk",
-    cron: "0 22 * * *",
-    timezone: "UTC",
-    description: "Evening content generation",
+    description: "Daily content generation",
   },
   {
     id: "desk-flyer",
     skill: "flyer",
     agentType: "desk",
-    cron: "0 8 * * *",
+    cron: "0 14 * * *",
     timezone: "UTC",
     description: "Daily flyer generation",
   },
-
   {
     id: "desk-card-hygiene",
     skill: "card-hygiene",
     agentType: "desk",
-    cron: "0 14 * * *",
+    cron: "0 18 * * *",
     timezone: "UTC",
     description: "Fix cards missing images or styles",
   },

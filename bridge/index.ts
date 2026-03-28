@@ -127,6 +127,23 @@ Bun.serve({
       return Response.json({ ok: true });
     }
 
+    // Sprite summary endpoint — Stop hook posts AI-generated summaries
+    const summaryMatch = url.pathname.match(/^\/sprites\/([^/]+)\/summary$/);
+    if (summaryMatch && req.method === "POST") {
+      const spriteId = summaryMatch[1];
+      const body = (await req.json()) as { summary: string; sessionId?: string; agentId?: string; ts?: string };
+      console.log(`[bridge] summary from ${spriteId}: ${body.summary?.slice(0, 80)}`);
+
+      try {
+        const { addSummary } = await import("./lib/db.ts");
+        addSummary(body.agentId || spriteId, body.summary, body.sessionId, body.ts);
+      } catch (err) {
+        console.error(`[bridge] summary save failed:`, err);
+      }
+
+      return Response.json({ ok: true });
+    }
+
     // Registry reload — no-op, DB is always current
     if (url.pathname === "/registry/reload" && req.method === "POST") {
       return Response.json({ ok: true, sprites: listAll().length });

@@ -79,8 +79,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_agents_phone ON agents(phone);
   CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
   CREATE INDEX IF NOT EXISTS idx_bridge_routes_phones ON bridge_routes(phone_numbers);
+  CREATE TABLE IF NOT EXISTS summaries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id TEXT NOT NULL,
+    session_id TEXT,
+    summary TEXT NOT NULL,
+    ts TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_cron_log_ts ON cron_log(ts);
   CREATE INDEX IF NOT EXISTS idx_cron_state_type ON cron_state(type);
+  CREATE INDEX IF NOT EXISTS idx_summaries_agent ON summaries(agent_id, ts);
 `);
 
 export { db };
@@ -390,6 +399,34 @@ export function setLastProcessed(ts: number): void {
     INSERT INTO catchup (key, timestamp_ms) VALUES ('last_processed', ?)
     ON CONFLICT(key) DO UPDATE SET timestamp_ms=excluded.timestamp_ms
   `).run(ts);
+}
+
+// --- Summaries ---
+
+export interface Summary {
+  id: number;
+  agent_id: string;
+  session_id: string | null;
+  summary: string;
+  ts: string;
+}
+
+const stmtAddSummary = db.prepare(
+  "INSERT INTO summaries (agent_id, session_id, summary, ts) VALUES (?, ?, ?, ?)"
+);
+
+export function addSummary(agentId: string, summary: string, sessionId?: string, ts?: string): void {
+  stmtAddSummary.run(agentId, sessionId || null, summary, ts || new Date().toISOString());
+}
+
+export function getSummaries(options?: { agentId?: string; since?: string; limit?: number }): Summary[] {
+  let sql = "SELECT * FROM summaries WHERE 1=1";
+  const params: any[] = [];
+  if (options?.agentId) { sql += " AND agent_id = ?"; params.push(options.agentId); }
+  if (options?.since) { sql += " AND ts >= ?"; params.push(options.since); }
+  sql += " ORDER BY id DESC";
+  sql += ` LIMIT ${options?.limit || 50}`;
+  return db.prepare(sql).all(...params) as Summary[];
 }
 
 // --- Transactions ---

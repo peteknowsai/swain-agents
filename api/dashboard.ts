@@ -3,7 +3,7 @@
  * Served at GET /dashboard (no auth required — read-only operational view).
  */
 
-import { listAgents, getCronLog, type Agent, type CronLogEntry } from "./db";
+import { listAgents, getCronLog, getSummaries, type Agent, type CronLogEntry, type Summary } from "./db";
 
 interface AgentView {
   id: string;
@@ -86,6 +86,7 @@ export function renderAgentLog(agentId: string): string {
   if (!agent) return renderError(`Agent "${agentId}" not found`);
 
   const crons = getCronLog({ limit: 50, agentId, since: last24h() });
+  const summaries = getSummaries({ agentId, since: last24h(), limit: 20 });
   const name = agent.captain_name || agent.region || agent.id;
 
   const cronRows = crons.map((c) => {
@@ -93,10 +94,17 @@ export function renderAgentLog(agentId: string): string {
     return `${c.ts.slice(0, 19)}Z  ${c.status.padEnd(8)}  ${c.skill.padEnd(20)}  ${duration}${c.error ? `  ERROR: ${c.error}` : ""}`;
   }).join("\n");
 
+  const summaryRows = summaries.map((s) => {
+    return `${s.ts.slice(0, 19)}Z  ${s.summary}`;
+  }).join("\n");
+
   const logText = `# Agent: ${name} (${agent.id})
 # Type: ${agent.type} | Status: ${agent.status} | Sprite: ${agent.sprite_name || "none"}
 # Captain: ${agent.captain_name || "—"} | Phone: ${agent.phone || "—"} | Region: ${agent.region || "—"}
 # Timezone: ${agent.timezone || "—"} | Assigned: ${agent.assigned_at || "—"}
+
+## AI Summaries (last 24h)
+${summaryRows || "(no summaries yet — will appear after next cron or conversation)"}
 
 ## Cron Log (last 24h)
 ${"Timestamp".padEnd(22)}  ${"Status".padEnd(8)}  ${"Skill".padEnd(20)}  Duration

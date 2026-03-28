@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/sprite/channel/hooks/stop-summary.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

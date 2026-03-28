@@ -97,3 +97,13 @@ export function findRouteForDM(): BridgeRoute | null {
   const routes = listRoutes();
   return routes.find((r) => r.allow_dms) ?? null;
 }
+
+// --- Summaries ---
+
+const stmtAddSummary = db.prepare(
+  "INSERT INTO summaries (agent_id, session_id, summary, ts) VALUES (?, ?, ?, ?)"
+);
+
+export function addSummary(agentId: string, summary: string, sessionId?: string, ts?: string): void {
+  stmtAddSummary.run(agentId, sessionId || null, summary, ts || new Date().toISOString());
+}

@@ -2,19 +2,13 @@
 /**
  * Swain Agent — persistent Claude agent on a sprite.
  *
- * Uses the Claude Agent SDK (v2) for multi-turn conversations.
- * Messages arrive via file drops from `sprite exec -- swain-agent-send`.
+ * Uses the Claude Agent SDK (v1 query API) for conversations.
+ * Messages arrive via file drops from `sprite exec -- swain-channel-send`.
  * Claude responds via the `reply` tool which POSTs to the Bridge.
- *
- * Session persists across sprite sleep/wake via resumeSession().
+ * Session persists across calls via --resume.
  */
 
-import {
-  unstable_v2_createSession,
-  unstable_v2_resumeSession,
-  tool,
-  createSdkMcpServer,
-} from "@anthropic-ai/claude-agent-sdk";
+import { query, tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { readdir, readFile, unlink, mkdir, writeFile } from "fs/promises";
 import { join } from "path";
@@ -28,24 +22,24 @@ const INBOX_DIR = "/home/sprite/.channel/inbox";
 const SESSION_FILE = "/home/sprite/.agent-session";
 const POLL_INTERVAL_MS = 500;
 
-const SYSTEM_PROMPT = `
-Read your CLAUDE.md for identity and context.
-At the start of every conversation, read .claude/memory/MEMORY.md to recall what you know about your captain.
-
-Messages from your captain arrive with a chat_id. Use the reply tool to send messages back.
-You can call reply MULTIPLE TIMES during a single task — use it whenever you want to communicate.
-Your captain communicates via iMessage — keep messages short (1-2 sentences), casual, no markdown, no bullet lists.
-
-You have full access to the sprite filesystem. Use your tools:
-- reply(chat_id, text) — send an iMessage to the captain
-- Bash — run commands: swain CLI, stoolap, goplaces, firecrawl
-- Read/Write/Edit — manage memory files, CLAUDE.md, skills
-- Glob/Grep — search files
-- WebSearch/WebFetch — real-time info (weather, tides, news)
-
-Never say you don't have access to something. Read your memory files to know what happened in previous conversations.
-For image generation, ALWAYS use the swain CLI (swain card image, swain image generate).
-`.trim();
+const SYSTEM_PROMPT = [
+  "Read your CLAUDE.md for identity and context.",
+  "At the start of every conversation, read .claude/memory/MEMORY.md to recall what you know about your captain.",
+  "",
+  "Messages from your captain arrive with a chat_id. Use the reply tool to send messages back.",
+  "You can call reply MULTIPLE TIMES during a single task — use it whenever you want to communicate.",
+  "Your captain communicates via iMessage — keep messages short (1-2 sentences), casual, no markdown.",
+  "",
+  "You have full access to the sprite filesystem. Use your tools:",
+  "- reply(chat_id, text) — send an iMessage to the captain",
+  "- Bash — run commands: swain CLI, stoolap, goplaces, firecrawl",
+  "- Read/Write/Edit — manage memory files, CLAUDE.md, skills",
+  "- Glob/Grep — search files",
+  "- WebSearch/WebFetch — real-time info (weather, tides, news)",
+  "",
+  "Never say you don't have access to something. Read your memory files to know what happened.",
+  "For image generation, ALWAYS use the swain CLI (swain card image, swain image generate).",
+].join("\n");
 
 // --- Reply Tool ---
 
@@ -72,10 +66,7 @@ const replyTool = tool(
       }
 
       console.log(`[agent] reply → ${chat_id}: ${text.slice(0, 60)}`);
-
-      // Trigger vault sync in background
       syncToR2().catch(() => {});
-
       return { content: [{ type: "text" as const, text: "sent" }] };
     } catch (err) {
       console.error(`[agent] reply error:`, err);
@@ -93,8 +84,7 @@ const mcpServer = createSdkMcpServer({
 
 async function loadSessionId(): Promise<string | null> {
   try {
-    const content = await readFile(SESSION_FILE, "utf-8");
-    return content.trim() || null;
+    return (await readFile(SESSION_FILE, "utf-8")).trim() || null;
   } catch {
     return null;
   }
@@ -102,26 +92,6 @@ async function loadSessionId(): Promise<string | null> {
 
 async function saveSessionId(id: string): Promise<void> {
   await writeFile(SESSION_FILE, id);
-}
-
-// --- Create or Resume Session ---
-
-const sessionOpts = {
-  model: "claude-sonnet-4-6" as const,
-  permissionMode: "bypassPermissions" as const,
-  systemPrompt: SYSTEM_PROMPT,
-  mcpServers: [mcpServer],
-};
-
-let session: ReturnType<typeof unstable_v2_createSession>;
-const savedSessionId = await loadSessionId();
-
-if (savedSessionId) {
-  console.log(`[agent] resuming session ${savedSessionId.slice(0, 8)}...`);
-  session = unstable_v2_resumeSession(savedSessionId, sessionOpts);
-} else {
-  console.log(`[agent] creating new session`);
-  session = unstable_v2_createSession(sessionOpts);
 }
 
 // --- Inbox ---
@@ -134,7 +104,6 @@ interface InboxMessage {
   user?: string;
   messageId?: string;
   type?: string;
-  ts?: number;
 }
 
 async function readInbox(): Promise<InboxMessage[]> {
@@ -168,40 +137,55 @@ async function readInbox(): Promise<InboxMessage[]> {
 
 let processing = false;
 const messageQueue: InboxMessage[] = [];
+let currentSessionId: string | null = await loadSessionId();
 
 async function processMessage(msg: InboxMessage): Promise<void> {
-  const prompt = msg.chatId
-    ? `<channel source="swain" chat_id="${msg.chatId}">${msg.text}</channel>`
-    : msg.text;
-
+  const prompt = `<channel source="swain" chat_id="${msg.chatId}">${msg.text}</channel>`;
   console.log(`[agent] ← ${msg.chatId}: ${msg.text.slice(0, 80)}`);
 
   try {
-    await session.send(prompt);
+    const result = query({
+      prompt,
+      options: {
+        model: "claude-sonnet-4-6",
+        permissionMode: "bypassPermissions",
+        systemPrompt: SYSTEM_PROMPT,
+        mcpServers: [mcpServer],
+        ...(currentSessionId ? { resume: currentSessionId } : {}),
+      },
+    });
 
-    for await (const event of session.stream()) {
-      // Save session ID from every event
-      if (event.session_id) {
-        await saveSessionId(event.session_id);
+    for await (const event of result) {
+      // Save session ID
+      if (event.type === "result" && (event as any).session_id) {
+        currentSessionId = (event as any).session_id;
+        await saveSessionId(currentSessionId!);
+        console.log(`[agent] session: ${currentSessionId!.slice(0, 8)}...`);
       }
-      // Reply tool calls are handled automatically by the SDK
+
+      // Log assistant text output (shouldn't happen if reply tool is used, but just in case)
+      if (event.type === "assistant") {
+        const texts = (event as any).message?.content
+          ?.filter((b: any) => b.type === "text")
+          ?.map((b: any) => b.text)
+          ?.join("");
+        if (texts) {
+          console.log(`[agent] text output: ${texts.slice(0, 100)}`);
+        }
+      }
     }
+
+    console.log(`[agent] done processing ${msg.chatId}`);
   } catch (err) {
     console.error(`[agent] processing error:`, err);
 
-    // If session is broken, create a new one
-    if (String(err).includes("session") || String(err).includes("closed")) {
-      console.log(`[agent] session broken, creating new one`);
-      session = unstable_v2_createSession(sessionOpts);
-      // Retry once with new session
+    // If session is broken, clear it and retry
+    if (String(err).includes("session")) {
+      console.log(`[agent] clearing broken session`);
+      currentSessionId = null;
       try {
-        await session.send(prompt);
-        for await (const event of session.stream()) {
-          if (event.session_id) await saveSessionId(event.session_id);
-        }
-      } catch (retryErr) {
-        console.error(`[agent] retry failed:`, retryErr);
-      }
+        await unlink(SESSION_FILE);
+      } catch {}
     }
   }
 }
@@ -230,11 +214,11 @@ setInterval(async () => {
   }
 }, POLL_INTERVAL_MS);
 
-// Check inbox immediately on startup
-const initialMessages = await readInbox();
-if (initialMessages.length > 0) {
-  messageQueue.push(...initialMessages);
+// Process any messages already in inbox on startup
+const initial = await readInbox();
+if (initial.length > 0) {
+  messageQueue.push(...initial);
   processQueue();
 }
 
-console.log(`[agent] running — ${SPRITE_ID} — watching inbox`);
+console.log(`[agent] running — ${SPRITE_ID} — session: ${currentSessionId?.slice(0, 8) ?? "new"}`);

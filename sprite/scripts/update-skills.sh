@@ -50,17 +50,13 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     fi
   fi
 
-  # Ensure start.sh ends with sleep infinity (not exec bun, not exit 0, not bare comment)
-  # This keeps the platform service manager happy without running anything.
-  if ! sprite exec -s "$name" -- grep -q "exec sleep infinity" /home/sprite/start.sh 2>/dev/null; then
-    sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d; /^exit 0/d; /^# No persistent/d; /^# Desk.pool/d' /home/sprite/start.sh 2>/dev/null
-    echo "exec sleep infinity" | sprite exec -s "$name" -- tee -a /home/sprite/start.sh > /dev/null 2>&1
-    echo "  launcher: set to sleep infinity"
-  fi
+  # Clean up start.sh — env vars only, no persistent process
+  sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d; /^exec sleep/d; /^exit 0/d; /^# No persistent/d; /^# Keep service/d; /^# Desk.pool/d' /home/sprite/start.sh 2>/dev/null
 
-  # Kill any running agent/server processes so the sprite can settle
+  # Kill any stale processes
   sprite exec -s "$name" -- pkill -f 'bun run channel/' 2>/dev/null
   sprite exec -s "$name" -- pkill -f 'bun run server' 2>/dev/null
+  sprite exec -s "$name" -- pkill -f 'sleep infinity' 2>/dev/null
 done
 echo ""
 echo "Done."

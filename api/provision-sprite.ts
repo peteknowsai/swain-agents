@@ -297,7 +297,7 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
 
   // 7. Create launcher script with env vars
   const poolPrefix = type === "desk" ? `pool/desks/${name}` : `pool/advisors/${name}`;
-  const launcherScript = generateLauncherScript(name, poolPrefix, type);
+  const launcherScript = generateLauncherScript(name, poolPrefix);
   await writeToSprite(name, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(name, "chmod +x /home/sprite/start.sh");
 
@@ -419,19 +419,16 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   }
 }
 
-function generateLauncherScript(spriteName: string, vaultPrefix?: string, type: "advisor" | "desk" = "advisor"): string {
+function generateLauncherScript(spriteName: string, vaultPrefix?: string): string {
   const envLines = Object.entries(SPRITE_ENV_VARS)
     .filter(([_, v]) => v)
     .map(([k, v]) => `export ${k}="${v}"`)
     .join("\n");
 
-  // Desks and pool sprites: env vars only, no persistent process.
-  // They sleep between cron runs. claude -p sources env vars from start.sh.
-  // Active advisors: run the Agent SDK for inbound conversations.
-  const launcher = type === "advisor"
-    ? `cd /home/sprite\nexec bun run channel/swain-agent.ts`
-    : `# Desk/pool sprite — no persistent process, sleeps between cron runs\nexit 0`;
-
+  // All sprites: env vars only, no persistent process.
+  // Agent SDK starts on demand via swain-channel-send when a message arrives.
+  // claude -p (crons) sources env vars from this file.
+  // Sprite sleeps when idle.
   return `#!/bin/bash
 ${envLines}
 export SPRITE_ID="${spriteName}"
@@ -439,7 +436,7 @@ export VAULT_PREFIX="${vaultPrefix || spriteName}"
 export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"
 export CHANNEL_PORT="8080"
 export CLAUDE_PATH="/home/sprite/.local/bin/claude"
-${launcher}
+# No persistent process — agent starts on demand, sprite sleeps when idle
 `;
 }
 
@@ -665,7 +662,7 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<{
     try {
       const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
       await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
-      const poolLauncher = generateLauncherScript(spriteName, `pool/advisors/${spriteName}`, "desk");  // "desk" = no persistent process, sprite sleeps
+      const poolLauncher = generateLauncherScript(spriteName, `pool/advisors/${spriteName}`);
       await writeToSprite(spriteName, "/home/sprite/start.sh", poolLauncher);
       await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
     } catch (err) {
@@ -1084,7 +1081,7 @@ export async function provisionSpriteDesk(input: DeskInput): Promise<{
 
   // 2. Update launcher with vault prefix
   const vaultPrefix = `desks/${slugify(input.name)}`;
-  const launcherScript = generateLauncherScript(spriteName, vaultPrefix, "desk");
+  const launcherScript = generateLauncherScript(spriteName, vaultPrefix);
   await writeToSprite(spriteName, "/home/sprite/start.sh", launcherScript);
   await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
 
@@ -1144,7 +1141,7 @@ export async function deleteSpriteDesk(agentId: string): Promise<void> {
   // 1. Reset CLAUDE.md and launcher to pool version
   const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.desk-pool"), "utf-8");
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
-  const poolLauncher = generateLauncherScript(spriteName, `pool/desks/${spriteName}`, "desk");
+  const poolLauncher = generateLauncherScript(spriteName, `pool/desks/${spriteName}`);
   await writeToSprite(spriteName, "/home/sprite/start.sh", poolLauncher);
   await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
 

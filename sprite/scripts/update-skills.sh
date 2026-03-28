@@ -30,7 +30,7 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
   done
   echo "  skills: $(ls -d "$SKILLS_DIR"/*/ | wc -l | tr -d ' ') updated"
 
-  # Update agent + sync
+  # Update agent + channel-send
   cat "$CHANNEL_DIR/swain-agent.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/swain-agent.ts > /dev/null 2>&1
   cat "$CHANNEL_DIR/sync.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/sync.ts > /dev/null 2>&1
   cat "$CHANNEL_DIR/swain-channel-send" | sprite exec -s "$name" -- tee /usr/local/bin/swain-channel-send > /dev/null 2>&1
@@ -47,26 +47,20 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     if [ -n "$AGENT_API_TOKEN" ]; then
       sprite exec -s "$name" -- sed -i "/^export SWAIN_API_TOKEN/a export SWAIN_AGENT_API_URL=\"$AGENT_API_URL\"\nexport SWAIN_AGENT_API_TOKEN=\"$AGENT_API_TOKEN\"" /home/sprite/start.sh 2>/dev/null
       echo "  env: added SWAIN_AGENT_API_URL + TOKEN"
-    else
-      echo "  env: SWAIN_AGENT_API_TOKEN not set on VPS, skipping"
     fi
   fi
 
-  # Desk and pool sprites should NOT run a persistent process — let them sleep
-  if echo "$name" | grep -qE '(desk|pool)'; then
-    if sprite exec -s "$name" -- grep -q "exec bun run" /home/sprite/start.sh 2>/dev/null; then
-      sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; s|^exec bun run.*|# No persistent process — sprite sleeps between cron runs\nexit 0|' /home/sprite/start.sh 2>/dev/null
-      echo "  launcher: removed persistent process (sprite will sleep)"
-    fi
+  # Remove any persistent process from start.sh — all sprites sleep now.
+  # Agent SDK starts on demand via swain-channel-send.
+  if sprite exec -s "$name" -- grep -q "exec bun run\|exec bun channel" /home/sprite/start.sh 2>/dev/null; then
+    sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d' /home/sprite/start.sh 2>/dev/null
+    echo "# No persistent process — agent starts on demand, sprite sleeps when idle" | sprite exec -s "$name" -- tee -a /home/sprite/start.sh > /dev/null 2>&1
+    echo "  launcher: removed persistent process (on-demand now)"
   fi
 
-  # Active advisors should run swain-agent.ts, not the old server.ts
-  if echo "$name" | grep -qE '(advisor)' && ! echo "$name" | grep -q 'pool'; then
-    if sprite exec -s "$name" -- grep -q "server.ts" /home/sprite/start.sh 2>/dev/null; then
-      sprite exec -s "$name" -- sed -i 's|cd /home/sprite/channel|cd /home/sprite|; s|exec bun run server.ts|exec bun run channel/swain-agent.ts|' /home/sprite/start.sh 2>/dev/null
-      echo "  launcher: migrated server.ts → swain-agent.ts"
-    fi
-  fi
+  # Kill any running agent/server processes so the sprite can sleep
+  sprite exec -s "$name" -- pkill -f 'bun run channel/' 2>/dev/null
+  sprite exec -s "$name" -- pkill -f 'bun run server' 2>/dev/null
 done
 echo ""
 echo "Done."

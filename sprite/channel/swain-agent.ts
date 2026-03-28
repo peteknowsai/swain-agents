@@ -1,11 +1,13 @@
 #!/usr/bin/env bun
 /**
- * Swain Agent — persistent Claude agent on a sprite.
+ * Swain Agent — on-demand Claude agent on a sprite.
+ *
+ * Started by swain-channel-send when a message arrives. Processes messages
+ * from the inbox, then exits after IDLE_TIMEOUT_MS of inactivity.
+ * Sprite goes back to sleep when the process exits.
  *
  * Uses the Claude Agent SDK (v1 query API) for conversations.
- * Messages arrive via file drops from `sprite exec -- swain-channel-send`.
- * Claude responds via the `reply` tool which POSTs to the Bridge.
- * Session persists across calls via --resume.
+ * Session persists across runs via .agent-session file.
  */
 
 import { query, tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
@@ -20,7 +22,9 @@ const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const INBOX_DIR = "/home/sprite/.channel/inbox";
 const SESSION_FILE = "/home/sprite/.agent-session";
+const PID_FILE = "/home/sprite/.agent-pid";
 const POLL_INTERVAL_MS = 500;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes of no messages → exit
 
 const SYSTEM_PROMPT = [
   "Read your CLAUDE.md for identity and context.",
@@ -94,6 +98,15 @@ async function saveSessionId(id: string): Promise<void> {
   await writeFile(SESSION_FILE, id);
 }
 
+// --- PID file (so swain-channel-send knows if we're running) ---
+
+await writeFile(PID_FILE, String(process.pid));
+process.on("exit", () => {
+  try { require("fs").unlinkSync(PID_FILE); } catch {}
+});
+process.on("SIGTERM", () => process.exit(0));
+process.on("SIGINT", () => process.exit(0));
+
 // --- Inbox ---
 
 await mkdir(INBOX_DIR, { recursive: true });
@@ -138,6 +151,7 @@ async function readInbox(): Promise<InboxMessage[]> {
 let processing = false;
 const messageQueue: InboxMessage[] = [];
 let currentSessionId: string | null = await loadSessionId();
+let lastActivityMs = Date.now();
 
 async function processMessage(msg: InboxMessage): Promise<void> {
   const prompt = `<channel source="swain" chat_id="${msg.chatId}">${msg.text}</channel>`;
@@ -159,8 +173,6 @@ async function processMessage(msg: InboxMessage): Promise<void> {
     });
 
     for await (const event of result) {
-      // Save session ID
-      // Session ID comes from system/init event or result event
       const eventSessionId = (event as any).session_id;
       if (eventSessionId && eventSessionId !== currentSessionId) {
         currentSessionId = eventSessionId;
@@ -168,7 +180,6 @@ async function processMessage(msg: InboxMessage): Promise<void> {
         console.log(`[agent] session: ${currentSessionId!.slice(0, 8)}...`);
       }
 
-      // Log assistant text output (shouldn't happen if reply tool is used, but just in case)
       if (event.type === "assistant") {
         const texts = (event as any).message?.content
           ?.filter((b: any) => b.type === "text")
@@ -184,13 +195,10 @@ async function processMessage(msg: InboxMessage): Promise<void> {
   } catch (err) {
     console.error(`[agent] processing error:`, err);
 
-    // If session is broken, clear it and retry
     if (String(err).includes("session")) {
       console.log(`[agent] clearing broken session`);
       currentSessionId = null;
-      try {
-        await unlink(SESSION_FILE);
-      } catch {}
+      try { await unlink(SESSION_FILE); } catch {}
     }
   }
 }
@@ -202,44 +210,39 @@ async function processQueue(): Promise<void> {
   try {
     while (messageQueue.length > 0) {
       const msg = messageQueue.shift()!;
+      lastActivityMs = Date.now();
       await processMessage(msg);
+      lastActivityMs = Date.now();
     }
   } finally {
     processing = false;
   }
 }
 
-// --- Inbox Poller ---
+// --- Inbox Poller + Idle Timeout ---
 
-setInterval(async () => {
+const poller = setInterval(async () => {
   const messages = await readInbox();
   if (messages.length > 0) {
+    lastActivityMs = Date.now();
     messageQueue.push(...messages);
     processQueue();
+  }
+
+  // Exit if idle for too long and not processing
+  if (!processing && Date.now() - lastActivityMs > IDLE_TIMEOUT_MS) {
+    console.log(`[agent] idle for ${IDLE_TIMEOUT_MS / 1000}s, shutting down`);
+    clearInterval(poller);
+    process.exit(0);
   }
 }, POLL_INTERVAL_MS);
 
 // Process any messages already in inbox on startup
 const initial = await readInbox();
 if (initial.length > 0) {
+  lastActivityMs = Date.now();
   messageQueue.push(...initial);
   processQueue();
 }
 
-// Health endpoint — sprite service manager expects something on port 8080
-const PORT = Number(process.env.CHANNEL_PORT ?? 8080);
-Bun.serve({
-  port: PORT,
-  hostname: "0.0.0.0",
-  fetch(req) {
-    return Response.json({
-      ok: true,
-      mode: "agent-sdk",
-      session: currentSessionId?.slice(0, 8) ?? null,
-      queueLength: messageQueue.length,
-      processing,
-    });
-  },
-});
-
-console.log(`[agent] running — ${SPRITE_ID} — session: ${currentSessionId?.slice(0, 8) ?? "new"} — health on :${PORT}`);
+console.log(`[agent] started — ${SPRITE_ID} — session: ${currentSessionId?.slice(0, 8) ?? "new"} — idle timeout: ${IDLE_TIMEOUT_MS / 1000}s`);

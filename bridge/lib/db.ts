@@ -98,12 +98,12 @@ export function findRouteForDM(): BridgeRoute | null {
   return routes.find((r) => r.allow_dms) ?? null;
 }
 
-// --- Summaries ---
+// --- Activity Log ---
 
-const stmtAddSummary = db.prepare(
-  "INSERT INTO summaries (agent_id, session_id, summary, ts) VALUES (?, ?, ?, ?)"
+const stmtAddActivity = db.prepare(
+  "INSERT INTO activity_log (agent_id, session_id, trigger, actions, ts) VALUES (?, ?, ?, ?, ?)"
 );
 
-export function addSummary(agentId: string, summary: string, sessionId?: string, ts?: string): void {
-  stmtAddSummary.run(agentId, sessionId || null, summary, ts || new Date().toISOString());
+export function addActivity(agentId: string, actions: string, options?: { sessionId?: string; trigger?: string; ts?: string }): void {
+  stmtAddActivity.run(agentId, options?.sessionId || null, options?.trigger || null, actions, options?.ts || new Date().toISOString());
 }

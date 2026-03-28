@@ -79,17 +79,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_agents_phone ON agents(phone);
   CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
   CREATE INDEX IF NOT EXISTS idx_bridge_routes_phones ON bridge_routes(phone_numbers);
-  CREATE TABLE IF NOT EXISTS summaries (
+  CREATE TABLE IF NOT EXISTS activity_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agent_id TEXT NOT NULL,
     session_id TEXT,
-    summary TEXT NOT NULL,
+    trigger TEXT,
+    actions TEXT NOT NULL,
     ts TEXT NOT NULL
   );
 
   CREATE INDEX IF NOT EXISTS idx_cron_log_ts ON cron_log(ts);
   CREATE INDEX IF NOT EXISTS idx_cron_state_type ON cron_state(type);
-  CREATE INDEX IF NOT EXISTS idx_summaries_agent ON summaries(agent_id, ts);
+  CREATE INDEX IF NOT EXISTS idx_activity_agent ON activity_log(agent_id, ts);
 `);
 
 export { db };
@@ -401,32 +402,33 @@ export function setLastProcessed(ts: number): void {
   `).run(ts);
 }
 
-// --- Summaries ---
+// --- Activity Log ---
 
-export interface Summary {
+export interface ActivityEntry {
   id: number;
   agent_id: string;
   session_id: string | null;
-  summary: string;
+  trigger: string | null;
+  actions: string;
   ts: string;
 }
 
-const stmtAddSummary = db.prepare(
-  "INSERT INTO summaries (agent_id, session_id, summary, ts) VALUES (?, ?, ?, ?)"
+const stmtAddActivity = db.prepare(
+  "INSERT INTO activity_log (agent_id, session_id, trigger, actions, ts) VALUES (?, ?, ?, ?, ?)"
 );
 
-export function addSummary(agentId: string, summary: string, sessionId?: string, ts?: string): void {
-  stmtAddSummary.run(agentId, sessionId || null, summary, ts || new Date().toISOString());
+export function addActivity(agentId: string, actions: string, options?: { sessionId?: string; trigger?: string; ts?: string }): void {
+  stmtAddActivity.run(agentId, options?.sessionId || null, options?.trigger || null, actions, options?.ts || new Date().toISOString());
 }
 
-export function getSummaries(options?: { agentId?: string; since?: string; limit?: number }): Summary[] {
-  let sql = "SELECT * FROM summaries WHERE 1=1";
+export function getActivity(options?: { agentId?: string; since?: string; limit?: number }): ActivityEntry[] {
+  let sql = "SELECT * FROM activity_log WHERE 1=1";
   const params: any[] = [];
   if (options?.agentId) { sql += " AND agent_id = ?"; params.push(options.agentId); }
   if (options?.since) { sql += " AND ts >= ?"; params.push(options.since); }
   sql += " ORDER BY id DESC";
   sql += ` LIMIT ${options?.limit || 50}`;
-  return db.prepare(sql).all(...params) as Summary[];
+  return db.prepare(sql).all(...params) as ActivityEntry[];
 }
 
 // --- Transactions ---

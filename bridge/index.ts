@@ -127,18 +127,22 @@ Bun.serve({
       return Response.json({ ok: true });
     }
 
-    // Sprite summary endpoint — Stop hook posts AI-generated summaries
-    const summaryMatch = url.pathname.match(/^\/sprites\/([^/]+)\/summary$/);
-    if (summaryMatch && req.method === "POST") {
-      const spriteId = summaryMatch[1];
-      const body = (await req.json()) as { summary: string; sessionId?: string; agentId?: string; ts?: string };
-      console.log(`[bridge] summary from ${spriteId}: ${body.summary?.slice(0, 80)}`);
+    // Sprite activity endpoint — Stop hook posts structured activity logs
+    const activityMatch = url.pathname.match(/^\/sprites\/([^/]+)\/activity$/);
+    if (activityMatch && req.method === "POST") {
+      const spriteId = activityMatch[1];
+      const body = (await req.json()) as { actions: string; sessionId?: string; agentId?: string; trigger?: string; ts?: string };
+      console.log(`[bridge] activity from ${spriteId}: ${body.trigger?.slice(0, 60)}`);
 
       try {
-        const { addSummary } = await import("./lib/db.ts");
-        addSummary(body.agentId || spriteId, body.summary, body.sessionId, body.ts);
+        const { addActivity } = await import("./lib/db.ts");
+        addActivity(body.agentId || spriteId, body.actions, {
+          sessionId: body.sessionId,
+          trigger: body.trigger,
+          ts: body.ts,
+        });
       } catch (err) {
-        console.error(`[bridge] summary save failed:`, err);
+        console.error(`[bridge] activity save failed:`, err);
       }
 
       return Response.json({ ok: true });

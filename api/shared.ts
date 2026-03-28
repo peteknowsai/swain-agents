@@ -1,11 +1,19 @@
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
+import {
+  listAgents,
+  upsertAgent,
+  deleteAgentRecord,
+  findAgentByUserId,
+  getPoolSize,
+  type Agent,
+} from "./db";
 
 // --- Constants ---
 
 export const WORKSPACES_ROOT = "/root/workspaces";
 export const OPENCLAW_CONFIG = "/root/.openclaw/openclaw.json";
-export const REGISTRY_FILE = "/root/swain-agent-api/registry.json";
+export const REGISTRY_FILE = "/root/swain-agent-api/registry.json"; // legacy, kept for reference
 export const CONVEX_BASE_URL = "https://wandering-sparrow-224.convex.site";
 export const CONVEX_TOKEN = process.env.SWAIN_API_TOKEN;
 
@@ -98,24 +106,78 @@ export async function convexRequest(method: string, path: string, data?: unknown
   return res.json();
 }
 
-// --- Unified registry ---
+// --- Unified registry (backed by SQLite via db.ts) ---
+
+function agentToEntry(a: Agent): AgentEntry {
+  return {
+    type: a.type as AgentEntry["type"],
+    status: a.status as AgentEntry["status"],
+    createdAt: a.created_at || "",
+    poolIndex: a.pool_index ?? undefined,
+    userId: a.user_id ?? undefined,
+    captainName: a.captain_name ?? undefined,
+    timezone: a.timezone ?? undefined,
+    assignedAt: a.assigned_at ?? undefined,
+    phone: a.phone ?? undefined,
+    region: a.region ?? undefined,
+    spriteName: a.sprite_name ?? undefined,
+    spriteUrl: a.sprite_url ?? undefined,
+    pausedAt: a.paused_at ?? undefined,
+  };
+}
+
+function entryToAgent(id: string, e: AgentEntry): Agent {
+  return {
+    id,
+    type: e.type,
+    status: e.status,
+    sprite_name: e.spriteName ?? null,
+    sprite_url: e.spriteUrl ?? null,
+    pool_index: e.poolIndex ?? null,
+    user_id: e.userId ?? null,
+    captain_name: e.captainName ?? null,
+    phone: e.phone ?? null,
+    timezone: e.timezone ?? null,
+    region: e.region ?? null,
+    created_at: e.createdAt || null,
+    assigned_at: e.assignedAt ?? null,
+    paused_at: e.pausedAt ?? null,
+  };
+}
 
 export async function loadRegistry(): Promise<AgentRegistry> {
-  try {
-    return JSON.parse(await readFile(REGISTRY_FILE, "utf-8"));
-  } catch {
-    return { agents: {}, pool: { size: 0, version: 1 } };
+  const agents: Record<string, AgentEntry> = {};
+  for (const a of listAgents()) {
+    agents[a.id] = agentToEntry(a);
   }
+  return {
+    agents,
+    pool: { size: getPoolSize(), version: 1 },
+  };
 }
 
 export async function saveRegistry(reg: AgentRegistry): Promise<void> {
-  await writeFile(REGISTRY_FILE, JSON.stringify(reg, null, 2));
+  // Determine which IDs are in the DB but not in the registry (deleted)
+  const dbAgents = new Set(listAgents().map((a) => a.id));
+  const regIds = new Set(Object.keys(reg.agents));
+
+  // Upsert all entries from the registry
+  for (const [id, entry] of Object.entries(reg.agents)) {
+    upsertAgent(entryToAgent(id, entry));
+  }
+
+  // Delete agents that were removed from the registry object
+  for (const dbId of dbAgents) {
+    if (!regIds.has(dbId)) {
+      deleteAgentRecord(dbId);
+    }
+  }
 }
 
 export function lookupByUserId(registry: AgentRegistry, userId: string): string | null {
-  for (const [agentId, entry] of Object.entries(registry.agents)) {
-    if (entry.userId === userId) return agentId;
-  }
+  // Fast path: query DB directly (ignores the in-memory registry object)
+  const agent = findAgentByUserId(userId);
+  if (agent) return agent.id;
   return null;
 }
 

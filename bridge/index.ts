@@ -16,35 +16,16 @@ import {
   startTyping as bbStartTyping,
 } from "./lib/bluebubbles.ts";
 import {
-  loadRegistry,
   listAll,
   findByPhone,
   findDefaultForIMessage,
 } from "./lib/registry.ts";
 import { sendMessageToSprite, checkHealth } from "./lib/sprites.ts";
-import { runCatchUp, saveLastProcessed } from "./lib/catchup.ts";
+import { runCatchUp, setLastProcessed } from "./lib/catchup.ts";
 
 const PORT = Number(process.env.BRIDGE_PORT ?? 3848);
 
-// Load registry from config file
-const REGISTRY_PATH = process.env.REGISTRY_PATH ?? "./registry.json";
-
-async function loadRegistryFromDisk(): Promise<void> {
-  const file = Bun.file(REGISTRY_PATH);
-  const config = await file.json();
-  loadRegistry(config);
-}
-
-try {
-  await loadRegistryFromDisk();
-} catch (err) {
-  console.error(
-    `[bridge] failed to load registry from ${REGISTRY_PATH}:`,
-    err
-  );
-  console.error("[bridge] create a registry.json with sprite configs");
-  process.exit(1);
-}
+console.log(`[bridge] registry: ${listAll().length} sprite(s) from DB`);
 
 /**
  * Process an inbound iMessage — deliver to sprite, reply comes async.
@@ -109,7 +90,7 @@ Bun.serve({
       // Process in background — don't block the webhook response
       (async () => {
         await processInboundIMessage(parsed);
-        await saveLastProcessed(Date.now());
+        setLastProcessed(Date.now());
       })();
 
       return Response.json({ ok: true });
@@ -146,15 +127,9 @@ Bun.serve({
       return Response.json({ ok: true });
     }
 
-    // Registry reload — called by API server after provisioning
+    // Registry reload — no-op, DB is always current
     if (url.pathname === "/registry/reload" && req.method === "POST") {
-      try {
-        await loadRegistryFromDisk();
-        return Response.json({ ok: true, sprites: listAll().length });
-      } catch (err) {
-        console.error("[bridge] registry reload failed:", err);
-        return Response.json({ ok: false, error: String(err) }, { status: 500 });
-      }
+      return Response.json({ ok: true, sprites: listAll().length });
     }
 
     // Agent-to-agent messaging — POST /agents/:agentId/message

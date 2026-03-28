@@ -1,13 +1,14 @@
 /**
  * Catch-up polling — replays missed iMessages on Bridge startup.
  *
- * Stores the timestamp of the last processed message on disk.
+ * Reads the last-processed timestamp from SQLite.
  * On startup, queries BlueBubbles for anything newer and processes it.
  */
 
 import { queryRecentMessages, parseBBQueryMessage } from "./bluebubbles.ts";
+import { getLastProcessed, setLastProcessed } from "./db.ts";
 
-const TIMESTAMP_FILE = process.env.CATCHUP_FILE ?? "./last-processed.json";
+export { setLastProcessed };
 
 type ProcessFn = (parsed: {
   text: string;
@@ -17,39 +18,11 @@ type ProcessFn = (parsed: {
 }) => Promise<boolean>;
 
 /**
- * Load the last-processed timestamp from disk.
- * Returns Date.now() on first run (nothing to catch up on).
- */
-export async function loadLastProcessed(): Promise<number> {
-  try {
-    const file = Bun.file(TIMESTAMP_FILE);
-    if (await file.exists()) {
-      const data = await file.json();
-      return data.timestamp ?? Date.now();
-    }
-  } catch {}
-
-  // First run — initialize file and skip catch-up
-  await saveLastProcessed(Date.now());
-  return Date.now();
-}
-
-/**
- * Persist the last-processed timestamp to disk.
- */
-export async function saveLastProcessed(timestampMs: number): Promise<void> {
-  await Bun.write(
-    TIMESTAMP_FILE,
-    JSON.stringify({ timestamp: timestampMs }, null, 2)
-  );
-}
-
-/**
  * Query BlueBubbles for missed messages and process them.
  * Paginates if more than 100 results.
  */
 export async function runCatchUp(processMessage: ProcessFn): Promise<void> {
-  const lastTs = await loadLastProcessed();
+  const lastTs = getLastProcessed();
   const ageSeconds = Math.floor((Date.now() - lastTs) / 1000);
   console.log(
     `[catchup] last processed: ${new Date(lastTs).toISOString()} (${ageSeconds}s ago)`
@@ -74,7 +47,7 @@ export async function runCatchUp(processMessage: ProcessFn): Promise<void> {
       const ok = await processMessage(parsed);
       if (ok) {
         cursor = parsed.dateCreated;
-        await saveLastProcessed(cursor);
+        setLastProcessed(cursor);
         totalProcessed++;
       }
     }

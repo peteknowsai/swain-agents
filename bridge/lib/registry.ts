@@ -1,66 +1,76 @@
 /**
  * Registry — maps Discord channels and phone numbers to Sprites.
  *
- * Simple JSON config for now. Move to Convex later.
+ * Queries the shared SQLite database on every call. No in-memory cache —
+ * SQLite is fast enough and this way the Bridge always sees fresh data
+ * without needing a reload endpoint.
  */
 
-import type { SpriteConfig } from "./sprites.ts";
+import {
+  findRouteByPhone,
+  findRouteByChannel,
+  findRouteForDM,
+  listRoutes,
+  type BridgeRoute,
+} from "./db.ts";
 
-export type RegistryEntry = SpriteConfig & {
+export type RegistryEntry = {
+  id: string;
+  url: string;
   name: string;
-  discordChannelIds: string[]; // guild channel IDs this Sprite listens to
-  allowDMs: boolean; // whether this Sprite accepts Discord DMs
-  phoneNumbers: string[]; // iMessage addresses (phone or email) routed to this Sprite
+  discordChannelIds: string[];
+  allowDMs: boolean;
+  phoneNumbers: string[];
 };
 
-let entries: RegistryEntry[] = [];
-
-/**
- * Load registry from a config file or env var.
- */
-export function loadRegistry(config: RegistryEntry[]): void {
-  entries = config;
-  console.log(
-    `[registry] loaded ${entries.length} sprite(s): ${entries.map((e) => e.name).join(", ")}`
-  );
+/** Convert a DB route to the RegistryEntry shape used throughout the Bridge. */
+function toEntry(route: BridgeRoute): RegistryEntry {
+  return {
+    id: route.agent_id,
+    url: route.url,
+    name: route.name,
+    discordChannelIds: route.discord_channel_ids,
+    allowDMs: route.allow_dms,
+    phoneNumbers: route.phone_numbers,
+  };
 }
 
 /**
  * Find a Sprite by Discord channel ID.
  */
 export function findByChannel(channelId: string): RegistryEntry | undefined {
-  return entries.find((e) => e.discordChannelIds.includes(channelId));
+  const route = findRouteByChannel(channelId);
+  return route ? toEntry(route) : undefined;
 }
 
 /**
  * Find a Sprite that accepts Discord DMs (first one wins).
  */
 export function findForDM(): RegistryEntry | undefined {
-  return entries.find((e) => e.allowDMs);
+  const route = findRouteForDM();
+  return route ? toEntry(route) : undefined;
 }
 
 /**
  * Find a Sprite by phone number or iMessage address.
  */
 export function findByPhone(address: string): RegistryEntry | undefined {
-  // Normalize: strip spaces/dashes for comparison
-  const normalized = address.replace(/[\s\-()]/g, "");
-  return entries.find((e) =>
-    e.phoneNumbers.some((p) => p.replace(/[\s\-()]/g, "") === normalized)
-  );
+  const route = findRouteByPhone(address);
+  return route ? toEntry(route) : undefined;
 }
 
 /**
  * Find the default Sprite for unregistered iMessage senders.
  */
 export function findDefaultForIMessage(): RegistryEntry | undefined {
-  // For now, first sprite with any phoneNumbers config gets unregistered messages
-  return entries.find((e) => e.phoneNumbers.length > 0);
+  const routes = listRoutes();
+  const route = routes.find((r) => r.phone_numbers.length > 0);
+  return route ? toEntry(route) : undefined;
 }
 
 /**
  * Get all registered Sprites.
  */
 export function listAll(): RegistryEntry[] {
-  return entries;
+  return listRoutes().map(toEntry);
 }

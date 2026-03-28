@@ -3,12 +3,11 @@
  * Replaces OpenClaw provisioning with Sprite microVMs on sprites.dev.
  */
 
-import { readFile, writeFile } from "fs/promises";
+import { readFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { type CaptainInput, render } from "./templates";
 import {
-  REGISTRY_FILE,
   loadRegistry,
   saveRegistry,
   lookupByUserId as registryLookup,
@@ -23,12 +22,17 @@ import {
   createService,
   runClaudeOnSprite,
 } from "./sprite";
+import {
+  upsertRoute,
+  updateRoutePhone,
+  removeRoutePhone,
+  getRoute,
+  deleteRoute,
+} from "./db";
 
 // --- Constants ---
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BRIDGE_REGISTRY_FILE = "/root/clawd/swain-agents/bridge/registry.json";
-const BRIDGE_RELOAD_URL = "http://localhost:3848/registry/reload";
 const SPRITE_TEMPLATES_DIR = join(__dirname, "..", "sprite", "templates");
 const SKILLS_DIR = join(__dirname, "..", "skills");
 const CHANNEL_DIR = join(__dirname, "..", "sprite", "channel");
@@ -135,14 +139,14 @@ export async function provisionSpritePool(count: number = 1): Promise<{
         spriteUrl: url,
       };
 
-      // Register in bridge registry (no phone yet — just URL for health checks)
-      await addToBridgeRegistry({
-        id: name,
+      // Register in bridge routes (no phone yet — just URL for health checks)
+      upsertRoute({
+        agent_id: name,
         name: `Pool ${name}`,
         url,
-        phoneNumbers: [],
-        discordChannelIds: [],
-        allowDMs: false,
+        phone_numbers: [],
+        discord_channel_ids: [],
+        allow_dms: false,
       });
 
       results.push({ name, url });
@@ -159,7 +163,6 @@ export async function provisionSpritePool(count: number = 1): Promise<{
   if (created > 0) {
     registry.pool.size = Object.values(registry.agents).filter(a => a.type === "advisor").length;
     await saveRegistry(registry);
-    await reloadBridgeRegistry();
   }
 
   return { created, failed, sprites: results };
@@ -560,10 +563,9 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   entry.assignedAt = new Date().toISOString();
   await saveRegistry(registry);
 
-  // 5. Update bridge registry with phone routing
+  // 5. Update bridge route with phone routing
   if (phone) {
-    await updateBridgeRegistryPhone(agentId, phone, input.name);
-    await reloadBridgeRegistry();
+    updateRoutePhone(agentId, phone, `${input.name}'s Advisor`);
   }
 
   // 6. Trigger intro message (fire-and-forget)
@@ -687,11 +689,10 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<{
     } catch {}
   }
 
-  // 5. Remove phone from bridge registry
+  // 5. Remove phone from bridge route
   if (phone) {
     try {
-      await removeBridgeRegistryPhone(agentId, phone);
-      await reloadBridgeRegistry();
+      removeRoutePhone(agentId, phone);
     } catch (err) {
       warnings.push(`bridge phone cleanup failed: ${err}`);
     }
@@ -807,21 +808,18 @@ export async function promoteSprite(agentId: string, newName: string): Promise<{
   delete registry.agents[agentId];
   registry.agents[newName] = entry;
 
-  // 6. Update bridge registry
-  const bridgeEntries = await loadBridgeRegistry();
-  const bridgeEntry = bridgeEntries.find(e => e.id === agentId);
-  if (bridgeEntry) {
-    bridgeEntry.id = newName;
-    bridgeEntry.url = newUrl;
+  // 6. Update bridge routes — copy old route to new ID, delete old
+  const oldRoute = getRoute(agentId);
+  if (oldRoute) {
+    upsertRoute({ ...oldRoute, agent_id: newName, url: newUrl });
+    deleteRoute(agentId);
+  } else {
+    // setupSprite may have created a route for newName already — just update URL
+    const newRoute = getRoute(newName);
+    if (newRoute) {
+      upsertRoute({ ...newRoute, url: newUrl });
+    }
   }
-  // Also remove any new sprite entry created during setupSprite
-  const newBridgeEntry = bridgeEntries.find(e => e.id === newName && e !== bridgeEntry);
-  if (newBridgeEntry) {
-    const idx = bridgeEntries.indexOf(newBridgeEntry);
-    if (idx >= 0) bridgeEntries.splice(idx, 1);
-  }
-  await saveBridgeRegistry(bridgeEntries);
-  await reloadBridgeRegistry();
   await saveRegistry(registry);
 
   // 7. Recycle the old pool sprite
@@ -1003,13 +1001,13 @@ export async function provisionDeskSpritePool(count: number = 1): Promise<{
         spriteUrl: url,
       };
 
-      await addToBridgeRegistry({
-        id: name,
+      upsertRoute({
+        agent_id: name,
         name: `Desk Pool ${name}`,
         url,
-        phoneNumbers: [],
-        discordChannelIds: [],
-        allowDMs: false,
+        phone_numbers: [],
+        discord_channel_ids: [],
+        allow_dms: false,
       });
 
       results.push({ name, url });
@@ -1025,7 +1023,6 @@ export async function provisionDeskSpritePool(count: number = 1): Promise<{
 
   if (created > 0) {
     await saveRegistry(registry);
-    await reloadBridgeRegistry();
   }
 
   return { created, failed, sprites: results };
@@ -1116,7 +1113,6 @@ export async function provisionSpriteDesk(input: DeskInput): Promise<{
   entry.region = input.region;
   entry.assignedAt = new Date().toISOString();
   await saveRegistry(registry);
-  await reloadBridgeRegistry();
 
   console.log(`Desk ${agentId} assigned to ${input.region} on sprite ${spriteName}`);
 
@@ -1229,74 +1225,6 @@ export async function wakeAllAdvisors(
   }
 
   return { triggered, failed, results };
-}
-
-// --- Bridge registry helpers ---
-
-interface BridgeRegistryEntry {
-  id: string;
-  name: string;
-  url: string;
-  phoneNumbers: string[];
-  discordChannelIds: string[];
-  allowDMs: boolean;
-}
-
-async function loadBridgeRegistry(): Promise<BridgeRegistryEntry[]> {
-  try {
-    const content = await readFile(BRIDGE_REGISTRY_FILE, "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return [];
-  }
-}
-
-async function saveBridgeRegistry(entries: BridgeRegistryEntry[]): Promise<void> {
-  await writeFile(BRIDGE_REGISTRY_FILE, JSON.stringify(entries, null, 2));
-}
-
-async function addToBridgeRegistry(entry: BridgeRegistryEntry): Promise<void> {
-  const entries = await loadBridgeRegistry();
-  const existing = entries.findIndex(e => e.id === entry.id);
-  if (existing >= 0) {
-    entries[existing] = entry;
-  } else {
-    entries.push(entry);
-  }
-  await saveBridgeRegistry(entries);
-}
-
-async function updateBridgeRegistryPhone(agentId: string, phone: string, name: string): Promise<void> {
-  const entries = await loadBridgeRegistry();
-  const entry = entries.find(e => e.id === agentId);
-  if (entry) {
-    entry.name = `${name}'s Advisor`;
-    if (!entry.phoneNumbers.includes(phone)) {
-      entry.phoneNumbers.push(phone);
-    }
-    await saveBridgeRegistry(entries);
-  }
-}
-
-async function removeBridgeRegistryPhone(agentId: string, phone: string): Promise<void> {
-  const entries = await loadBridgeRegistry();
-  const entry = entries.find(e => e.id === agentId);
-  if (entry) {
-    entry.phoneNumbers = entry.phoneNumbers.filter(p => p !== phone);
-    entry.name = `Pool ${agentId}`;
-    await saveBridgeRegistry(entries);
-  }
-}
-
-async function reloadBridgeRegistry(): Promise<void> {
-  try {
-    const res = await fetch(BRIDGE_RELOAD_URL, { method: "POST" });
-    if (!res.ok) {
-      console.warn(`Bridge registry reload failed: ${res.status}`);
-    }
-  } catch (err) {
-    console.warn(`Bridge registry reload error (bridge may not be running): ${err}`);
-  }
 }
 
 // --- Intro message ---

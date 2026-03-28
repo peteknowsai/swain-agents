@@ -2,11 +2,14 @@
  * Sprite exec — run Claude on sprites directly from the VPS.
  *
  * No HTTP, no channel server. Just: sprite exec → claude -p → parse result.
- * Session IDs stored on VPS for resume across sprite sleep cycles.
+ * Session IDs stored in SQLite for resume across sprite sleep cycles.
  */
 
+import { getSession, saveSession, deleteSession } from "./db.ts";
+
+export { getSession, saveSession, deleteSession };
+
 const SPRITE_CLI = process.env.SPRITE_CLI ?? "sprite";
-const SESSION_DIR = process.env.SESSION_DIR ?? "/root/swain-agent-api/chat-sessions";
 
 const SYSTEM_PROMPT = [
   "Read your CLAUDE.md for identity and context.",
@@ -127,28 +130,3 @@ export async function runOnSprite(
   }
 }
 
-// --- Session store (per-chatId files on VPS) ---
-
-function sessionPath(chatId: string): string {
-  const safe = chatId.replace(/[^a-zA-Z0-9_+-]/g, "_");
-  return `${SESSION_DIR}/${safe}.session`;
-}
-
-export async function getSession(chatId: string): Promise<string | null> {
-  try {
-    const file = Bun.file(sessionPath(chatId));
-    if (await file.exists()) return (await file.text()).trim();
-  } catch {}
-  return null;
-}
-
-export async function saveSession(chatId: string, sessionId: string): Promise<void> {
-  await Bun.spawn(["mkdir", "-p", SESSION_DIR]).exited;
-  await Bun.write(sessionPath(chatId), sessionId);
-}
-
-export async function deleteSession(chatId: string): Promise<void> {
-  try {
-    await Bun.spawn(["rm", "-f", sessionPath(chatId)]).exited;
-  } catch {}
-}

@@ -71,4 +71,20 @@ export const SCHEDULES: ScheduleEntry[] = [
     timezone: "agent",
     description: "Nightly memory consolidation",
   },
+  {
+    id: "advisor-daily-report",
+    skill: "daily-report",
+    agentType: "advisor",
+    cron: "0 23 * * *",
+    timezone: "agent",
+    description: "End-of-day shift report",
+  },
+  {
+    id: "desk-daily-report",
+    skill: "daily-report",
+    agentType: "desk",
+    cron: "0 23 * * *",
+    timezone: "UTC",
+    description: "End-of-day shift report",
+  },
 ];

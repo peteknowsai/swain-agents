@@ -211,10 +211,10 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   // Type-specific skills
   const advisorSkills = [
     "onboarding", "briefing", "profile", "card-create", "boat-art",
-    "boat-scan", "library",
+    "boat-scan", "library", "daily-report",
   ];
   const deskSkills = [
-    "content-desk", "flyer", "card-create", "card-hygiene", "library",
+    "content-desk", "flyer", "card-create", "card-hygiene", "library", "daily-report",
   ];
 
   const skillDirs = [
@@ -241,15 +241,6 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
       console.warn(`Skill ${skillDir} not found, skipping`);
     }
   }
-
-  // 5b. Deploy Stop hook for AI summaries
-  const HOOKS_DIR = join(CHANNEL_DIR, "hooks");
-  await execOnSprite(name, "mkdir -p /home/sprite/channel/hooks /home/sprite/.claude");
-  const hookScript = await readFile(join(HOOKS_DIR, "stop-summary.sh"), "utf-8");
-  await writeToSprite(name, "/home/sprite/channel/hooks/stop-summary.sh", hookScript);
-  await execOnSprite(name, "chmod +x /home/sprite/channel/hooks/stop-summary.sh");
-  const hookSettings = await readFile(join(HOOKS_DIR, "settings.json"), "utf-8");
-  await writeToSprite(name, "/home/sprite/.claude/settings.json", hookSettings);
 
   // 6. Install/update CLIs
   await execOnSprite(name, [

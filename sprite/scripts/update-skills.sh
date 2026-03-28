@@ -35,14 +35,7 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
   cat "$CHANNEL_DIR/swain-channel-send" | sprite exec -s "$name" -- tee /usr/local/bin/swain-channel-send > /dev/null 2>&1
   sprite exec -s "$name" -- chmod +x /usr/local/bin/swain-channel-send 2>/dev/null
 
-  # Deploy Stop hook for AI summaries
-  sprite exec -s "$name" -- mkdir -p /home/sprite/channel/hooks 2>/dev/null
-  cat "$CHANNEL_DIR/hooks/stop-summary.sh" | sprite exec -s "$name" -- tee /home/sprite/channel/hooks/stop-summary.sh > /dev/null 2>&1
-  sprite exec -s "$name" -- chmod +x /home/sprite/channel/hooks/stop-summary.sh 2>/dev/null
-  # Install hook in Claude Code settings
-  sprite exec -s "$name" -- mkdir -p /home/sprite/.claude 2>/dev/null
-  cat "$CHANNEL_DIR/hooks/settings.json" | sprite exec -s "$name" -- tee /home/sprite/.claude/settings.json > /dev/null 2>&1
-  echo "  agent + hooks: updated"
+  echo "  agent: updated"
 
   # Ensure directories exist
   sprite exec -s "$name" -- mkdir -p /home/sprite/.channel/inbox /home/sprite/stoolap /home/sprite/logs /home/sprite/media 2>/dev/null

@@ -3,7 +3,7 @@
  * Served at GET /dashboard (no auth required — read-only operational view).
  */
 
-import { listAgents, getCronLog, getActivity, type Agent, type CronLogEntry, type ActivityEntry } from "./db";
+import { listAgents, getCronLog, getReports, type Agent, type CronLogEntry, type DailyReport } from "./db";
 
 interface SpriteStatus {
   name: string;
@@ -122,59 +122,78 @@ function statusBadge(status: string): string {
   return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${color}20;color:${color};font-size:12px;font-weight:600">${status}</span>`;
 }
 
-export function renderAgentLog(agentId: string): string {
+export function renderAgentLog(agentId: string, dateParam?: string): string {
   const agents = listAgents();
   const agent = agents.find((a) => a.id === agentId);
   if (!agent) return renderError(`Agent "${agentId}" not found`);
 
-  const crons = getCronLog({ limit: 50, agentId, since: last24h() });
-  const activities = getActivity({ agentId, since: last24h(), limit: 20 });
+  const reports = getReports({ agentId, limit: 30 });
   const name = agent.captain_name || agent.region || agent.id;
 
-  const cronRows = crons.map((c) => {
+  // Find available dates
+  const dates = [...new Set(reports.map(r => r.ts.slice(0, 10)))];
+  const selectedDate = dateParam || dates[0] || new Date().toISOString().slice(0, 10);
+  const report = reports.find(r => r.ts.startsWith(selectedDate));
+
+  // Cron log for selected date
+  const dayStart = `${selectedDate}T00:00:00Z`;
+  const dayEnd = `${selectedDate}T23:59:59Z`;
+  const crons = getCronLog({ limit: 50, agentId, since: dayStart });
+  const dayCrons = crons.filter(c => c.ts <= dayEnd);
+
+  const cronRows = dayCrons.map((c) => {
+    const time = c.ts.slice(11, 19);
     const duration = c.duration_ms ? `${(c.duration_ms / 1000).toFixed(1)}s` : "—";
-    return `${c.ts.slice(0, 19)}Z  ${c.status.padEnd(8)}  ${c.skill.padEnd(20)}  ${duration}${c.error ? `  ERROR: ${c.error}` : ""}`;
+    const status = c.status === "success" ? "ok" : c.status;
+    return `${time}  ${status.padEnd(8)}  ${c.skill.padEnd(20)}  ${duration}${c.error ? `  ERROR: ${c.error.slice(0, 80)}` : ""}`;
   }).join("\n");
 
-  const activityRows = activities.map((a) => {
-    const trigger = a.trigger ? `[${a.trigger.slice(0, 80)}]` : "[unknown trigger]";
-    return `--- ${a.ts.slice(0, 19)}Z ${trigger} ---\n${a.actions}`;
-  }).join("\n\n");
-
-  const logText = `# Agent: ${name} (${agent.id})
-# Type: ${agent.type} | Status: ${agent.status} | Sprite: ${agent.sprite_name || "none"}
-# Captain: ${agent.captain_name || "—"} | Phone: ${agent.phone || "—"} | Region: ${agent.region || "—"}
-# Timezone: ${agent.timezone || "—"} | Assigned: ${agent.assigned_at || "—"}
-
-## Activity (last 24h)
-${activityRows || "(no activity yet — will appear after next cron or conversation)"}
-
-## Cron Log (last 24h)
-${"Timestamp".padEnd(22)}  ${"Status".padEnd(8)}  ${"Skill".padEnd(20)}  Duration
-${"-".repeat(80)}
-${cronRows || "(no cron history)"}`;
+  const dateNav = dates.length > 0
+    ? dates.map(d => d === selectedDate
+        ? `<strong style="color:#22c55e">${d}</strong>`
+        : `<a href="/dashboard/${agentId}?date=${d}" style="color:#888;text-decoration:none">${d}</a>`
+      ).join(" &middot; ")
+    : "<span style='color:#666'>no reports yet</span>";
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${name} — Swain Log</title>
+  <title>${name} — Swain</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0a0a0a; color: #e5e5e5; padding: 24px; }
-    h1 { font-size: 18px; margin-bottom: 4px; color: #fff; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0a0a0a; color: #e5e5e5; padding: 24px; max-width: 900px; }
+    h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+    h2 { font-size: 15px; color: #22c55e; text-transform: uppercase; letter-spacing: 1px; margin: 24px 0 12px; }
     .back { color: #22c55e; text-decoration: none; font-size: 13px; }
     .back:hover { text-decoration: underline; }
-    pre { background: #111; border: 1px solid #222; border-radius: 8px; padding: 16px; margin-top: 16px; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre; }
-    .copy-btn { margin-top: 12px; padding: 8px 16px; background: #22c55e; color: #000; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .meta { color: #888; font-size: 13px; margin: 4px 0 16px; }
+    .dates { margin: 16px 0; font-size: 13px; }
+    .report { background: #111; border: 1px solid #222; border-radius: 8px; padding: 20px; margin: 16px 0; font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+    .crons { background: #111; border: 1px solid #222; border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.6; font-family: monospace; white-space: pre; overflow-x: auto; }
+    .copy-btn { margin-top: 8px; padding: 6px 14px; background: #22c55e; color: #000; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
     .copy-btn:hover { background: #16a34a; }
+    .empty { color: #666; font-style: italic; }
   </style>
 </head>
 <body>
   <a class="back" href="/dashboard">&larr; Dashboard</a>
   <h1>${name}</h1>
-  <pre id="log">${logText}</pre>
-  <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('log').textContent).then(()=>this.textContent='Copied!').catch(()=>this.textContent='Failed')">Copy to Clipboard</button>
+  <p class="meta">${agent.type} &middot; ${agent.sprite_name} &middot; ${agent.phone || "no phone"} &middot; ${agent.timezone || "no tz"}</p>
+
+  <div class="dates">${dateNav}</div>
+
+  <h2>Daily Report</h2>
+  ${report
+    ? `<div class="report" id="report">${report.report}</div>
+       <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('report').textContent).then(()=>this.textContent='Copied!').catch(()=>this.textContent='Failed')">Copy Report</button>`
+    : `<p class="empty">No report for ${selectedDate}. Reports generate at end of day.</p>`}
+
+  <h2>Cron Log — ${selectedDate}</h2>
+  ${dayCrons.length
+    ? `<div class="crons" id="crons">${cronRows}</div>
+       <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('crons').textContent).then(()=>this.textContent='Copied!').catch(()=>this.textContent='Failed')">Copy Crons</button>`
+    : `<p class="empty">No crons for ${selectedDate}</p>`}
 </body>
 </html>`;
 }

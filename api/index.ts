@@ -89,7 +89,8 @@ const server = Bun.serve({
     }
     const dashMatch = matchRoute(pathname, "/dashboard/:agentId");
     if (dashMatch && method === "GET") {
-      return new Response(renderAgentLog(dashMatch.agentId), { headers: { "Content-Type": "text/html" } });
+      const dateParam = url.searchParams.get("date") || undefined;
+      return new Response(renderAgentLog(dashMatch.agentId, dateParam), { headers: { "Content-Type": "text/html" } });
     }
 
     if (!auth(req)) return error("Unauthorized", 401);

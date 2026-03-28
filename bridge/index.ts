@@ -127,22 +127,18 @@ Bun.serve({
       return Response.json({ ok: true });
     }
 
-    // Sprite activity endpoint — Stop hook posts structured activity logs
-    const activityMatch = url.pathname.match(/^\/sprites\/([^/]+)\/activity$/);
-    if (activityMatch && req.method === "POST") {
-      const spriteId = activityMatch[1];
-      const body = (await req.json()) as { actions: string; sessionId?: string; agentId?: string; trigger?: string; ts?: string };
-      console.log(`[bridge] activity from ${spriteId}: ${body.trigger?.slice(0, 60)}`);
+    // Sprite daily report endpoint
+    const reportMatch = url.pathname.match(/^\/sprites\/([^/]+)\/report$/);
+    if (reportMatch && req.method === "POST") {
+      const spriteId = reportMatch[1];
+      const body = (await req.json()) as { report: string; agentId?: string; ts?: string };
+      console.log(`[bridge] daily report from ${spriteId} (${body.report?.length || 0} chars)`);
 
       try {
-        const { addActivity } = await import("./lib/db.ts");
-        addActivity(body.agentId || spriteId, body.actions, {
-          sessionId: body.sessionId,
-          trigger: body.trigger,
-          ts: body.ts,
-        });
+        const { addReport } = await import("./lib/db.ts");
+        addReport(body.agentId || spriteId, body.report, body.ts);
       } catch (err) {
-        console.error(`[bridge] activity save failed:`, err);
+        console.error(`[bridge] report save failed:`, err);
       }
 
       return Response.json({ ok: true });

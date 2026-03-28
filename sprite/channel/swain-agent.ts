@@ -22,7 +22,6 @@ const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
 const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const INBOX_DIR = "/home/sprite/.channel/inbox";
 const SESSION_FILE = "/home/sprite/.agent-session";
-const PID_FILE = "/home/sprite/.agent-pid";
 const POLL_INTERVAL_MS = 500;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes of no messages → exit
 
@@ -98,12 +97,7 @@ async function saveSessionId(id: string): Promise<void> {
   await writeFile(SESSION_FILE, id);
 }
 
-// --- PID file (so swain-channel-send knows if we're running) ---
-
-await writeFile(PID_FILE, String(process.pid));
-process.on("exit", () => {
-  try { require("fs").unlinkSync(PID_FILE); } catch {}
-});
+// Clean shutdown on signals
 process.on("SIGTERM", () => process.exit(0));
 process.on("SIGINT", () => process.exit(0));
 

@@ -392,31 +392,14 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   // 9. Create channel service (auto-starts on HTTP request)
   await createService(name, "channel", {
     cmd: "/home/sprite/start.sh",
-    httpPort: 8080,
     dir: "/home/sprite",
   });
 
   // 10. Make URL public
   await makePublic(name);
 
-  // 11. Wait for health check
-  const url = await getSpriteUrl(name);
-  await waitForSpriteHealth(url, 60_000);
-
-  // 12. Trigger initial vault sync so files appear in Obsidian immediately
-  try {
-    await fetch(`${url}/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: "Stand by. Do not respond with any text. Output nothing.",
-        chatId: "system-init",
-      }),
-      signal: AbortSignal.timeout(60_000),
-    });
-  } catch {
-    console.warn(`Initial sync trigger failed for ${name} (non-fatal)`);
-  }
+  // 11. Verify sprite is reachable
+  await waitForSpriteReady(name, 60_000);
 }
 
 function generateLauncherScript(spriteName: string, vaultPrefix?: string): string {
@@ -425,8 +408,9 @@ function generateLauncherScript(spriteName: string, vaultPrefix?: string): strin
     .map(([k, v]) => `export ${k}="${v}"`)
     .join("\n");
 
-  // All sprites: env vars only. Agent SDK starts on demand via swain-channel-send.
-  // claude -p (crons) sources env vars via grep from this file.
+  // Env vars + Agent SDK launch. Registered as a sprite service so it auto-restarts
+  // on wake. Agent exits after 5 min idle → sprite sleeps.
+  // claude -p (crons) sources env vars via: eval $(grep "^export" start.sh)
   return `#!/bin/bash
 ${envLines}
 export SPRITE_ID="${spriteName}"
@@ -434,6 +418,8 @@ export VAULT_PREFIX="${vaultPrefix || spriteName}"
 export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"
 export CHANNEL_PORT="8080"
 export CLAUDE_PATH="/home/sprite/.local/bin/claude"
+cd /home/sprite
+exec bun run channel/swain-agent.ts >> /home/sprite/logs/agent.log 2>&1
 `;
 }
 
@@ -801,8 +787,8 @@ export async function promoteSprite(agentId: string, newName: string): Promise<{
     await execOnSprite(newName, "sprite-env services start channel");
   } catch {}
 
-  // 4. Wait for new sprite to be healthy
-  await waitForSpriteHealth(newUrl, 60_000);
+  // 4. Wait for new sprite to be reachable
+  await waitForSpriteReady(newName, 60_000);
 
   // 5. Swap registry — update the agent entry and re-key from pool name to promoted name
   entry.spriteName = newName;
@@ -1276,17 +1262,17 @@ function normalizePhone(phone: string): string {
   return phone.startsWith("+") ? phone : `+${digits}`;
 }
 
-async function waitForSpriteHealth(url: string, timeoutMs: number): Promise<void> {
+async function waitForSpriteReady(spriteName: string, timeoutMs: number): Promise<void> {
   const start = Date.now();
   let attempt = 0;
   while (Date.now() - start < timeoutMs) {
     attempt++;
     try {
-      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(10_000) });
-      if (res.ok) return;
+      const out = await execOnSprite(spriteName, "echo ready");
+      if (out.trim() === "ready") return;
     } catch {}
     const delay = attempt <= 5 ? 2000 : 5000;
     await Bun.sleep(delay);
   }
-  throw new Error(`Sprite at ${url} did not become healthy within ${timeoutMs}ms`);
+  throw new Error(`Sprite ${spriteName} did not become reachable within ${timeoutMs}ms`);
 }

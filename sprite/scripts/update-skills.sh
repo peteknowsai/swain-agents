@@ -18,12 +18,10 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     skill_name=$(basename "$skill")
     sprite exec -s "$name" -- mkdir -p "/home/sprite/.claude/skills/$skill_name" 2>/dev/null
 
-    # Copy SKILL.md
     if [ -f "$skill/SKILL.md" ]; then
       cat "$skill/SKILL.md" | sprite exec -s "$name" -- tee "/home/sprite/.claude/skills/$skill_name/SKILL.md" > /dev/null 2>&1
     fi
 
-    # Copy reference.md if it exists
     if [ -f "$skill/reference.md" ]; then
       cat "$skill/reference.md" | sprite exec -s "$name" -- tee "/home/sprite/.claude/skills/$skill_name/reference.md" > /dev/null 2>&1
     fi
@@ -50,13 +48,23 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     fi
   fi
 
-  # Clean up start.sh — env vars only, no persistent process
-  sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d; /^exec sleep/d; /^exit 0/d; /^# No persistent/d; /^# Keep service/d; /^# Desk.pool/d' /home/sprite/start.sh 2>/dev/null
+  # Ensure start.sh launches the Agent SDK (service auto-restarts it on wake)
+  if ! sprite exec -s "$name" -- grep -q "exec bun run channel/swain-agent.ts" /home/sprite/start.sh 2>/dev/null; then
+    # Remove old launcher lines
+    sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; /^exec bun/d; /^exec sleep/d; /^exit 0/d; /^# No persistent/d; /^# Keep service/d; /^# Desk.pool/d' /home/sprite/start.sh 2>/dev/null
+    # Add Agent SDK launcher
+    printf 'cd /home/sprite\nexec bun run channel/swain-agent.ts >> /home/sprite/logs/agent.log 2>&1\n' | sprite exec -s "$name" -- tee -a /home/sprite/start.sh > /dev/null 2>&1
+    echo "  launcher: set to Agent SDK service"
+  fi
 
-  # Kill any stale processes
+  # Kill stale processes so the service can take over on next wake
   sprite exec -s "$name" -- pkill -f 'bun run channel/' 2>/dev/null
   sprite exec -s "$name" -- pkill -f 'bun run server' 2>/dev/null
   sprite exec -s "$name" -- pkill -f 'sleep infinity' 2>/dev/null
+
+  # Recreate service without httpPort (idempotent — overwrites existing)
+  sprite exec -s "$name" -- sprite-env services create channel --cmd /home/sprite/start.sh 2>/dev/null
+  echo "  service: registered"
 done
 echo ""
 echo "Done."

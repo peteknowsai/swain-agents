@@ -1,14 +1,12 @@
 #!/bin/bash
-# Drop a message into the channel inbox and ensure the agent is running.
+# Drop a message into the channel inbox for the Agent SDK to pick up.
 # Usage: swain-channel-send "message text" "chat_id" [user] [messageId] [type]
 #
 # Called via: sprite exec -s <name> -- swain-channel-send "hello" "im:+1234"
+# The Agent SDK runs as a sprite service and auto-starts on wake.
 
 INBOX_DIR="/home/sprite/.channel/inbox"
-PID_FILE="/home/sprite/.agent-pid"
-AGENT_LOG="/home/sprite/logs/agent.log"
-
-mkdir -p "$INBOX_DIR" /home/sprite/logs
+mkdir -p "$INBOX_DIR"
 
 TEXT="$1"
 CHAT_ID="${2:-default}"
@@ -22,21 +20,5 @@ FILENAME="$(date +%s%N).json"
 cat > "$INBOX_DIR/$FILENAME" << ENDJSON
 {"text":"$(echo "$TEXT" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')","chatId":"$CHAT_ID","user":"$USER","messageId":"$MESSAGE_ID","type":"$TYPE","ts":$(date +%s%3N)}
 ENDJSON
-
-# Start the agent if it's not already running
-AGENT_RUNNING=false
-if [ -f "$PID_FILE" ]; then
-  AGENT_PID=$(cat "$PID_FILE" 2>/dev/null)
-  if [ -n "$AGENT_PID" ] && kill -0 "$AGENT_PID" 2>/dev/null; then
-    AGENT_RUNNING=true
-  fi
-fi
-
-if [ "$AGENT_RUNNING" = false ]; then
-  # Source env vars and start the agent in the background
-  eval $(grep "^export" /home/sprite/start.sh 2>/dev/null)
-  cd /home/sprite
-  nohup bun run channel/swain-agent.ts >> "$AGENT_LOG" 2>&1 &
-fi
 
 echo "ok"

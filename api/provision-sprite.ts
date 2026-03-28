@@ -614,6 +614,41 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<{
 
   const phone = entry.phone;
   const spriteName = entry.spriteName;
+  const userId = entry.userId;
+
+  // 0. Check desk — if this is the last user, hibernate the desk
+  if (userId) {
+    try {
+      const userProc = Bun.spawn(["swain", "user", "get", userId, "--json"], { stdout: "pipe", stderr: "pipe" });
+      const userJson = await new Response(userProc.stdout).text();
+      await userProc.exited;
+      const userData = JSON.parse(userJson);
+      const deskName = userData?.desk;
+
+      if (deskName) {
+        // Check how many users are on this desk
+        const deskProc = Bun.spawn(["swain", "user", "list", `--desk=${deskName}`, "--json"], { stdout: "pipe", stderr: "pipe" });
+        const deskJson = await new Response(deskProc.stdout).text();
+        await deskProc.exited;
+        const deskUsers = JSON.parse(deskJson);
+        const userCount = deskUsers?.users?.length ?? deskUsers?.length ?? 0;
+
+        if (userCount <= 1) {
+          // This is the last user — hibernate the desk
+          const deskEntry = Object.entries(registry.agents).find(
+            ([_, e]) => e.type === "desk" && e.spriteName?.includes(deskName)
+          );
+          if (deskEntry) {
+            deskEntry[1].status = "paused";
+            console.log(`Desk ${deskName} hibernated — last user removed`);
+          }
+          warnings.push(`desk ${deskName} hibernated (last user)`);
+        }
+      }
+    } catch (err) {
+      warnings.push(`desk hibernation check failed: ${err}`);
+    }
+  }
 
   // 1. Reset sprite files (non-fatal if sprite is unreachable)
   if (spriteName) {

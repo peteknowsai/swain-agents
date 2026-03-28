@@ -1232,6 +1232,7 @@ async function reloadBridgeRegistry(): Promise<void> {
 // --- Intro message ---
 
 function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, phone: string, returning?: boolean): void {
+  (async () => {
   const introPrompt = returning
     ? [
         `You're reconnecting with ${input.name} — a returning captain.`,
@@ -1257,6 +1258,7 @@ function triggerIntro(spriteName: string, agentId: string, input: CaptainInput, 
   } catch (err) {
     console.error(`Intro delivery failed for ${agentId}: ${err}`);
   }
+  })();
 }
 
 // --- Helpers ---

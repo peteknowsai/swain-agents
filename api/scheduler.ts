@@ -49,7 +49,7 @@ function logCronEntry(entry: CronLogEntry): void {
 
 // --- Core ---
 
-async function fireWake(schedule: ScheduleEntry, agentId: string): Promise<void> {
+async function fireWake(schedule: ScheduleEntry, agentId: string, options?: { noRetry?: boolean }): Promise<void> {
   const ts = new Date().toISOString();
   const start = Date.now();
 
@@ -61,12 +61,12 @@ async function fireWake(schedule: ScheduleEntry, agentId: string): Promise<void>
       logCronEntry({ ts, schedule_id: schedule.id, agent_id: agentId, skill: schedule.skill, status: "success", duration_ms: durationMs });
     } else {
       logCronEntry({ ts, schedule_id: schedule.id, agent_id: agentId, skill: schedule.skill, status: "failed", error: result.error, duration_ms: durationMs });
-      enqueueRetry(schedule, agentId);
+      if (!options?.noRetry) enqueueRetry(schedule, agentId);
     }
   } catch (err: any) {
     const durationMs = Date.now() - start;
     logCronEntry({ ts, schedule_id: schedule.id, agent_id: agentId, skill: schedule.skill, status: "failed", error: err.message, duration_ms: durationMs });
-    enqueueRetry(schedule, agentId);
+    if (!options?.noRetry) enqueueRetry(schedule, agentId);
   }
 }
 
@@ -94,8 +94,8 @@ async function processRetries(): Promise<void> {
 
     const ts = new Date().toISOString();
     logCronEntry({ ts, schedule_id: scheduleId, agent_id: agentId, skill: schedule.skill, status: "retry" });
-    // Fire-and-forget, no second retry
-    fireWake(schedule, agentId).catch(() => {});
+    // Fire-and-forget, no second retry — noRetry prevents infinite retry loops
+    fireWake(schedule, agentId, { noRetry: true }).catch(() => {});
   }
 }
 

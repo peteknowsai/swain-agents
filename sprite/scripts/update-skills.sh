@@ -9,7 +9,7 @@ SKILLS_DIR="/root/clawd/swain-agents/sprite/skills"
 CHANNEL_DIR="/root/clawd/swain-agents/sprite/channel"
 
 echo "Updating skills + channel server on all sprites..."
-for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|pete-|joe-|austin-|manny-|.*-desk)'); do
+for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|austin-|manny-|.*-desk)'); do
   echo ""
   echo "=== $name ==="
 
@@ -55,8 +55,16 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|pete-|joe-|austin-|m
   # Desk and pool sprites should NOT run a persistent process — let them sleep
   if echo "$name" | grep -qE '(desk|pool)'; then
     if sprite exec -s "$name" -- grep -q "exec bun run" /home/sprite/start.sh 2>/dev/null; then
-      sprite exec -s "$name" -- sed -i 's|^cd /home/sprite.*||; s|^exec bun run.*|# No persistent process — sprite sleeps between cron runs\nexit 0|' /home/sprite/start.sh 2>/dev/null
+      sprite exec -s "$name" -- sed -i '/^cd \/home\/sprite/d; s|^exec bun run.*|# No persistent process — sprite sleeps between cron runs\nexit 0|' /home/sprite/start.sh 2>/dev/null
       echo "  launcher: removed persistent process (sprite will sleep)"
+    fi
+  fi
+
+  # Active advisors should run swain-agent.ts, not the old server.ts
+  if echo "$name" | grep -qE '(advisor)' && ! echo "$name" | grep -q 'pool'; then
+    if sprite exec -s "$name" -- grep -q "server.ts" /home/sprite/start.sh 2>/dev/null; then
+      sprite exec -s "$name" -- sed -i 's|cd /home/sprite/channel|cd /home/sprite|; s|exec bun run server.ts|exec bun run channel/swain-agent.ts|' /home/sprite/start.sh 2>/dev/null
+      echo "  launcher: migrated server.ts → swain-agent.ts"
     fi
   fi
 done

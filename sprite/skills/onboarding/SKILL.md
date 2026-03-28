@@ -161,7 +161,21 @@ Do this in the same turn. Use `reply` to send the wrap-up, then do all the backe
    ```
    Research and create cards on topics matching the captain's interests.
 
-5. **Style every card** (image + backgroundColor). See the briefing skill for the full quality gate.
+5. **Style every card** — each card needs an image and backgroundColor:
+
+   First, browse available styles:
+   ```bash
+   swain style list --json
+   ```
+
+   For each card without an image, pick a style that fits the content and generate:
+   ```bash
+   swain card image <cardId> --style=<styleId> --bg-color='<dark hex>' --prompt='<1-2 sentence scene description>' --json
+   ```
+
+   - **Vary styles** — don't use the same style twice in one briefing
+   - **Scene prompts are specific**: "Yellowfin tuna breaking the surface at dawn off Hilo" not "fish in water"
+   - **Background colors**: dark enough for white text contrast
 
 6. **Generate boat art:**
    ```bash

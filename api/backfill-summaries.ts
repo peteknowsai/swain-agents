@@ -61,9 +61,32 @@ async function backfillSprite(agentId: string, spriteName: string): Promise<numb
       continue;
     }
 
-    // Get the last assistant messages from the session (last 20 lines, filter for assistant)
+    // Extract activity from session: tool calls (reply, Bash, Write, etc.) and any text output
     const lastMessages = await spriteExec(spriteName,
-      `tail -50 '${file}' 2>/dev/null | grep '"type":"assistant"' | tail -3 | while read line; do echo "$line" | python3 -c "import json,sys; msg=json.load(sys.stdin); texts=[b['text'] for b in msg.get('message',{}).get('content',[]) if b.get('type')=='text']; print(' '.join(texts)[:500] if texts else '')" 2>/dev/null; done`
+      `tail -200 '${file}' 2>/dev/null | python3 -c "
+import json, sys
+lines = []
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try:
+        msg = json.loads(line)
+        # Extract reply tool calls (what the agent said to the captain)
+        if msg.get('type') == 'assistant':
+            for block in msg.get('message',{}).get('content',[]):
+                if block.get('type') == 'tool_use' and block.get('name') == 'reply':
+                    text = block.get('input',{}).get('text','')
+                    if text: lines.append(f'Sent: {text[:200]}')
+                elif block.get('type') == 'tool_use':
+                    name = block.get('name','')
+                    inp = str(block.get('input',{}))[:100]
+                    lines.append(f'Used {name}: {inp}')
+                elif block.get('type') == 'text' and block.get('text','').strip():
+                    lines.append(block['text'][:200])
+    except: pass
+# Keep last 10 actions
+for l in lines[-10:]: print(l)
+" 2>/dev/null`
     );
 
     if (!lastMessages.trim()) {

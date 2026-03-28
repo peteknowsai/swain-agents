@@ -35,8 +35,22 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|pete-|joe-|austin-|m
   cat "$CHANNEL_DIR/sync.ts" | sprite exec -s "$name" -- tee /home/sprite/channel/sync.ts > /dev/null 2>&1
   cat "$CHANNEL_DIR/swain-channel-send" | sprite exec -s "$name" -- tee /usr/local/bin/swain-channel-send > /dev/null 2>&1
   sprite exec -s "$name" -- chmod +x /usr/local/bin/swain-channel-send 2>/dev/null
-  sprite exec -s "$name" -- mkdir -p /home/sprite/.channel/inbox 2>/dev/null
   echo "  agent: updated"
+
+  # Ensure directories exist
+  sprite exec -s "$name" -- mkdir -p /home/sprite/.channel/inbox /home/sprite/stoolap /home/sprite/logs /home/sprite/media 2>/dev/null
+
+  # Inject new env vars into start.sh if missing
+  if ! sprite exec -s "$name" -- grep -q SWAIN_AGENT_API_URL /home/sprite/start.sh 2>/dev/null; then
+    AGENT_API_URL="${SWAIN_AGENT_API_URL:-http://76.13.106.143:3847}"
+    AGENT_API_TOKEN="${SWAIN_AGENT_API_TOKEN:-}"
+    if [ -n "$AGENT_API_TOKEN" ]; then
+      sprite exec -s "$name" -- sed -i "/^export SWAIN_API_TOKEN/a export SWAIN_AGENT_API_URL=\"$AGENT_API_URL\"\nexport SWAIN_AGENT_API_TOKEN=\"$AGENT_API_TOKEN\"" /home/sprite/start.sh 2>/dev/null
+      echo "  env: added SWAIN_AGENT_API_URL + TOKEN"
+    else
+      echo "  env: SWAIN_AGENT_API_TOKEN not set on VPS, skipping"
+    fi
+  fi
 done
 echo ""
 echo "Done."

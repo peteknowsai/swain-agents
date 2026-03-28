@@ -37,8 +37,9 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
 
   echo "  agent: updated"
 
-  # Ensure directories exist
+  # Ensure directories exist, clean up old hooks
   sprite exec -s "$name" -- mkdir -p /home/sprite/.channel/inbox /home/sprite/stoolap /home/sprite/logs /home/sprite/media 2>/dev/null
+  sprite exec -s "$name" -- rm -rf /home/sprite/channel/hooks /home/sprite/.claude/settings.json 2>/dev/null
 
   # Inject new env vars into start.sh if missing
   if ! sprite exec -s "$name" -- grep -q SWAIN_AGENT_API_URL /home/sprite/start.sh 2>/dev/null; then

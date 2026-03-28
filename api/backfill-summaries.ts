@@ -61,31 +61,54 @@ async function backfillSprite(agentId: string, spriteName: string): Promise<numb
       continue;
     }
 
-    // Extract activity from session: tool calls (reply, Bash, Write, etc.) and any text output
+    // Extract full turn activity: user prompts, tool calls + results, assistant output
     const lastMessages = await spriteExec(spriteName,
-      `tail -200 '${file}' 2>/dev/null | python3 -c "
+      `python3 -c "
 import json, sys
 lines = []
-for line in sys.stdin:
+for line in open('${file}'):
     line = line.strip()
     if not line: continue
     try:
         msg = json.loads(line)
-        # Extract reply tool calls (what the agent said to the captain)
-        if msg.get('type') == 'assistant':
+        t = msg.get('type','')
+
+        # User/system prompt
+        if t == 'human':
             for block in msg.get('message',{}).get('content',[]):
-                if block.get('type') == 'tool_use' and block.get('name') == 'reply':
-                    text = block.get('input',{}).get('text','')
-                    if text: lines.append(f'Sent: {text[:200]}')
-                elif block.get('type') == 'tool_use':
+                if block.get('type') == 'text':
+                    lines.append(f'PROMPT: {block[\"text\"][:300]}')
+
+        # Assistant actions
+        elif t == 'assistant':
+            for block in msg.get('message',{}).get('content',[]):
+                if block.get('type') == 'tool_use':
                     name = block.get('name','')
-                    inp = str(block.get('input',{}))[:100]
-                    lines.append(f'Used {name}: {inp}')
+                    inp = block.get('input',{})
+                    if name == 'reply':
+                        lines.append(f'SENT MESSAGE: {inp.get(\"text\",\"\")[:200]}')
+                    elif name == 'Bash':
+                        lines.append(f'RAN: {inp.get(\"command\",\"\")[:200]}')
+                    elif name in ('Read','Write','Edit'):
+                        lines.append(f'{name.upper()}: {inp.get(\"file_path\",\"\")[:150]}')
+                    elif name in ('WebSearch','WebFetch'):
+                        q = inp.get('query','') or inp.get('url','')
+                        lines.append(f'{name}: {q[:150]}')
+                    else:
+                        lines.append(f'TOOL {name}: {str(inp)[:150]}')
                 elif block.get('type') == 'text' and block.get('text','').strip():
-                    lines.append(block['text'][:200])
+                    lines.append(f'OUTPUT: {block[\"text\"][:200]}')
+
+        # Tool results (success/error)
+        elif t == 'tool_result':
+            if msg.get('is_error'):
+                lines.append(f'ERROR: {str(msg.get(\"content\",\"\"))[:150]}')
+
     except: pass
-# Keep last 10 actions
-for l in lines[-10:]: print(l)
+
+# Keep a representative sample: first 3 + last 7
+sample = lines[:3] + lines[-7:] if len(lines) > 10 else lines
+for l in sample: print(l)
 " 2>/dev/null`
     );
 
@@ -102,7 +125,7 @@ for l in lines[-10:]: print(l)
     const truncated = lastMessages.trim().slice(0, 1500);
     try {
       const summary = await claudeHaiku(
-        `Summarize what this AI agent did in 1-2 sentences. Be specific about actions taken. Here is the agent output:\n\n${truncated}`,
+        `Summarize this AI agent's entire turn in 3 sentences max. Include what triggered it, what tools it used, and the outcome. Be specific.\n\n${truncated}`,
         spriteName
       );
 

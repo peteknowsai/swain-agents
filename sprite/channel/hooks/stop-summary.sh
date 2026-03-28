@@ -1,7 +1,7 @@
 #!/bin/bash
-# Claude Code Stop hook — generates a 1-2 sentence summary after each turn.
+# Claude Code Stop hook — generates a 3-sentence max summary of the entire turn.
 # Uses Haiku for speed. POSTs to VPS API for dashboard display.
-# Receives JSON on stdin with session_id, last_assistant_message, stop_hook_active.
+# Receives JSON on stdin with session_id, transcript_path, stop_hook_active.
 
 INPUT=$(cat)
 
@@ -12,11 +12,11 @@ if [ "$HOOK_ACTIVE" = "true" ]; then
   exit 0
 fi
 
-LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // empty')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
+TRANSCRIPT=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
-# Nothing to summarize
-if [ -z "$LAST_MSG" ] || [ "$LAST_MSG" = "null" ]; then
+# Need a transcript to summarize
+if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; then
   exit 0
 fi
 
@@ -26,11 +26,51 @@ eval $(grep "^export" /home/sprite/start.sh 2>/dev/null)
 SPRITE_ID="${SPRITE_ID:-unknown}"
 BRIDGE_URL="${BRIDGE_URL:-}"
 
-# Truncate long messages for the summary prompt
-TRUNCATED=$(echo "$LAST_MSG" | head -c 2000)
+# Extract full turn activity from transcript: prompts, tool calls, results, output
+ACTIVITY=$(python3 -c "
+import json, sys
+lines = []
+for line in open('$TRANSCRIPT'):
+    line = line.strip()
+    if not line: continue
+    try:
+        msg = json.loads(line)
+        t = msg.get('type','')
+        if t == 'human':
+            for block in msg.get('message',{}).get('content',[]):
+                if block.get('type') == 'text':
+                    lines.append(f'PROMPT: {block[\"text\"][:300]}')
+        elif t == 'assistant':
+            for block in msg.get('message',{}).get('content',[]):
+                if block.get('type') == 'tool_use':
+                    name = block.get('name','')
+                    inp = block.get('input',{})
+                    if name == 'reply':
+                        lines.append(f'SENT: {inp.get(\"text\",\"\")[:200]}')
+                    elif name == 'Bash':
+                        lines.append(f'RAN: {inp.get(\"command\",\"\")[:200]}')
+                    elif name in ('Read','Write','Edit'):
+                        lines.append(f'{name.upper()}: {inp.get(\"file_path\",\"\")[:150]}')
+                    else:
+                        lines.append(f'TOOL {name}: {str(inp)[:100]}')
+                elif block.get('type') == 'text' and block.get('text','').strip():
+                    lines.append(f'OUTPUT: {block[\"text\"][:200]}')
+        elif t == 'tool_result' and msg.get('is_error'):
+            lines.append(f'ERROR: {str(msg.get(\"content\",\"\"))[:150]}')
+    except: pass
+sample = lines[:3] + lines[-7:] if len(lines) > 10 else lines
+for l in sample: print(l)
+" 2>/dev/null)
+
+# Nothing worth summarizing
+if [ -z "$ACTIVITY" ]; then
+  exit 0
+fi
+
+TRUNCATED=$(echo "$ACTIVITY" | head -c 2000)
 
 # Generate summary with Haiku (fast + cheap)
-SUMMARY=$(claude -p "Summarize what was just done in 1-2 sentences. Be specific about actions taken (cards created, messages sent, data updated). Here is the output: $TRUNCATED" \
+SUMMARY=$(claude -p "Summarize this AI agent's entire turn in 3 sentences max. Include what triggered it, what tools it used, and the outcome. Be specific. Here is the activity log: $TRUNCATED" \
   --model claude-haiku-4-5-20251001 \
   --dangerously-skip-permissions \
   --max-turns 1 \

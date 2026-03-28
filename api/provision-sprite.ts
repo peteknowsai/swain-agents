@@ -594,42 +594,75 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
  * Release an advisor back to the pool. Resets CLAUDE.md and clears captain data.
  * Does NOT destroy the sprite — recycles it.
  */
-export async function deleteSpriteAdvisor(agentId: string): Promise<void> {
+export async function deleteSpriteAdvisor(agentId: string): Promise<{
+  released: boolean;
+  phone?: string;
+  agentId: string;
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
   const registry = await loadRegistry();
   const entry = registry.agents[agentId];
-  if (!entry) throw new Error(`Agent ${agentId} not found`);
-  if (!entry.spriteName) throw new Error(`Agent ${agentId} is not a sprite-based advisor`);
 
+  // Idempotent — if agent doesn't exist or is already available, succeed silently
+  if (!entry) {
+    return { released: true, agentId, warnings: ["agent not found in registry"] };
+  }
+  if (entry.status === "available") {
+    return { released: true, agentId, warnings: ["already in available state"] };
+  }
+
+  const phone = entry.phone;
   const spriteName = entry.spriteName;
 
-  // 1. Reset CLAUDE.md and launcher to pool version
-  const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
-  await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
-  const poolLauncher = generateLauncherScript(spriteName, `pool/advisors/${spriteName}`);
-  await writeToSprite(spriteName, "/home/sprite/start.sh", poolLauncher);
-  await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
+  // 1. Reset sprite files (non-fatal if sprite is unreachable)
+  if (spriteName) {
+    try {
+      const poolClaudeMd = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.pool"), "utf-8");
+      await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", poolClaudeMd);
+      const poolLauncher = generateLauncherScript(spriteName, `pool/advisors/${spriteName}`);
+      await writeToSprite(spriteName, "/home/sprite/start.sh", poolLauncher);
+      await execOnSprite(spriteName, "chmod +x /home/sprite/start.sh");
+    } catch (err) {
+      warnings.push(`sprite file reset failed: ${err}`);
+    }
 
-  // 2. Clear session data
-  try {
-    await execOnSprite(spriteName, "rm -f /home/sprite/.claude-sessions/sessions.json");
-  } catch {
-    console.warn(`Session cleanup failed for ${spriteName} (non-fatal)`);
+    // 2. Clear all session + memory data
+    try {
+      await execOnSprite(spriteName, "rm -f /home/sprite/.agent-session /home/sprite/.claude-sessions/sessions.json");
+      await execOnSprite(spriteName, "rm -rf /home/sprite/.channel/inbox/* /home/sprite/.claude/memory/*");
+    } catch {
+      warnings.push(`session/memory cleanup failed`);
+    }
+
+    // 3. Kill the agent process so it restarts fresh
+    try {
+      await execOnSprite(spriteName, "pkill -f swain-agent 2>/dev/null; pkill -f cli.js 2>/dev/null");
+    } catch {
+      // Process might not be running — fine
+    }
   }
 
-  // 3. Clear memory files
-  try {
-    await execOnSprite(spriteName, "rm -rf /home/sprite/.claude/memory/*");
-  } catch {
-    console.warn(`Memory cleanup failed for ${spriteName} (non-fatal)`);
+  // 4. Clear VPS-side session files
+  if (phone) {
+    const chatId = `im:${phone}`;
+    const safeName = chatId.replace(/[^a-zA-Z0-9_+-]/g, "_");
+    try {
+      await Bun.spawn(["rm", "-f", `/root/swain-agent-api/chat-sessions/${safeName}.session`]).exited;
+    } catch {}
   }
 
-  // 4. Remove phone from bridge registry
-  if (entry.phone) {
-    await removeBridgeRegistryPhone(agentId, entry.phone);
-    await reloadBridgeRegistry();
+  // 5. Remove phone from bridge registry
+  if (phone) {
+    try {
+      await removeBridgeRegistryPhone(agentId, phone);
+      await reloadBridgeRegistry();
+    } catch (err) {
+      warnings.push(`bridge phone cleanup failed: ${err}`);
+    }
   }
 
-  // 5. Reset agent registry entry
+  // 5. Reset agent registry entry — always succeeds
   entry.status = "available";
   delete entry.userId;
   delete entry.captainName;
@@ -638,7 +671,9 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<void> {
   delete entry.assignedAt;
   await saveRegistry(registry);
 
-  console.log(`Advisor ${agentId} released back to pool (sprite ${spriteName} recycled)`);
+  console.log(`Advisor ${agentId} released back to pool${warnings.length > 0 ? ` (warnings: ${warnings.join("; ")})` : ""}`);
+
+  return { released: true, phone: phone || undefined, agentId, warnings };
 }
 
 // --- Promote: rename a pool sprite to a permanent name ---

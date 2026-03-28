@@ -204,8 +204,8 @@ const server = Bun.serve({
       // DELETE /advisors/:agentId — release back to pool
       const deleteMatch = matchRoute(pathname, "/advisors/:agentId");
       if (deleteMatch && method === "DELETE") {
-        await deleteSpriteAdvisor(deleteMatch.agentId);
-        return json({ status: "deleted", agentId: deleteMatch.agentId });
+        const result = await deleteSpriteAdvisor(deleteMatch.agentId);
+        return json(result);
       }
 
       // POST /pool/provision — create sprite pool

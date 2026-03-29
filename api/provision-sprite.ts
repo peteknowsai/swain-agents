@@ -477,9 +477,7 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
   if (!entry.spriteName) entry.spriteName = spriteName;
   if (!entry.spriteUrl) entry.spriteUrl = spriteUrl;
 
-  // 0. Wake the sprite now — file writes take several seconds, so the channel
-  //    service will be warm by the time we need to send the intro
-  fetch(`${spriteUrl}/health`, { signal: AbortSignal.timeout(10_000) }).catch(() => {});
+  // 0. Wake the sprite — execOnSprite will wake it on the first file write
 
   // 1. Render CLAUDE.md with captain data
   const templateContent = await readFile(join(SPRITE_TEMPLATES_DIR, "CLAUDE.md.template"), "utf-8");
@@ -667,16 +665,7 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<{
     }
   }
 
-  // 4. Clear VPS-side session files
-  if (phone) {
-    const chatId = `im:${phone}`;
-    const safeName = chatId.replace(/[^a-zA-Z0-9_+-]/g, "_");
-    try {
-      await Bun.spawn(["rm", "-f", `/root/swain-agent-api/chat-sessions/${safeName}.session`]).exited;
-    } catch {}
-  }
-
-  // 5. Remove phone from bridge route
+  // 4. Remove phone from bridge route
   if (phone) {
     try {
       removeRoutePhone(agentId, phone);
@@ -685,7 +674,7 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<{
     }
   }
 
-  // 5. Reset agent registry entry — always succeeds
+  // 5. Reset agent registry entry
   entry.status = "available";
   delete entry.userId;
   delete entry.captainName;
@@ -699,20 +688,6 @@ export async function deleteSpriteAdvisor(agentId: string): Promise<{
   return { released: true, phone: phone || undefined, agentId, warnings };
 }
 
-// --- Promote: rename a pool sprite to a permanent name ---
-
-/**
- * Promote a pool sprite to a permanent name.
- * Creates a new sprite with the real name, copies the brain,
- * swaps routing, and recycles the pool sprite.
- *
- * Run this in the background after the advisor/desk has had its
- * first conversation — the captain never notices the swap.
- *
- * @param agentId - current pool agent ID (e.g., "advisor-pool-1")
- * @param newName - permanent sprite name (e.g., "pete-advisor", "tampa-bay-desk")
- */
-// promoteSprite removed — sprites keep their pool names. Dashboard shows captain/region names.
 
 // --- Queries ---
 

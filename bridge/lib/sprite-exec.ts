@@ -67,7 +67,7 @@ export async function runOnSprite(
   }
 
   // Wrap in bash -c with env var sourcing
-  const shellCmd = `eval $(grep "^export" /home/sprite/start.sh) && ${claudeArgs.map((a) => `'${a}'`).join(" ")}`;
+  const shellCmd = `source /home/sprite/.sprite-env && eval $(grep "^export" /home/sprite/start.sh) && ${claudeArgs.map((a) => `'${a}'`).join(" ")}`;
 
   const execArgs = [
     SPRITE_CLI, "exec",

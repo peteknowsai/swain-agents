@@ -56,6 +56,14 @@ export const SCHEDULES: ScheduleEntry[] = [
     description: "Daily morning briefing",
   },
   {
+    id: "advisor-desk-check",
+    skill: "desk-check",
+    agentType: "advisor",
+    cron: "5 6 * * *",
+    timezone: "agent",
+    description: "Verify captain's desk exists, create if missing",
+  },
+  {
     id: "advisor-profile-maintenance",
     skill: "profile",
     agentType: "advisor",

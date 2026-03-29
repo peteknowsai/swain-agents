@@ -147,6 +147,11 @@ Do this in the same turn. Use `reply` to send the wrap-up, then do all the backe
    swain desk create --name=<slug> --region='<region>' --lat=<lat> --lon=<lon> \
      --scope='<coverage description>' --created-by-location='<what captain said>' --json
    ```
+   **Verify it worked** — the JSON output must contain `"status": "assigned"`. If desk
+   creation fails, retry once. If it fails again, assign the nearest existing desk from
+   your search results instead. **Never set the user's desk field to a desk that doesn't
+   exist.**
+
    Then assign:
    ```bash
    swain user update <userId> --desk=<slug> --microlocation='<specific spot>' --json

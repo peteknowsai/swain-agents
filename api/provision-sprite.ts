@@ -36,22 +36,13 @@ const SPRITE_TEMPLATES_DIR = join(__dirname, "..", "sprite", "templates");
 const SKILLS_DIR = join(__dirname, "..", "skills");
 const CHANNEL_DIR = join(__dirname, "..", "sprite", "channel");
 
-// Env vars that get baked into each sprite's launcher script
-const SPRITE_ENV_VARS = {
-  CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN || "",
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
-  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || "",
-  REPLICATE_API_TOKEN: process.env.REPLICATE_API_TOKEN || "",
-  CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID || "",
-  CLOUDFLARE_IMAGES_API_TOKEN: process.env.CLOUDFLARE_IMAGES_API_TOKEN || "",
-  BRIDGE_URL: process.env.BRIDGE_URL || "http://76.13.106.143:3848",
-  SWAIN_API_TOKEN: process.env.SWAIN_API_TOKEN || "",
+// 1Password Environment — secrets are fetched at runtime, not baked in
+const OP_SERVICE_ACCOUNT_TOKEN = process.env.OP_SERVICE_ACCOUNT_TOKEN || "";
+const OP_ENVIRONMENT_ID = process.env.OP_ENVIRONMENT_ID || "w6u5notvixg7qdvla4aedg4xcm";
+
+// Non-secret env vars still set directly (per-sprite or static config)
+const SPRITE_STATIC_VARS = {
   SWAIN_AGENT_API_URL: process.env.SWAIN_AGENT_API_URL || "http://76.13.106.143:3847",
-  SWAIN_AGENT_API_TOKEN: process.env.SWAIN_AGENT_API_TOKEN || "",
-  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "a18dd41e124527b88c6f76255c8ce27e",
-  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "c722f4980f2977a03c5d1952949452d3e2167848bfdbc2f8fb979f2bd886d8ef",
-  R2_ENDPOINT: process.env.R2_ENDPOINT || "https://5a6fef07a998d84ec047ef43d0543342.r2.cloudflarestorage.com",
-  R2_BUCKET: process.env.R2_BUCKET || "swain-vaults",
 };
 
 // --- Pool config ---
@@ -289,6 +280,40 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
   // Create stoolap data directory
   await execOnSprite(name, "mkdir -p /home/sprite/stoolap");
 
+  // Install 1Password CLI (beta — for environment read support)
+  try {
+    await execOnSprite(name, "test -f /usr/local/bin/op");
+  } catch {
+    const { execSync } = await import("child_process");
+    try {
+      execSync(
+        `cat /usr/local/bin/op | sprite exec -s ${name} -- bash -c "cat > /usr/local/bin/op && chmod +x /usr/local/bin/op"`,
+        {
+          env: { ...process.env, HOME: "/root", PATH: `/root/.local/bin:${process.env.PATH}` },
+          timeout: 120_000,
+        },
+      );
+      console.log(`1Password CLI installed on ${name}`);
+    } catch (err) {
+      console.warn(`1Password CLI install failed (non-fatal): ${err}`);
+    }
+  }
+
+  // Write .sprite-env — sources 1Password secrets + static config.
+  // Sourced by start.sh, .bashrc, and cron runners.
+  const spriteEnv = [
+    "#!/bin/bash",
+    `export OP_SERVICE_ACCOUNT_TOKEN="${OP_SERVICE_ACCOUNT_TOKEN}"`,
+    `export OP_ENVIRONMENT_ID="${OP_ENVIRONMENT_ID}"`,
+    `eval "$(op environment read ${OP_ENVIRONMENT_ID} 2>/dev/null | sed 's/^/export /')"`,
+    `export SWAIN_AGENT_API_URL="${SPRITE_STATIC_VARS.SWAIN_AGENT_API_URL}"`,
+  ].join("\n");
+  await writeToSprite(name, "/home/sprite/.sprite-env", spriteEnv);
+  await execOnSprite(name, "chmod +x /home/sprite/.sprite-env");
+
+  // Source .sprite-env from .bashrc so Bash tool gets secrets
+  await execOnSprite(name, `grep -q '.sprite-env' /home/sprite/.bashrc || echo '\\nsource /home/sprite/.sprite-env' >> /home/sprite/.bashrc`);
+
   // Update Claude Code to latest
   await execOnSprite(name, "curl -fsSL https://claude.ai/install.sh | bash").catch(
     (err) => console.warn(`Claude Code update failed (non-fatal): ${err}`),
@@ -402,16 +427,17 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
 }
 
 function generateLauncherScript(spriteName: string, vaultPrefix?: string): string {
-  const envLines = Object.entries(SPRITE_ENV_VARS)
+  const staticLines = Object.entries(SPRITE_STATIC_VARS)
     .filter(([_, v]) => v)
     .map(([k, v]) => `export ${k}="${v}"`)
     .join("\n");
 
-  // Env vars + Agent SDK launch. Registered as a sprite service so it auto-restarts
-  // on wake. Agent exits after 5 min idle → sprite sleeps.
+  // Secrets loaded from 1Password at launch. Per-sprite vars set directly.
   // claude -p (crons) sources env vars via: eval $(grep "^export" start.sh)
   return `#!/bin/bash
-${envLines}
+# Source shared env (1Password secrets + static config)
+source /home/sprite/.sprite-env
+# Per-sprite identity
 export SPRITE_ID="${spriteName}"
 export VAULT_PREFIX="${vaultPrefix || spriteName}"
 export SPRITE_URL="$(sprite url -s ${spriteName} 2>/dev/null || echo '')"

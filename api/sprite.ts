@@ -129,7 +129,7 @@ export async function runClaudeOnSprite(
     claudeArgs.push("--resume", options.sessionId);
   }
 
-  const shellCmd = `eval $(grep "^export" /home/sprite/start.sh) && ${claudeArgs.map((a) => `'${a}'`).join(" ")}`;
+  const shellCmd = `source /home/sprite/.sprite-env && eval $(grep "^export" /home/sprite/start.sh) && ${claudeArgs.map((a) => `'${a}'`).join(" ")}`;
 
   console.log(`[sprite-claude] ${name}: ${prompt.slice(0, 80)}${options?.light ? " (light)" : ""}`);
   const start = Date.now();

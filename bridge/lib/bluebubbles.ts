@@ -31,6 +31,11 @@ export async function sendMessage(
 
     if (!res.ok) {
       const err = await res.text();
+      // If chat doesn't exist, create it and send
+      if (err.includes("Chat does not exist") || err.includes("not found")) {
+        console.log(`[bluebubbles] chat not found for ${address}, creating new chat...`);
+        return await sendNewChat(address, text);
+      }
       console.error(`[bluebubbles] send failed: ${res.status} ${err}`);
       return false;
     }
@@ -39,6 +44,39 @@ export async function sendMessage(
     return true;
   } catch (err) {
     console.error(`[bluebubbles] send error:`, err);
+    return false;
+  }
+}
+
+/**
+ * Create a new iMessage chat and send the first message.
+ * Used when the chat doesn't exist yet (first contact with this number).
+ */
+async function sendNewChat(address: string, text: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${BB_URL}/api/v1/chat/new?password=${BB_PASSWORD}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participants: [address],
+          message: text,
+          method: "private-api",
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`[bluebubbles] new chat failed: ${res.status} ${err}`);
+      return false;
+    }
+
+    console.log(`[bluebubbles] new chat + sent to ${address}: ${text.slice(0, 50)}...`);
+    return true;
+  } catch (err) {
+    console.error(`[bluebubbles] new chat error:`, err);
     return false;
   }
 }

@@ -101,41 +101,51 @@ General web search for anything the other tools don't cover — local news, new 
 ## Flyer Prompt Formula
 
 ```
-[Business/event name] [what they're promoting], [visual setting/backdrop],
-[design style keywords], [color palette]
+[Business/event name] [what they're known for — verified facts only], [visual backdrop],
+[design style keywords], [color palette]. Do not include phone numbers, addresses, or website URLs.
 ```
 
 The `--mode=flyer` flag tells the model to produce a designed graphic with text and layout elements. Your prompt should lean into that — describe it like you're briefing a graphic designer, not a photographer.
 
+**CRITICAL: Only include facts you verified from research.** The image model will render text from your prompt directly onto the flyer. If you put a fake phone number, fake address, fake deal, or fake URL in the prompt, it shows up on the flyer. Captains will see it and think it's real.
+
+- **Business name** — always include, you got it from GoPlaces
+- **What they sell/do** — general category is fine ("tackle and diving gear", "waterfront dining")
+- **Established date, "since XXXX"** — only if confirmed from research
+- **Specific deals/prices** — only if you found them on their actual website via Firecrawl
+- **Phone, address, URL** — NEVER put these in the prompt. The model will garble or invent them.
+
+The flyer's job is to get someone interested — not to be a directory listing. Keep it high-level and visual. The details come later when the captain likes the flyer and it becomes a card.
+
 **Good flyer prompts:**
 
 ```
-"Port 32 Tampa spring dry storage special 20% off, marina facility with boats on racks, bold modern promotional flyer, navy blue and gold color scheme"
+"S. Tokunaga Store Hilo fishing gear and diving equipment since 1920, tackle rods reels marine supply Big Island, bold local tackle shop promotional flyer, forest green and weathered brass palette. Do not include phone numbers, addresses, or website URLs."
 ```
 
 ```
-"Tampa Bay Fishing Tournament March 2026 registration open, sportfishing boats at dawn, energetic tournament poster design, teal and orange"
+"Port 32 Tampa premium dry storage and full-service marina, boats on racks in a clean modern facility, bold modern promotional flyer, navy blue and gold color scheme. Do not include phone numbers, addresses, or website URLs."
 ```
 
 ```
-"Waterfront Seafood Grill dock-and-dine happy hour specials, outdoor patio overlooking the water at sunset, warm inviting restaurant flyer, coral and cream tones"
+"Tampa Bay Fishing Tournament March 2026, sportfishing boats at dawn, energetic tournament poster design, teal and orange. Do not include phone numbers, addresses, or website URLs."
 ```
 
-```
-"West Marine spring electronics sale 25% off GPS and fish finders, marine electronics display, clean retail promotional layout, blue and white"
-```
-
-**Bad flyer prompts (too photographic, no design intent):**
-- "A marina at sunset" — produces a photo, not a flyer
-- "Boats in a harbor" — no promotional content, no business info
-- "Restaurant exterior" — just a building shot, not a designed piece
+**Bad flyer prompts (fabricated details):**
+- "Port 32 Tampa spring special 20% off" — is there actually a 20% off special? Did you verify this?
+- "Waterfront Grill happy hour $5 drafts 4-6pm" — did you find these prices? Or did you make them up?
+- "West Marine 25% off GPS and fish finders" — is this sale real right now?
+- Any prompt containing a phone number, street address, or URL
 
 **Key principles:**
-- Name the business/event in the prompt — it becomes the headline
-- State the offer/hook — "20% off", "registration open", "happy hour"
+- Name the business/event — it becomes the headline
+- Describe what they're known for in general terms — verified facts only
+- If you found a real deal or promotion via Firecrawl, include it
+- If you didn't find a specific offer, don't invent one — just feature the business
 - Describe a backdrop, not a scene — the setting supports the message
 - Include design direction — "bold modern flyer", "retro poster", "clean promotional layout"
 - Suggest 2-3 colors — guides the palette without overconstraining
+- **Always end with:** "Do not include phone numbers, addresses, or website URLs."
 - **4:5 vertical format** — matches the card layout in the app
 
 ---
@@ -228,5 +238,6 @@ These are non-negotiable. Break one and the batch will fail or produce garbage.
 - **Always call `run-start` before research** and `run-update` after, even on failure
 - **Always check yesterday's flyers** before generating today's — no duplicates
 - **Always include Port 32** if within 50 miles of desk center
-- **Never fabricate** business names, addresses, or URLs — use real data from goplaces / firecrawl
+- **Never fabricate** business names, addresses, URLs, deals, or prices — use real data from goplaces / firecrawl
+- **Never put phone numbers, addresses, or URLs in image prompts** — the image model will garble or invent them
 - **Always use `--mode=flyer`** when generating flyer images — this tells the model to produce a designed graphic with text and layout, not a photo

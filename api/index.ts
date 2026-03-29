@@ -12,7 +12,6 @@ import {
   deleteSpriteDesk,
   provisionDeskSpritePool,
   listDesks,
-  promoteSprite,
   type DeskInput,
 } from "./provision-sprite";
 import { type CaptainInput } from "./templates";
@@ -98,16 +97,7 @@ const server = Bun.serve({
     try {
       // ========== Unified /agents routes ==========
 
-      // POST /agents/:agentId/promote — rename pool sprite to permanent name
-      const promoteMatch = matchRoute(pathname, "/agents/:agentId/promote");
-      if (promoteMatch && method === "POST") {
-        const body = await req.json() as { name: string };
-        if (!body.name) return error("name is required (e.g., 'pete-advisor')");
-        const result = await promoteSprite(promoteMatch.agentId, body.name);
-        return json(result);
-      }
-
-      // POST /agents/:agentId/wake — wake a sprite and trigger a skill
+// POST /agents/:agentId/wake — wake a sprite and trigger a skill
       const wakeMatch = matchRoute(pathname, "/agents/:agentId/wake");
       if (wakeMatch && method === "POST") {
         const body = await req.json() as { skill: string; message?: string };

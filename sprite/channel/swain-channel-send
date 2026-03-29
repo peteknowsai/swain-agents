@@ -17,8 +17,15 @@ TYPE="${5:-}"
 # Timestamp-based filename for ordering
 FILENAME="$(date +%s%N).json"
 
-cat > "$INBOX_DIR/$FILENAME" << ENDJSON
-{"text":"$(echo "$TEXT" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')","chatId":"$CHAT_ID","user":"$USER","messageId":"$MESSAGE_ID","type":"$TYPE","ts":$(date +%s%3N)}
-ENDJSON
+# Use jq for proper JSON encoding — handles quotes, newlines, special chars
+jq -n \
+  --arg text "$TEXT" \
+  --arg chatId "$CHAT_ID" \
+  --arg user "$USER" \
+  --arg messageId "$MESSAGE_ID" \
+  --arg type "$TYPE" \
+  --argjson ts "$(date +%s%3N)" \
+  '{text: $text, chatId: $chatId, user: $user, messageId: $messageId, type: $type, ts: $ts}' \
+  > "$INBOX_DIR/$FILENAME"
 
 echo "ok"

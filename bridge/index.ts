@@ -111,19 +111,25 @@ Bun.serve({
 
       console.log(`[bridge] reply from ${spriteId}: ${body.type} → ${body.chatId}`);
 
+      let sent = false;
       if (body.chatId.startsWith("im:")) {
         const address = body.chatId.replace("im:", "");
         if (body.text) {
-          await imessageReply(address, body.text);
+          sent = await imessageReply(address, body.text);
         }
       } else {
         if (body.type === "image" && body.url) {
           await discordImage(body.chatId, body.url, body.caption);
+          sent = true;
         } else if (body.text) {
           await discordReply(body.chatId, body.text, body.replyTo);
+          sent = true;
         }
       }
 
+      if (!sent) {
+        return Response.json({ ok: false, error: "message delivery failed" }, { status: 502 });
+      }
       return Response.json({ ok: true });
     }
 

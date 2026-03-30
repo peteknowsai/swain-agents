@@ -101,51 +101,63 @@ General web search for anything the other tools don't cover — local news, new 
 ## Flyer Prompt Formula
 
 ```
-[Business/event name] [what they're known for — verified facts only], [visual backdrop],
-[design style keywords], [color palette]. Do not include phone numbers, addresses, or website URLs.
+[Business/event name] [verified details from research], [visual backdrop],
+[design style keywords], [color palette]. Only display the text described above — do not add any additional text, activities, details, phone numbers, addresses, or URLs beyond what is explicitly stated in this prompt.
 ```
 
-The `--mode=flyer` flag tells the model to produce a designed graphic with text and layout elements. Your prompt should lean into that — describe it like you're briefing a graphic designer, not a photographer.
+The `--mode=flyer` flag tells the model to produce a designed graphic. Your job is to **feed your research into the prompt**. The image model will render whatever text you include — but it will also INVENT text to fill empty space if you don't give it enough. So:
 
-**CRITICAL: Only include facts you verified from research.** The image model will render text from your prompt directly onto the flyer. If you put a fake phone number, fake address, fake deal, or fake URL in the prompt, it shows up on the flyer. Captains will see it and think it's real.
+1. **Research the business/event thoroughly** — GoPlaces, Firecrawl, web search
+2. **Put the real details INTO the prompt** — if you found that a festival has "farm tours, gala dinner, and chef demos", say that in the prompt
+3. **End every prompt with the clamping instruction** — this tells the model to stop adding things you didn't ask for
 
-- **Business name** — always include, you got it from GoPlaces
-- **What they sell/do** — general category is fine ("tackle and diving gear", "waterfront dining")
-- **Established date, "since XXXX"** — only if confirmed from research
-- **Specific deals/prices** — only if you found them on their actual website via Firecrawl
-- **Phone, address, URL** — NEVER put these in the prompt. The model will garble or invent them.
+**The image model WILL fill empty space with fabricated details.** If you write a vague prompt like "Chocolate Festival 2026, tropical backdrop, bold poster", the model will invent activities, taglines, and sub-events to fill the poster. The only way to prevent this is to either:
+- **Include the real details** so the model renders those instead of inventing
+- **Keep the design simple** with an explicit instruction like "simple layout with event name and dates only"
 
-The flyer's job is to get someone interested — not to be a directory listing. Keep it high-level and visual. The details come later when the captain likes the flyer and it becomes a card.
+### What to include in prompts (verified facts only)
+
+- **Business/event name** — always include
+- **What they do/sell** — from GoPlaces or their website
+- **Key highlights you found in research** — "featuring farm tours, gala dinner, and 15+ local chefs" (if you actually found this)
+- **Dates and year** — for events
+- **Established date** — only if confirmed
+- **Specific deals/prices** — only if found on their actual website
+- **NEVER**: phone numbers, street addresses, URLs — the model garbles these
+
+### What NOT to do
+
+- Don't write a vague prompt and let the image model fill in the blanks
+- Don't skip putting your research into the prompt — if you researched it, use it
+- Don't include details you didn't verify
 
 **Good flyer prompts:**
 
 ```
-"S. Tokunaga Store Hilo fishing gear and diving equipment since 1920, tackle rods reels marine supply Big Island, bold local tackle shop promotional flyer, forest green and weathered brass palette. Do not include phone numbers, addresses, or website URLs."
+"Big Island Chocolate Festival April 23-25 2026 at Waikoloa Beach Resort featuring farm-to-bar cacao tours, gala fundraiser dinner, chef competitions, and local chocolate tastings, tropical cacao farm with Pacific ocean backdrop, bold festival poster design, deep chocolate brown and tropical gold. Only display the text described above — do not add any additional text, activities, or details beyond what is explicitly stated in this prompt."
 ```
 
 ```
-"Port 32 Tampa premium dry storage and full-service marina, boats on racks in a clean modern facility, bold modern promotional flyer, navy blue and gold color scheme. Do not include phone numbers, addresses, or website URLs."
+"S. Tokunaga Store Hilo family-owned fishing gear and diving equipment since 1920 featuring rods reels lures and marine supply, bold vintage tackle shop promotional flyer, forest green and weathered brass palette. Only display the text described above — do not add any additional text, activities, or details beyond what is explicitly stated in this prompt."
 ```
 
 ```
-"Tampa Bay Fishing Tournament March 2026, sportfishing boats at dawn, energetic tournament poster design, teal and orange. Do not include phone numbers, addresses, or website URLs."
+"Port 32 Tampa premium dry storage and full-service marina with 400 dry slips and deep water access, boats on racks in a clean modern facility, bold modern promotional flyer, navy blue and gold. Only display the text described above — do not add any additional text, activities, or details beyond what is explicitly stated in this prompt."
 ```
 
-**Bad flyer prompts (fabricated details):**
-- "Port 32 Tampa spring special 20% off" — is there actually a 20% off special? Did you verify this?
-- "Waterfront Grill happy hour $5 drafts 4-6pm" — did you find these prices? Or did you make them up?
-- "West Marine 25% off GPS and fish finders" — is this sale real right now?
-- Any prompt containing a phone number, street address, or URL
+**Bad flyer prompts:**
+- "Chocolate Festival 2026, tropical backdrop, bold poster" — too vague, model will invent activities
+- "Port 32 Tampa spring special 20% off" — is there actually a 20% off special?
+- Any prompt with a phone number, street address, or URL
+- Any prompt where you did research but didn't include the findings
 
 **Key principles:**
+- Research first, then build the prompt from what you found
+- More verified detail in the prompt = less the model invents
 - Name the business/event — it becomes the headline
-- Describe what they're known for in general terms — verified facts only
-- If you found a real deal or promotion via Firecrawl, include it
-- If you didn't find a specific offer, don't invent one — just feature the business
-- Describe a backdrop, not a scene — the setting supports the message
 - Include design direction — "bold modern flyer", "retro poster", "clean promotional layout"
-- Suggest 2-3 colors — guides the palette without overconstraining
-- **Always end with:** "Do not include phone numbers, addresses, or website URLs."
+- Suggest 2-3 colors — guides the palette
+- **Always end with:** "Only display the text described above — do not add any additional text, activities, or details beyond what is explicitly stated in this prompt."
 - **4:5 vertical format** — matches the card layout in the app
 
 ---

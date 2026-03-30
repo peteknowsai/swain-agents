@@ -35,9 +35,9 @@ swain image generate "<flyer prompt>" --mode=flyer --aspect-ratio=4:5 --json
 swain image upload --url=<generated_url> --json
 ```
 
-**Prompt formula:** `[Business name] [what they're known for — verified facts only], [visual backdrop], [design style], [color palette]. Do not include phone numbers, addresses, or website URLs.`
+**Prompt formula:** `[Business/event name] [verified details from your research], [visual backdrop], [design style], [color palette]. Only display the text described above — do not add any additional text, activities, or details beyond what is explicitly stated in this prompt.`
 
-**Only include details you verified from research.** No fake deals, prices, phone numbers, or URLs. The image model renders your prompt as text on the flyer — captains will think fabricated details are real. Keep it high-level. The flyer gets people interested; details come later when they like it.
+**Feed your research into the prompt.** The image model will invent details to fill empty space. If you researched that a festival has "farm tours, gala dinner, and chef demos" — put that in the prompt so the model renders real facts instead of fabricating. No phone numbers, addresses, or URLs — the model garbles these.
 
 ### 6. Dry-run, then submit
 ```bash

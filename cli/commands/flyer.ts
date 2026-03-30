@@ -240,7 +240,7 @@ async function runStart(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const body: Record<string, any> = { date, agentId };
+  const body: Record<string, any> = { batchDate: date, agentId };
   if (desk) body.deskName = desk;
   else body.userId = userId;
 

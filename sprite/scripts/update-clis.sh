@@ -33,6 +33,12 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-)'); do
   cat /usr/local/bin/stoolap | sprite exec -s "$name" -- bash -c "cat > /usr/local/bin/stoolap && chmod +x /usr/local/bin/stoolap" 2>/dev/null
   NEW_ST=$(sprite exec -s "$name" -- stoolap --version 2>/dev/null || echo "failed")
   echo "  stoolap: $OLD_ST → $NEW_ST"
+
+  # Claude Code
+  OLD_CC=$(sprite exec -s "$name" -- claude --version 2>/dev/null || echo "missing")
+  sprite exec -s "$name" -- bash -c "claude update 2>/dev/null" 2>/dev/null
+  NEW_CC=$(sprite exec -s "$name" -- claude --version 2>/dev/null || echo "failed")
+  echo "  claude-code: $OLD_CC → $NEW_CC"
 done
 echo ""
 echo "Done."

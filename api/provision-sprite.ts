@@ -204,7 +204,7 @@ async function setupSprite(name: string, type: "advisor" | "desk" = "advisor"): 
     "boat-scan", "library", "daily-report",
   ];
   const deskSkills = [
-    "content-desk", "flyer", "card-create", "card-hygiene", "library", "daily-report",
+    "content-desk", "desk-bootstrap", "flyer", "card-create", "card-hygiene", "library", "daily-report",
   ];
 
   const skillDirs = [

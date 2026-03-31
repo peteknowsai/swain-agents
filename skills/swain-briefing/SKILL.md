@@ -95,8 +95,11 @@ briefing.
    **Create cards one at a time** — research, create, then move to the next. Don't
    try to batch all research and all creation into one pass.
 
-   If `firecrawl` is slow or rate-limited, create cards from your own knowledge
-   (boat type tips, general boating content for the captain's region) rather than failing.
+   If `firecrawl` returns `FIRECRAWL_UNAVAILABLE` or any error, **do not silently skip** —
+   send a brief WhatsApp note: "Using backup research for some cards today." Then fall
+   back to `web_search` (sequential, 1 req/sec — see rate limit note below) or create
+   cards from your own knowledge (boat type tips, general boating content for the captain's
+   region) rather than failing silently.
 
 7. **Get captain context from Convex and memory**
    ```bash
@@ -300,6 +303,21 @@ top of the pull results next time you build a briefing.
 
 **Research before creating.** Use `web_search` and `web_fetch` for real data.
 Never fabricate content.
+
+**Rate limit note:** Brave Search (Free tier) allows 1 request/second. Always fire
+`web_search` calls **sequentially** — one at a time. Do not call `web_search` in
+parallel or in rapid succession. If you receive a 429 response, wait 2 seconds before
+retrying once. If the retry also fails, skip that search and use your own knowledge or
+`firecrawl search` as a fallback.
+
+```
+# Correct: sequential research
+web_search "redfish season Florida Gulf"      ← wait for result
+web_search "Marco Island marina amenities"    ← then fire next
+
+# Wrong: parallel research (triggers 429)
+web_search "topic A" | web_search "topic B"  ← don't do this
+```
 
 ## Briefing Item Types
 

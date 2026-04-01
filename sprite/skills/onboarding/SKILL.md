@@ -191,7 +191,7 @@ Do this in the same turn. Use `reply` to send the wrap-up, then do all the backe
 
    **Required ordering:**
    ```
-   greeting → text + card → text + card → text + card → ... → boat_art → text (bridge to photo) → photo_upload → closing
+   greeting → boat_art → text (merch nudge) → text + card → text + card → ... → text (bridge to photo) → photo_upload → closing
    ```
 
    **Every card MUST have a text item before it** with 1-2 sentences of commentary.

@@ -32,14 +32,21 @@ Read `.claude/memory/` for personality, preferences, recent conversations.
 
 **Don't just ask — give a reason.** Tie the question to something in the briefing or to an answer the captain recently gave. "This report covers redfish and snook — curious what you usually go after?" then follow with the survey. The question should feel like it belongs in the conversation, not like a form.
 
-### 2. Check yesterday's briefing
+### 2. Generate boat art (do this early — it goes first in the briefing)
+
+```bash
+swain card boat-art --user=<userId> --json
+```
+Returns `image`, `styleName`, and `boatName`. Save these for assembly — the boat art item goes immediately after the greeting, before any content cards. If generation fails, retry with `--best`. Read the **boat-art** skill for style options.
+
+### 3. Check yesterday's briefing
 
 ```bash
 swain briefing previous --user=<userId> --json
 ```
 Returns card IDs and titles from the last briefing. Use this to pick different topics today.
 
-### 3. Check liked flyers (strongest interest signals)
+### 4. Check liked flyers (strongest interest signals)
 
 ```bash
 swain flyer list --user=<userId> --status=liked --json
@@ -62,14 +69,14 @@ swain card create --desk=<desk> --user=<userId> \
 
 **Liked flyer cards get priority in the briefing.** Your captain already told you they care.
 
-### 4. Pull fresh card candidates
+### 5. Pull fresh card candidates
 
 ```bash
 swain card pull --user=<userId> --exclude-served --json
 ```
 Returns lightweight card summaries sorted by relevance. **User-tagged cards appear first** — these are cards you created specifically for this captain during heartbeats. Prioritize them. Then liked-flyer cards, then timely cards, then evergreen.
 
-### 5. Fill the gap if needed
+### 6. Fill the gap if needed
 
 Count how many usable content cards came back from the pull (exclude boat art). If fewer than **9** content candidates:
 
@@ -87,13 +94,6 @@ Count how many usable content cards came back from the pull (exclude boat art). 
 
 **Create cards one at a time** — research, create, then move to the next. Don't try to batch all research and all creation into one pass.
 
-### 6. Generate boat art
-
-```bash
-swain card boat-art --user=<userId> --json
-```
-Returns image data. Take the `image`, `styleName`, and `boatName` from the result. Read the **boat-art** skill for style options.
-
 ### 7. Select 8-10 cards
 
 Selection priority:
@@ -106,7 +106,7 @@ Selection priority:
 
 **Hard floor: every briefing must have at least 8 cards total** (including boat art).
 
-### 8. File desk requests
+### 8. File desk requests (if needed)
 
 If your captain cares about something and the library doesn't have it:
 ```bash
@@ -156,14 +156,20 @@ Every card must pass (`allPass: true` — has both `image` and `backgroundColor`
 ### 11. Build briefing items
 
 JSON array structure:
-- Always start with a `greeting` and end with a `closing`
-- In between: `text` commentary, `card` references, and `boat_art`
+- Always start with a `greeting`, followed immediately by `boat_art`, then a merch nudge `text` item
+- Then: `text` commentary and `card` references
+- End with a `closing`
 - You don't have to introduce every card — sometimes one `text` item sets up two or three cards. Mix it up.
 - **Include 1-2 interactive items** from your curiosity list (step 1). Weave them into the flow alongside related content — don't stack them at the end like a survey.
-- For boat art:
+- For boat art (always the second item, right after greeting):
   ```json
   { "type": "boat_art", "image": "<url>", "styleName": "Art Deco", "boatName": "Fat Cat" }
   ```
+- For the merch nudge (always right after boat art):
+  ```json
+  { "type": "text", "content": "That one came out nice — want it on a shirt or mug? https://www.heyswain.com/art/art_abc123" }
+  ```
+  Use the `shareUrl` from the `swain card boat-art` response. Vary the wording daily.
 
 ### 12. Assemble the briefing
 
@@ -285,15 +291,16 @@ The `--user` flag tags the card for this specific captain. It will surface at th
 ```json
 [
   { "type": "greeting", "content": "Morning, Bobby! Looks like a great day to get out on the water." },
+  { "type": "boat_art", "image": "https://imagedelivery.net/.../public", "styleName": "Watercolor", "boatName": "Sea Dog" },
+  { "type": "text", "content": "The watercolor version of Sea Dog came out sharp — want it on a shirt or mug? https://www.heyswain.com/art/art_abc123" },
   { "type": "text", "content": "Conditions are looking perfect for your usual run out of Tierra Verde." },
   { "type": "card", "id": "card_weather_123" },
   { "type": "text", "content": "The redfish have been active near the mangroves this week." },
   { "type": "card", "id": "card_fishing_456" },
-  { "type": "boat_art", "image": "https://imagedelivery.net/.../public", "styleName": "Watercolor", "boatName": "Sea Dog" },
   { "type": "closing", "content": "Have a great day on the water!" }
 ]
 ```
 
 ## Ordering
 
-greeting -> text + card pairs -> interactive items woven in -> boat art -> closing
+greeting -> boat art + merch nudge -> text + card pairs -> interactive items woven in -> closing

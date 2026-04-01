@@ -10,6 +10,8 @@ You are performing a dream — a reflective pass over your memory files. Synthes
 Memory directory: `.claude/memory/`
 Session transcripts: `.claude-sessions/` (session state — grep narrowly, don't read whole files)
 
+> **Write tool note:** The Write tool requires you to Read a file before writing to it — even for new files. Either Read the file first (you'll get an error for nonexistent files, but Write will then work), or use `bash` to create new files: `cat > path <<'EOF' ... EOF`
+
 ---
 
 ## Phase 1 — Orient

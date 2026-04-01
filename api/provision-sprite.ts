@@ -511,18 +511,45 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
     captainName: input.name,
     userId: input.userId,
     phone: phone || "not provided",
-    boatName: input.boatName || "their boat",
-    boatType: input.boatMakeModel || "boat",
-    marina: input.marina || "unknown",
-    waters: input.location || "local waters",
-    primaryUse: input.interests || "cruising",
-    experienceLevel: input.experienceLevel || "unknown",
     timezone: input.timezone || "America/New_York",
     desk: "",
   });
 
   // 2. Push CLAUDE.md to sprite
   await writeToSprite(spriteName, "/home/sprite/CLAUDE.md", claudeMd);
+
+  // 2a. Write captain.md memory file with mutable captain data
+  const captainMemory = [
+    "---",
+    "type: captain",
+    `tags: [captain, profile]`,
+    `updated: ${new Date().toISOString().split("T")[0]}`,
+    "---",
+    "",
+    `# ${input.name}`,
+    "",
+    `- **Boat:** ${input.boatName || "unknown"} (${input.boatMakeModel || "unknown"})`,
+    `- **Marina:** ${input.marina || "unknown"}`,
+    `- **Waters:** ${input.location || "unknown"}`,
+    `- **Primary Use:** ${input.interests || "unknown"}`,
+    `- **Experience:** ${input.experienceLevel || "unknown"}`,
+  ].join("\n") + "\n";
+  await writeToSprite(spriteName, "/home/sprite/.claude/memory/captain.md", captainMemory);
+
+  // 2a-ii. Reset MEMORY.md to reference captain.md
+  await writeToSprite(spriteName, "/home/sprite/.claude/memory/MEMORY.md", [
+    "# MEMORY.md",
+    "",
+    "## Confirmed",
+    "",
+    `- [captain.md](captain.md) — ${input.name}'s profile, boat, marina`,
+    "",
+    "## Yearnings",
+    "",
+    "## Daily Notes",
+    "",
+    "No conversations yet.",
+  ].join("\n"));
 
   // 2b. Update launcher script with captain's vault prefix
   const vaultPrefix = `advisors/${slugify(input.name)}`;

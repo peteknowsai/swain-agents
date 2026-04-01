@@ -9,6 +9,8 @@ You're writing a shift report. Your manager needs to understand what you did tod
 
 ## How to Write the Report
 
+> **Important:** Use `bash` to write the report file (`cat > /tmp/daily-report.md <<'EOF' ... EOF`). Do NOT use the Write tool — it requires a prior Read and will fail on new files.
+
 1. **Read your CLAUDE.md first** so you know who you are and what you're reporting on.
 
 2. **Find today's session transcripts:**

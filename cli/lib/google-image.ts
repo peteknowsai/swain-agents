@@ -1,7 +1,7 @@
 /**
  * google-image.ts
  *
- * Generate images via Google Gemini API (gemini-2.5-flash-image)
+ * Generate images via Google Gemini API (Nano Banana 2 / Gemini 3.1 Flash Image)
  * and upload to Cloudflare Images.
  *
  * Replaces replicate-image.ts — same public interface, no polling needed.
@@ -12,7 +12,7 @@
  *   CLOUDFLARE_IMAGES_API_TOKEN — Cloudflare Images API token
  */
 
-const GEMINI_MODEL = "gemini-2.5-flash-image";
+const GEMINI_MODEL = "gemini-3.1-flash-image-preview";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const CF_DELIVERY_HASH = process.env.CLOUDFLARE_DELIVERY_HASH || "7NA-8FN5mTUANBxov63ekA";

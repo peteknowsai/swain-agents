@@ -2,14 +2,14 @@
  * image.ts
  *
  * Unified image generation library.
- * Sits between replicate-image.ts (infra) and CLI commands (UI).
+ * Sits between google-image.ts (infra) and CLI commands (UI).
  *
  * - Prompt suffix constants for consistent "no text" instructions
  * - generate() — the single entry point for all image generation
  * - Boat art styles, prompts, and content helpers
  */
 
-import { generateImage, type ReplicateImageResult } from './replicate-image';
+import { generateImage, type ImageResult, type ReplicateImageResult } from './google-image';
 import { ensureCardContrast } from './color';
 
 // ── Image fetching ───────────────────────────────────────────────

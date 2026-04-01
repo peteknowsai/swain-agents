@@ -234,14 +234,34 @@ export async function generateImage(
 ): Promise<ReplicateImageResult> {
   const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
 
-  // Step 1: Generate via Replicate
-  const { outputUrl, predictionId } = await runReplicate(
-    prompt,
-    replicateToken,
-    opts?.imageInputUrl,
-    opts?.aspectRatio,
-    opts?.resolution
-  );
+  // Step 1: Generate via Replicate (retry once on failure)
+  let lastError: Error | undefined;
+  let outputUrl: string | undefined;
+  let predictionId: string | undefined;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await runReplicate(
+        prompt,
+        replicateToken,
+        opts?.imageInputUrl,
+        opts?.aspectRatio,
+        opts?.resolution
+      );
+      outputUrl = result.outputUrl;
+      predictionId = result.predictionId;
+      break;
+    } catch (err: any) {
+      lastError = err;
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+  }
+
+  if (!outputUrl || !predictionId) {
+    throw lastError || new Error("Image generation failed after 2 attempts");
+  }
 
   // Step 2: Download and upload to Cloudflare Images
   const { url, imageId } = await uploadToCloudflare(

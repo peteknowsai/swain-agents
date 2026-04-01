@@ -859,7 +859,7 @@ async function boatArt(args: string[]): Promise<void> {
   }
 
   // 3. Generate images
-  const results: { style: string; styleName: string; image: string; boatName: string }[] = [];
+  const results: { style: string; styleName: string; image: string; boatName: string; error?: string }[] = [];
 
   for (const style of styles) {
     if (!jsonOutput) {
@@ -889,16 +889,21 @@ async function boatArt(args: string[]): Promise<void> {
     } catch (err: any) {
       if (!jsonOutput) {
         print(` ✗ ${err.message}`);
-      } else {
-        results.push({ style: style.id, styleName: style.name, image: '', boatName });
       }
+      results.push({ style: style.id, styleName: style.name, image: '', boatName, error: err.message });
     }
   }
 
+  const successCount = results.filter((r) => r.image).length;
   if (jsonOutput) {
-    console.log(JSON.stringify({ success: true, boatName, hasPhoto, results }, null, 2));
+    console.log(JSON.stringify({
+      success: successCount > 0,
+      boatName,
+      hasPhoto,
+      results,
+      ...(successCount === 0 ? { error: 'All image generations failed' } : {}),
+    }, null, 2));
   } else {
-    const successCount = results.filter((r) => r.image).length;
     printSuccess(`Generated ${successCount}/${styles.length} boat art image(s)`);
   }
 }

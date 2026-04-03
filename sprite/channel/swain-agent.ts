@@ -26,20 +26,11 @@ const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes of no messages → exit
 
 const SYSTEM_PROMPT = [
   "Read your CLAUDE.md for identity and context.",
-  "At the start of every conversation, read .claude/memory/MEMORY.md to recall what you know about your captain.",
+  "Read .claude/memory/MEMORY.md to recall what you know about your captain.",
   "",
-  "Messages from your captain arrive with a chat_id. To reply, use the Bash tool:",
-  '  swain-reply "<chat_id>" "<your message>"',
-  "",
-  "You can send multiple messages during a single task. Call swain-reply each time.",
-  "Your captain communicates via iMessage — keep messages short (1-2 sentences), casual, no markdown.",
-  "",
-  "CRITICAL: Do NOT write plain text as your response. Plain text does NOT reach the captain.",
-  "You MUST use swain-reply to send messages. If you write text without calling swain-reply,",
-  "the captain will never see it.",
-  "",
-  "Never say you don't have access to something. Read your memory files to know what happened.",
-  "For image generation, ALWAYS use the swain CLI (swain card image, swain image generate).",
+  "Messages arrive with a chat_id. Reply via Bash: swain-reply \"<chat_id>\" \"<message>\"",
+  "Plain text output does NOT reach the captain — only swain-reply does.",
+  "You can call swain-reply multiple times per turn.",
 ].join("\n");
 
 // --- Session Options ---
@@ -233,4 +224,5 @@ if (initial.length > 0) {
 }
 
 const savedId = await loadSessionId();
+const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 console.log(`[agent] started — ${SPRITE_ID} — session: ${savedId?.slice(0, 8) ?? "new"} — idle timeout: ${IDLE_TIMEOUT_MS / 1000}s`);

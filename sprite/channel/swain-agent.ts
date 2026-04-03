@@ -203,6 +203,12 @@ async function processMessage(msg: InboxMessage): Promise<void> {
     await s.send(prompt);
 
     for await (const event of s.stream()) {
+      // Log all event types for debugging
+      const evType = `${event.type}${(event as any).subtype ? `:${(event as any).subtype}` : ""}`;
+      if (event.type !== "assistant") {
+        console.log(`[agent] event: ${evType} ${JSON.stringify(event).slice(0, 200)}`);
+      }
+
       // Track session ID
       const eventSessionId = (event as any).session_id;
       if (eventSessionId && eventSessionId !== currentSessionId) {

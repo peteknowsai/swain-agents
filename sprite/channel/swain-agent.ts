@@ -2,44 +2,39 @@
 /**
  * Swain Agent — on-demand Claude agent on a sprite.
  *
- * Started by swain-channel-send when a message arrives. Processes messages
- * from the inbox, then exits after IDLE_TIMEOUT_MS of inactivity.
- * Sprite goes back to sleep when the process exits.
+ * Processes iMessage conversations via the v1 query() API with session
+ * resumption. Each inbound message becomes a query() call that resumes
+ * the captain's ongoing conversation.
  *
- * Uses the Claude Agent SDK (v2 session API) for conversations.
- * Session persists across runs via .agent-session file.
+ * Polls an inbox directory for messages, processes them, then exits
+ * after IDLE_TIMEOUT_MS of inactivity. Sprite sleeps when process exits.
  */
 
-import {
-  unstable_v2_createSession,
-  unstable_v2_resumeSession,
-} from "@anthropic-ai/claude-agent-sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import { readdir, readFile, unlink, mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 
 // --- Config ---
 
+const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const INBOX_DIR = "/home/sprite/.channel/inbox";
 const SESSION_FILE = "/home/sprite/.agent-session";
 const POLL_INTERVAL_MS = 500;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes of no messages → exit
 
-// --- Session Options ---
-// Claude reads CLAUDE.md from cwd for identity, personality, and instructions.
-// All communication instructions (swain-reply, etc.) live in CLAUDE.md.
-
-const SESSION_OPTIONS = {
+const QUERY_OPTIONS = {
   model: "claude-sonnet-4-6",
   permissionMode: "bypassPermissions" as const,
   cwd: "/home/sprite",
   settingSources: ["project" as const],
-  allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill"],
+  allowedTools: [
+    "Bash", "Read", "Write", "Edit", "Glob", "Grep",
+    "WebSearch", "WebFetch", "Skill",
+  ],
 };
 
 // --- Session Management ---
 
-type Session = ReturnType<typeof unstable_v2_createSession>;
-let session: Session | null = null;
 let currentSessionId: string | null = null;
 
 async function loadSessionId(): Promise<string | null> {
@@ -53,37 +48,6 @@ async function loadSessionId(): Promise<string | null> {
 async function saveSessionId(id: string): Promise<void> {
   await writeFile(SESSION_FILE, id);
 }
-
-async function getOrCreateSession(): Promise<Session> {
-  if (session) return session;
-
-  const savedId = await loadSessionId();
-  if (savedId) {
-    try {
-      session = unstable_v2_resumeSession(savedId, SESSION_OPTIONS);
-      currentSessionId = savedId;
-      console.log(`[agent] resumed session ${savedId.slice(0, 8)}...`);
-      return session;
-    } catch (err) {
-      console.log(`[agent] resume failed: ${err}`);
-      console.log(`[agent] creating fresh session`);
-    }
-  }
-
-  session = unstable_v2_createSession(SESSION_OPTIONS);
-  console.log(`[agent] created new session`);
-  return session;
-}
-
-// Clean shutdown on signals
-process.on("SIGTERM", () => {
-  if (session) session.close();
-  process.exit(0);
-});
-process.on("SIGINT", () => {
-  if (session) session.close();
-  process.exit(0);
-});
 
 // --- Inbox ---
 
@@ -135,26 +99,43 @@ async function processMessage(msg: InboxMessage): Promise<void> {
   console.log(`[agent] ← ${msg.chatId}: ${msg.text.slice(0, 80)}`);
 
   try {
-    const s = await getOrCreateSession();
-    await s.send(prompt);
+    const sessionId = currentSessionId ?? await loadSessionId();
+    const options = {
+      ...QUERY_OPTIONS,
+      ...(sessionId ? { resume: sessionId } : {}),
+    };
 
-    for await (const event of s.stream()) {
-      // Track session ID
-      const eventSessionId = (event as any).session_id;
-      if (eventSessionId && eventSessionId !== currentSessionId) {
-        currentSessionId = eventSessionId;
-        await saveSessionId(currentSessionId!);
-        console.log(`[agent] session: ${currentSessionId!.slice(0, 8)}...`);
+    for await (const message of query({ prompt, options })) {
+      // Track session ID from init
+      if (message.type === "system" && message.subtype === "init") {
+        const newId = (message as any).session_id;
+        if (newId && newId !== currentSessionId) {
+          currentSessionId = newId;
+          await saveSessionId(newId);
+          console.log(`[agent] session: ${newId.slice(0, 8)}...`);
+        }
       }
 
-      if (event.type === "assistant") {
-        const content = (event as any).message?.content ?? [];
+      // Log text output
+      if (message.type === "assistant") {
+        const content = (message as any).message?.content ?? [];
         const texts = content
           .filter((b: any) => b.type === "text")
           .map((b: any) => b.text)
           .join("");
         if (texts) {
-          console.log(`[agent] text output: ${texts.slice(0, 100)}`);
+          console.log(`[agent] text: ${texts.slice(0, 100)}`);
+        }
+      }
+
+      // Log result
+      if (message.type === "result") {
+        console.log(`[agent] result: ${message.subtype} (${(message as any).duration_ms}ms)`);
+        // Capture session ID from result
+        const resultSessionId = (message as any).session_id;
+        if (resultSessionId && resultSessionId !== currentSessionId) {
+          currentSessionId = resultSessionId;
+          await saveSessionId(resultSessionId);
         }
       }
     }
@@ -164,9 +145,8 @@ async function processMessage(msg: InboxMessage): Promise<void> {
     console.error(`[agent] processing error:`, err);
 
     // If session is broken, clear it so next message gets a fresh one
-    if (String(err).includes("session") || String(err).includes("closed")) {
+    if (String(err).includes("session") || String(err).includes("closed") || String(err).includes("resume")) {
       console.log(`[agent] clearing broken session`);
-      session = null;
       currentSessionId = null;
       try { await unlink(SESSION_FILE); } catch {}
     }
@@ -203,7 +183,6 @@ const poller = setInterval(async () => {
   if (!processing && Date.now() - lastActivityMs > IDLE_TIMEOUT_MS) {
     console.log(`[agent] idle for ${IDLE_TIMEOUT_MS / 1000}s, shutting down`);
     clearInterval(poller);
-    if (session) session.close();
     process.exit(0);
   }
 }, POLL_INTERVAL_MS);
@@ -216,6 +195,5 @@ if (initial.length > 0) {
   processQueue();
 }
 
-const savedId = await loadSessionId();
-const SPRITE_ID = process.env.SPRITE_ID ?? "local";
-console.log(`[agent] started — ${SPRITE_ID} — session: ${savedId?.slice(0, 8) ?? "new"} — idle timeout: ${IDLE_TIMEOUT_MS / 1000}s`);
+currentSessionId = await loadSessionId();
+console.log(`[agent] started — ${SPRITE_ID} — session: ${currentSessionId?.slice(0, 8) ?? "new"} — idle timeout: ${IDLE_TIMEOUT_MS / 1000}s`);

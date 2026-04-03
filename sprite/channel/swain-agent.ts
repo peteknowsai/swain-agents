@@ -13,19 +13,12 @@
 import {
   unstable_v2_createSession,
   unstable_v2_resumeSession,
-  tool,
-  createSdkMcpServer,
-  type SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { z } from "zod";
 import { readdir, readFile, unlink, mkdir, writeFile } from "fs/promises";
 import { join } from "path";
-import { syncToR2 } from "./sync";
 
 // --- Config ---
 
-const BRIDGE_URL = process.env.BRIDGE_URL ?? "";
-const SPRITE_ID = process.env.SPRITE_ID ?? "local";
 const INBOX_DIR = "/home/sprite/.channel/inbox";
 const SESSION_FILE = "/home/sprite/.agent-session";
 const POLL_INTERVAL_MS = 500;
@@ -35,59 +28,19 @@ const SYSTEM_PROMPT = [
   "Read your CLAUDE.md for identity and context.",
   "At the start of every conversation, read .claude/memory/MEMORY.md to recall what you know about your captain.",
   "",
-  "Messages from your captain arrive with a chat_id. Use the reply tool to send messages back.",
-  "You can call reply MULTIPLE TIMES during a single task — use it whenever you want to communicate.",
+  "Messages from your captain arrive with a chat_id. To reply, use the Bash tool:",
+  '  swain-reply "<chat_id>" "<your message>"',
+  "",
+  "You can send multiple messages during a single task. Call swain-reply each time.",
   "Your captain communicates via iMessage — keep messages short (1-2 sentences), casual, no markdown.",
   "",
-  "You have full access to the sprite filesystem. Use your tools:",
-  "- reply(chat_id, text) — send an iMessage to the captain",
-  "- Bash — run commands: swain CLI, stoolap, goplaces, firecrawl",
-  "- Read/Write/Edit — manage memory files, CLAUDE.md, skills",
-  "- Glob/Grep — search files",
-  "- WebSearch/WebFetch — real-time info (weather, tides, news)",
+  "CRITICAL: Do NOT write plain text as your response. Plain text does NOT reach the captain.",
+  "You MUST use swain-reply to send messages. If you write text without calling swain-reply,",
+  "the captain will never see it.",
   "",
   "Never say you don't have access to something. Read your memory files to know what happened.",
   "For image generation, ALWAYS use the swain CLI (swain card image, swain image generate).",
 ].join("\n");
-
-// --- Reply Tool ---
-
-const replyTool = tool(
-  "reply",
-  "Send an iMessage to the captain. Use this for ALL outbound communication. You can call this multiple times during a task.",
-  { chat_id: z.string().describe("The chat_id from the inbound message"), text: z.string().describe("The message to send") },
-  async ({ chat_id, text }) => {
-    if (!BRIDGE_URL) {
-      console.log(`[agent] reply (no bridge): ${text}`);
-      return { content: [{ type: "text" as const, text: "sent (no bridge)" }] };
-    }
-
-    try {
-      const res = await fetch(`${BRIDGE_URL}/sprites/${SPRITE_ID}/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "text", text, chatId: chat_id }),
-      });
-
-      if (!res.ok) {
-        console.error(`[agent] reply failed: ${res.status}`);
-        return { content: [{ type: "text" as const, text: `send failed: ${res.status}` }] };
-      }
-
-      console.log(`[agent] reply → ${chat_id}: ${text.slice(0, 60)}`);
-      syncToR2().catch(() => {});
-      return { content: [{ type: "text" as const, text: "sent" }] };
-    } catch (err) {
-      console.error(`[agent] reply error:`, err);
-      return { content: [{ type: "text" as const, text: `send error: ${err}` }] };
-    }
-  }
-);
-
-const mcpServer = createSdkMcpServer({
-  name: "swain-tools",
-  tools: [replyTool],
-});
 
 // --- Session Options ---
 
@@ -95,9 +48,8 @@ const SESSION_OPTIONS = {
   model: "claude-sonnet-4-6",
   permissionMode: "bypassPermissions" as const,
   cwd: "/home/sprite",
-  allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill", "mcp__swain-tools__reply"],
+  allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill"],
   systemPrompt: SYSTEM_PROMPT,
-  mcpServers: [mcpServer],
 };
 
 // --- Session Management ---
@@ -203,12 +155,6 @@ async function processMessage(msg: InboxMessage): Promise<void> {
     await s.send(prompt);
 
     for await (const event of s.stream()) {
-      // Log all event types for debugging
-      const evType = `${event.type}${(event as any).subtype ? `:${(event as any).subtype}` : ""}`;
-      if (event.type !== "assistant") {
-        console.log(`[agent] event: ${evType} ${JSON.stringify(event).slice(0, 200)}`);
-      }
-
       // Track session ID
       const eventSessionId = (event as any).session_id;
       if (eventSessionId && eventSessionId !== currentSessionId) {
@@ -217,24 +163,8 @@ async function processMessage(msg: InboxMessage): Promise<void> {
         console.log(`[agent] session: ${currentSessionId!.slice(0, 8)}...`);
       }
 
-      // Log MCP server connection status on init
-      if (event.type === "system" && (event as any).subtype === "init") {
-        const mcpServers = (event as any).mcp_servers;
-        if (mcpServers) {
-          for (const srv of mcpServers) {
-            console.log(`[agent] mcp: ${srv.name} — ${srv.status} — tools: ${srv.tools?.map((t: any) => t.name).join(", ") ?? "none"}`);
-          }
-        }
-      }
-
-      // Log tool calls
       if (event.type === "assistant") {
         const content = (event as any).message?.content ?? [];
-        for (const block of content) {
-          if (block.type === "tool_use") {
-            console.log(`[agent] tool call: ${block.name}(${JSON.stringify(block.input).slice(0, 100)})`);
-          }
-        }
         const texts = content
           .filter((b: any) => b.type === "text")
           .map((b: any) => b.text)
@@ -242,11 +172,6 @@ async function processMessage(msg: InboxMessage): Promise<void> {
         if (texts) {
           console.log(`[agent] text output: ${texts.slice(0, 100)}`);
         }
-      }
-
-      // Log tool results
-      if (event.type === "tool_result") {
-        console.log(`[agent] tool result: ${(event as any).tool_name ?? "unknown"} → ${String((event as any).output ?? "").slice(0, 80)}`);
       }
     }
 

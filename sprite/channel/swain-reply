@@ -1,0 +1,38 @@
+#!/bin/bash
+# Send an iMessage reply via the bridge.
+# Usage: swain-reply <chat_id> <text>
+#
+# Example: swain-reply "im:+14156239773" "Hey, your briefing is ready!"
+#
+# Requires BRIDGE_URL and SPRITE_ID environment variables.
+
+CHAT_ID="$1"
+TEXT="$2"
+
+if [ -z "$CHAT_ID" ] || [ -z "$TEXT" ]; then
+  echo '{"ok":false,"error":"Usage: swain-reply <chat_id> <text>"}' >&2
+  exit 1
+fi
+
+if [ -z "$BRIDGE_URL" ]; then
+  echo '{"ok":false,"error":"BRIDGE_URL not set"}' >&2
+  exit 1
+fi
+
+BODY=$(jq -n --arg type "text" --arg text "$TEXT" --arg chatId "$CHAT_ID" \
+  '{type: $type, text: $text, chatId: $chatId}')
+
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+  "${BRIDGE_URL}/sprites/${SPRITE_ID}/reply" \
+  -H "Content-Type: application/json" \
+  -d "$BODY" 2>/dev/null)
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+BODY=$(echo "$RESPONSE" | head -1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+  echo '{"ok":true}'
+else
+  echo "{\"ok\":false,\"error\":\"HTTP ${HTTP_CODE}: ${BODY}\"}" >&2
+  exit 1
+fi

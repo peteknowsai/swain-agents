@@ -34,6 +34,8 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
   cat "$CHANNEL_DIR/package.json" | sprite exec -s "$name" -- tee /home/sprite/channel/package.json > /dev/null 2>&1
   cat "$CHANNEL_DIR/swain-channel-send" | sprite exec -s "$name" -- tee /usr/local/bin/swain-channel-send > /dev/null 2>&1
   sprite exec -s "$name" -- chmod +x /usr/local/bin/swain-channel-send 2>/dev/null
+  cat "$CHANNEL_DIR/swain-reply" | sprite exec -s "$name" -- tee /usr/local/bin/swain-reply > /dev/null 2>&1
+  sprite exec -s "$name" -- chmod +x /usr/local/bin/swain-reply 2>/dev/null
 
   echo "  agent: updated"
 

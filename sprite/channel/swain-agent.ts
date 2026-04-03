@@ -24,23 +24,15 @@ const SESSION_FILE = "/home/sprite/.agent-session";
 const POLL_INTERVAL_MS = 500;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes of no messages → exit
 
-const SYSTEM_PROMPT = [
-  "Read your CLAUDE.md for identity and context.",
-  "Read .claude/memory/MEMORY.md to recall what you know about your captain.",
-  "",
-  "Messages arrive with a chat_id. Reply via Bash: swain-reply \"<chat_id>\" \"<message>\"",
-  "Plain text output does NOT reach the captain — only swain-reply does.",
-  "You can call swain-reply multiple times per turn.",
-].join("\n");
-
 // --- Session Options ---
+// Claude reads CLAUDE.md from cwd for identity, personality, and instructions.
+// All communication instructions (swain-reply, etc.) live in CLAUDE.md.
 
 const SESSION_OPTIONS = {
   model: "claude-sonnet-4-6",
   permissionMode: "bypassPermissions" as const,
   cwd: "/home/sprite",
   allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill"],
-  systemPrompt: SYSTEM_PROMPT,
 };
 
 // --- Session Management ---

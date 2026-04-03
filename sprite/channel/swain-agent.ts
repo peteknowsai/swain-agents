@@ -211,14 +211,36 @@ async function processMessage(msg: InboxMessage): Promise<void> {
         console.log(`[agent] session: ${currentSessionId!.slice(0, 8)}...`);
       }
 
+      // Log MCP server connection status on init
+      if (event.type === "system" && (event as any).subtype === "init") {
+        const mcpServers = (event as any).mcp_servers;
+        if (mcpServers) {
+          for (const srv of mcpServers) {
+            console.log(`[agent] mcp: ${srv.name} — ${srv.status} — tools: ${srv.tools?.map((t: any) => t.name).join(", ") ?? "none"}`);
+          }
+        }
+      }
+
+      // Log tool calls
       if (event.type === "assistant") {
-        const texts = (event as any).message?.content
-          ?.filter((b: any) => b.type === "text")
-          ?.map((b: any) => b.text)
-          ?.join("");
+        const content = (event as any).message?.content ?? [];
+        for (const block of content) {
+          if (block.type === "tool_use") {
+            console.log(`[agent] tool call: ${block.name}(${JSON.stringify(block.input).slice(0, 100)})`);
+          }
+        }
+        const texts = content
+          .filter((b: any) => b.type === "text")
+          .map((b: any) => b.text)
+          .join("");
         if (texts) {
           console.log(`[agent] text output: ${texts.slice(0, 100)}`);
         }
+      }
+
+      // Log tool results
+      if (event.type === "tool_result") {
+        console.log(`[agent] tool result: ${(event as any).tool_name ?? "unknown"} → ${String((event as any).output ?? "").slice(0, 80)}`);
       }
     }
 

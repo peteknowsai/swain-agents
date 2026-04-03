@@ -95,7 +95,7 @@ const SESSION_OPTIONS = {
   model: "claude-sonnet-4-6",
   permissionMode: "bypassPermissions" as const,
   cwd: "/home/sprite",
-  allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill"],
+  allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Skill", "mcp__swain-tools__reply"],
   systemPrompt: SYSTEM_PROMPT,
   mcpServers: [mcpServer],
 };

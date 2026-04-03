@@ -17,8 +17,8 @@ Build a personalized daily briefing for your captain.
 6. **Check liked flyers** — sprinkle in 1-2 flyer-based cards if relevant
 7. **Style every card** — image + backgroundColor
 8. **Select 8-10 cards** and write commentary
-9. **Assemble the briefing** — boat art + merch nudge first, then cards
-10. **Notify your captain**
+9. **Assemble the briefing** — boat art + art compliment first, then cards
+10. **Check engagement & notify your captain** via iMessage
 
 For the detailed step-by-step workflow, card styling process, and briefing item format reference, see [reference.md](reference.md).
 
@@ -31,10 +31,18 @@ Generate it early in the workflow so it's ready:
 swain card boat-art --user=<userId> --json
 ```
 
-After the boat art item, add a short merch callout as a `text` item using the `shareUrl` from `swain card boat-art`:
-> "This one came out great — if you want it on a shirt, mug, or print, just tap here: https://www.heyswain.com/art/art_abc123"
+After the boat art item, add a short `text` item complimenting the art. Most days, just appreciate it — reference the style name and boat name naturally. Occasionally (not every day) you can mention the Art tab for merch, but never include a URL.
 
-Keep the merch line casual and vary the wording day to day. Don't hard-sell — it's a nudge, like showing a friend a cool print. Reference the style name when it fits naturally ("The watercolor version of [boatName] turned out sharp").
+**Good examples:**
+- "The watercolor version of Zack Attack turned out sharp."
+- "Gold foil hits different on that hull."
+- "That art deco style suits Sea Dog."
+- Occasional merch mention: "If you want that one on a shirt, check the Art tab."
+
+**Never do this:**
+- Don't include URLs or links in briefing text — the captain is already in the app.
+- Don't say "tap here" or "click this" — it reads like a bot.
+- Don't mention merch every day — it gets old fast.
 
 **Boat art is mandatory.** If generation fails, retry once with `--best`. If it still fails, flag it in your daily report but still send the briefing without it.
 
@@ -70,7 +78,16 @@ Your commentary makes it personal:
 
 ## Notification
 
-After assembly, send a short message with the app link:
-> Fresh stuff for you today — https://www.heyswain.com/app
+After assembly, send an iMessage via the `reply` tool to let your captain know the briefing is ready.
 
-One sentence. Don't list what's in the briefing. Let the app surprise them.
+```
+reply(chat_id, "Fresh stuff for you today — https://www.heyswain.com/app")
+```
+
+**Check engagement first.** Run `swain user engagement <userId> --json` to see how long it's been since they were active. Adjust your tone:
+
+- **Active recently:** Casual one-liner. "Fresh stuff for you today" + app link.
+- **Quiet 3+ days:** Make it enticing — reference something specific from the briefing that would hook them. "Wahoo window opened up this morning — https://www.heyswain.com/app"
+- **Quiet 7+ days:** Warmer re-engagement. "Been a minute — put together something good for you today. https://www.heyswain.com/app"
+
+One sentence. Never desperate. Charm, not begging. The `heyswain.com/app` link is fine in iMessage — it opens the app.

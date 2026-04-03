@@ -165,11 +165,11 @@ JSON array structure:
   ```json
   { "type": "boat_art", "image": "<url>", "styleName": "Art Deco", "boatName": "Fat Cat" }
   ```
-- For the merch nudge (always right after boat art):
+- For the art compliment (right after boat art):
   ```json
-  { "type": "text", "content": "That one came out nice — want it on a shirt or mug? https://www.heyswain.com/art/art_abc123" }
+  { "type": "text", "content": "The watercolor version of Sea Dog turned out sharp." }
   ```
-  Use the `shareUrl` from the `swain card boat-art` response. Vary the wording daily.
+  Compliment the art most days. Occasionally mention the Art tab for merch — never include a URL in briefing text. The captain is already in the app.
 
 ### 12. Assemble the briefing
 
@@ -292,7 +292,7 @@ The `--user` flag tags the card for this specific captain. It will surface at th
 [
   { "type": "greeting", "content": "Morning, Bobby! Looks like a great day to get out on the water." },
   { "type": "boat_art", "image": "https://imagedelivery.net/.../public", "styleName": "Watercolor", "boatName": "Sea Dog" },
-  { "type": "text", "content": "The watercolor version of Sea Dog came out sharp — want it on a shirt or mug? https://www.heyswain.com/art/art_abc123" },
+  { "type": "text", "content": "The watercolor version of Sea Dog turned out sharp." },
   { "type": "text", "content": "Conditions are looking perfect for your usual run out of Tierra Verde." },
   { "type": "card", "id": "card_weather_123" },
   { "type": "text", "content": "The redfish have been active near the mangroves this week." },
@@ -303,4 +303,4 @@ The `--user` flag tags the card for this specific captain. It will surface at th
 
 ## Ordering
 
-greeting -> boat art + merch nudge -> text + card pairs -> interactive items woven in -> closing
+greeting -> boat art + art compliment -> text + card pairs -> interactive items woven in -> closing

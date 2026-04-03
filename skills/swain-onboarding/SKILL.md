@@ -309,19 +309,19 @@ Steps:
 
 10. swain user update {{userId}} --onboardingStep=done --onboardingStatus=completed --json
 11. Write MEMORY.md with everything learned about the captain
-12. Send the 'all set' notification via WhatsApp:
-   message action=send channel=whatsapp target={{phone}} message=\"You're all set — first one's ready for you 🤙 https://www.heyswain.com/app\"
+12. Send the 'all set' notification via `reply` tool:
+   reply(chat_id, "You're all set — first one's ready for you 🤙 https://www.heyswain.com/app")
 
-13. Wait 5 minutes, then send a casual nudge:
+13. Wait 5 minutes, then send a casual nudge via `reply` tool:
    (sleep/wait 300 seconds or equivalent)
-   message action=send channel=whatsapp target={{phone}} message=\"<casual reminder that they can text you anytime — questions about their boat, want different stuff, whatever. Keep it short. Say it in your voice.>\"
+   reply(chat_id, "<casual reminder that they can text you anytime — questions about their boat, want different stuff, whatever. Keep it short. Say it in your voice.>")
 
 Tools: `swain` (CLI for cards, briefings, users) and `firecrawl` (web search and scraping).
 Speed matters — quick searches, not deep research.
 
 CRITICAL: Your ONLY text output must be exactly ANNOUNCE_SKIP — nothing else.
 Do NOT write status reports, summaries, or any other text. If you write anything
-other than ANNOUNCE_SKIP, it gets sent to the captain's WhatsApp as a raw message.",
+other than ANNOUNCE_SKIP, it gets sent to the captain as a raw message.",
   label="onboarding-briefing"
 )
 ```

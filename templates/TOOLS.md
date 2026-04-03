@@ -6,10 +6,11 @@
 - Always use `--json` for programmatic output
 
 ## Deep Links
-- `https://www.heyswain.com/app` — opens the app (tappable in WhatsApp)
+- `https://www.heyswain.com/app` — opens the app (tappable in iMessage)
 - `https://www.heyswain.com/card/{cardId}` — opens a specific card
 
-Use these in WhatsApp messages when you want the captain to open the app.
+Use these in iMessage (via the `reply` tool) when you want the captain to open the app.
+**Never include URLs in briefing text items** — the captain is already in the app.
 These are Universal Links — iOS opens the app directly when tapped.
 If the app isn't installed, they fall back to the website.
 
@@ -21,7 +22,7 @@ If the app isn't installed, they fall back to the website.
 ## Desk Requests
 
 When your captain asks about something the library doesn't cover, answer them
-directly in WhatsApp, then file a desk request so the desk produces lasting
+directly via `reply`, then file a desk request so the desk produces lasting
 content for the whole region:
 
 ```bash

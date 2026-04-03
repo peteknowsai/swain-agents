@@ -10,10 +10,10 @@ Create a personalized daily briefing for your captain.
 
 ## ZERO TEXT OUTPUT
 
-**Every character of plain text you write gets sent to the captain's WhatsApp.**
+**Every character of plain text you write gets sent to the captain's iMessage.**
 There is no "thinking out loud." No status updates, no planning text.
 
-- Send WhatsApp messages ONLY through the `message` tool
+- Send iMessages ONLY through the `reply` tool
 - NEVER write plain text except `NO_REPLY` at the very end of your turn
 - All work happens through tool calls (CLI, memory, LLM tools)
 
@@ -261,21 +261,20 @@ briefing.
     ```
     Each art ID maps to a shareable URL: `https://www.heyswain.com/art/{artId}`
 
-15. **Notify your captain**
-    Send a short WhatsApp message letting them know the briefing is ready. Include
-    the `heyswain://` deep link so they can tap straight into the app.
+15. **Check engagement & notify your captain**
+    Run `swain user engagement {{userId}} --json` to see how long it's been since
+    they were active. Then send an iMessage via the `reply` tool:
 
     ```
-    message action=send channel=whatsapp target={{phone}} message="<your message>"
+    reply(chat_id, "<your message> https://www.heyswain.com/app")
     ```
 
-    Keep it short and natural — one sentence. Don't list what's in the briefing.
-    Let the app surprise them.
+    Adjust tone based on engagement:
+    - **Active recently:** Casual. "Fresh stuff for you today — https://www.heyswain.com/app"
+    - **Quiet 3+ days:** Enticing — reference something specific. "Wahoo window opened up this morning — https://www.heyswain.com/app"
+    - **Quiet 7+ days:** Warm re-engagement. "Been a minute — put together something good for you today. https://www.heyswain.com/app"
 
-    Examples:
-    - "Morning! New stuff for you 🤙 https://www.heyswain.com/app"
-    - "Fresh stuff for you today — https://www.heyswain.com/app"
-    - "Got a good one for you this morning 🚤 https://www.heyswain.com/app"
+    One sentence. Never desperate. The app link is fine in iMessage — it opens the app.
 
 ## Creating Personalized Cards
 

@@ -2,7 +2,7 @@
 
 /**
  * User Commands
- * swain user list|get|update|onboard-status
+ * swain user list|get|update|engagement|onboard-status
  */
 
 import {
@@ -264,6 +264,126 @@ async function updateUser(args: string[]): Promise<void> {
   }
 }
 
+/**
+ * swain user engagement <userId> [--json]
+ * Get engagement stats by merging Convex user data with iMessage analytics.
+ */
+async function getEngagement(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = args[0] && !args[0].startsWith('--') ? args[0] : params['id'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: swain user engagement <userId> [--json]');
+    process.exit(1);
+  }
+
+  // Get user profile for phone number
+  const userResult = await workerRequest(`/users/${userId}`);
+  if (!userResult.success || !userResult.user) {
+    if (jsonOutput) {
+      console.log(JSON.stringify({ success: false, error: 'User not found' }, null, 2));
+    } else {
+      printError('User not found');
+    }
+    process.exit(1);
+  }
+
+  const phone = userResult.user.messagingPhone || userResult.user.phone;
+
+  // Fetch Convex engagement (best-effort)
+  let convexEngagement: any = null;
+  try {
+    const convexResult = await workerRequest(`/users/${userId}/engagement`);
+    if (convexResult.success) convexEngagement = convexResult.engagement;
+  } catch {}
+
+  // Fetch iMessage analytics (best-effort)
+  let imessageStats: any = null;
+  let imessageSummary: any = null;
+  const imessageApiUrl = process.env.IMESSAGE_API_URL ?? 'https://imessage-api.heyswain.com';
+  const imessageToken = process.env.IMESSAGE_API_TOKEN;
+
+  if (phone && imessageToken) {
+    const chatGuid = encodeURIComponent(`any;-;${phone}`);
+    const headers = { 'Authorization': `Bearer ${imessageToken}` };
+
+    // Fetch detailed stats and chat summary in parallel
+    const [detailRes, summaryRes] = await Promise.all([
+      fetch(`${imessageApiUrl}/analytics/chats/${chatGuid}`, {
+        headers, signal: AbortSignal.timeout(10_000),
+      }).catch(() => null),
+      fetch(`${imessageApiUrl}/analytics/chats`, {
+        headers, signal: AbortSignal.timeout(10_000),
+      }).catch(() => null),
+    ]);
+
+    if (detailRes?.ok) {
+      const json = await detailRes.json() as any;
+      imessageStats = json.data;
+    }
+
+    if (summaryRes?.ok) {
+      const json = await summaryRes.json() as any;
+      const chats = json.data ?? [];
+      imessageSummary = chats.find((c: any) => c.guid === `any;-;${phone}`);
+    }
+  }
+
+  // 7-day message count from recent messages
+  let messageCount7d = 0;
+  if (phone && imessageToken) {
+    try {
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const chatGuid = encodeURIComponent(`any;-;${phone}`);
+      const res = await fetch(`${imessageApiUrl}/chats/${chatGuid}/messages?after=${sevenDaysAgo}&limit=500`, {
+        headers: { 'Authorization': `Bearer ${imessageToken}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) {
+        const json = await res.json() as any;
+        const msgs = json.data ?? [];
+        messageCount7d = msgs.filter((m: any) => !m.isFromMe).length;
+      }
+    } catch {}
+  }
+
+  // Merge: prefer iMessage analytics for message data, Convex for app data
+  const lastMessageAt = imessageSummary?.dateRange?.to ?? null;
+  const daysSinceMessage = lastMessageAt
+    ? Math.floor((Date.now() - new Date(lastMessageAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const engagement = {
+    lastActiveAt: convexEngagement?.lastActiveAt ?? lastMessageAt,
+    lastMessageAt,
+    daysSinceActive: convexEngagement?.daysSinceActive ?? daysSinceMessage,
+    daysSinceMessage,
+    briefingsOpened7d: convexEngagement?.briefingsOpened7d ?? 0,
+    messageCount7d,
+    totalMessages: imessageStats?.totalMessages ?? 0,
+    sentByAdvisor: imessageStats?.sent ?? 0,
+    receivedFromCaptain: imessageStats?.received ?? 0,
+    onboardedAt: convexEngagement?.onboardedAt ?? null,
+  };
+
+  if (jsonOutput) {
+    console.log(JSON.stringify({ success: true, engagement }, null, 2));
+    return;
+  }
+
+  print(`\n${colors.bold}ENGAGEMENT${colors.reset} for ${userId}\n`);
+  print(`  Last Active:     ${engagement.lastActiveAt || '-'}`);
+  print(`  Days Since:      ${engagement.daysSinceActive ?? '-'}`);
+  print(`  Last Message:    ${engagement.lastMessageAt || '-'}`);
+  print(`  Days Silent:     ${engagement.daysSinceMessage ?? '-'}`);
+  print(`  Messages (7d):   ${engagement.messageCount7d}`);
+  print(`  Total Messages:  ${engagement.totalMessages} (${engagement.sentByAdvisor} sent / ${engagement.receivedFromCaptain} received)`);
+  print(`  Briefings (7d):  ${engagement.briefingsOpened7d}`);
+  print(`  Onboarded:       ${engagement.onboardedAt || '-'}`);
+  print('');
+}
+
 function showHelp(): void {
   print(`
 ${colors.bold}swain user${colors.reset} - User management
@@ -272,6 +392,7 @@ ${colors.bold}COMMANDS${colors.reset}
   list                    List all users
   get <userId>            Get user details (includes advisor memories)
   update <userId>         Update user profile fields
+  engagement <userId>     Get engagement stats (last active, message count)
   onboard-status <id>     Get or set onboarding status
 
 ${colors.bold}UPDATE FIELDS${colors.reset}
@@ -322,6 +443,7 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain user get user_abc123
   swain user update user_abc123 --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL"
   swain user update user_abc123 --experienceLevel=beginner --primaryUse="fishing,diving" --json
+  swain user engagement user_abc123 --json
   swain user onboard-status user_abc123
   swain user onboard-status user_abc123 --status=completed
 `);
@@ -341,6 +463,9 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'update':
         await updateUser(commandArgs);
+        break;
+      case 'engagement':
+        await getEngagement(commandArgs);
         break;
       case 'onboard-status':
         await onboardStatus(commandArgs);

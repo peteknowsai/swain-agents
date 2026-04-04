@@ -99,20 +99,28 @@ async function processMessage(msg: InboxMessage): Promise<void> {
   console.log(`[agent] ← ${msg.chatId}: ${msg.text.slice(0, 80)}`);
 
   try {
-    const sessionId = currentSessionId ?? await loadSessionId();
+    // Triggers (crons, scan episodes, etc.) get isolated sessions — never resume
+    // the captain's conversation. Only iMessage/chat messages resume.
+    const isTrigger = msg.chatId.startsWith("trigger:");
+    const sessionId = isTrigger ? null : (currentSessionId ?? await loadSessionId());
     const options = {
       ...QUERY_OPTIONS,
       ...(sessionId ? { resume: sessionId } : {}),
     };
 
     for await (const message of query({ prompt, options })) {
-      // Track session ID from init
+      // Track session ID from init — but don't save trigger sessions
+      // as the main session (they're one-off, shouldn't pollute iMessage session)
       if (message.type === "system" && message.subtype === "init") {
         const newId = (message as any).session_id;
-        if (newId && newId !== currentSessionId) {
-          currentSessionId = newId;
-          await saveSessionId(newId);
-          console.log(`[agent] session: ${newId.slice(0, 8)}...`);
+        if (newId) {
+          if (isTrigger) {
+            console.log(`[agent] session: ${newId.slice(0, 8)}... (trigger, not saved)`);
+          } else if (newId !== currentSessionId) {
+            currentSessionId = newId;
+            await saveSessionId(newId);
+            console.log(`[agent] session: ${newId.slice(0, 8)}...`);
+          }
         }
       }
 
@@ -131,11 +139,13 @@ async function processMessage(msg: InboxMessage): Promise<void> {
       // Log result
       if (message.type === "result") {
         console.log(`[agent] result: ${message.subtype} (${(message as any).duration_ms}ms)`);
-        // Capture session ID from result
-        const resultSessionId = (message as any).session_id;
-        if (resultSessionId && resultSessionId !== currentSessionId) {
-          currentSessionId = resultSessionId;
-          await saveSessionId(resultSessionId);
+        // Capture session ID from result — skip for triggers
+        if (!isTrigger) {
+          const resultSessionId = (message as any).session_id;
+          if (resultSessionId && resultSessionId !== currentSessionId) {
+            currentSessionId = resultSessionId;
+            await saveSessionId(resultSessionId);
+          }
         }
       }
     }

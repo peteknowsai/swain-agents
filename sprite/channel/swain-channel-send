@@ -28,4 +28,10 @@ jq -n \
   '{text: $text, chatId: $chatId, user: $user, messageId: $messageId, type: $type, ts: $ts}' \
   > "$INBOX_DIR/$FILENAME"
 
+# Ensure the agent service is running — it exits after idle timeout,
+# so new messages need to kick it back to life.
+if ! pgrep -f 'bun run channel/swain-agent.ts' > /dev/null 2>&1; then
+  sprite-env services restart channel > /dev/null 2>&1 &
+fi
+
 echo "ok"

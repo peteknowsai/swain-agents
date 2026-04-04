@@ -10,6 +10,7 @@ import {
   type AgentEntry,
   type AgentRegistry,
 } from "./shared";
+import { sprite } from "./sprite";
 import { deleteAdvisor, deleteDesk } from "./provision";
 
 const MAX_FILE_SIZE = 1_048_576; // 1MB
@@ -376,35 +377,29 @@ export async function sendAgentMessage(agentId: string, req: Request): Promise<a
     throw new Error("message is required — pass { message: string } or a trigger payload with type/action");
   }
 
-  const args = [
-    "openclaw", "agent",
-    "--agent", agentId,
-    "--message", message,
-  ];
+  // Resolve sprite name — use spriteName from registry if set, otherwise agent ID is the sprite name
+  const entry = registry.agents[agentId];
+  const spriteName = entry.spriteName || agentId;
 
-  if (session) {
-    args.push("--session-id", `agent:${agentId}:${session}`);
+  // Route message to the sprite's inbox via swain-channel-send.
+  // The Agent SDK service on the sprite picks up inbox JSON files and processes them.
+  const chatId = session ? `trigger:${session}` : `trigger:${agentId}`;
+
+  try {
+    const result = await sprite([
+      "exec", "-s", spriteName,
+      "--", "swain-channel-send",
+      message,
+      chatId,
+    ]);
+
+    if (result !== "ok") {
+      throw new Error(`swain-channel-send returned: ${result}`);
+    }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Agent message failed: ${errMsg}`);
   }
 
-  // Fire and forget — agent turns can take minutes (TTS, image processing, etc).
-  // We just need to confirm the process launched successfully.
-  const proc = Bun.spawn(args, {
-    stdout: "ignore",
-    stderr: "pipe",
-  });
-
-  // Give it a moment to fail fast on bad args / missing agent
-  const raceResult = await Promise.race([
-    proc.exited.then(code => ({ type: "exited" as const, code })),
-    new Promise<{ type: "running" }>(resolve =>
-      setTimeout(() => resolve({ type: "running" }), 2000)
-    ),
-  ]);
-
-  if (raceResult.type === "exited" && raceResult.code !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    throw new Error(`Agent message failed (exit ${raceResult.code}): ${stderr}`);
-  }
-
-  return { success: true, agentId, dispatched: true };
+  return { success: true, agentId, spriteName, dispatched: true };
 }

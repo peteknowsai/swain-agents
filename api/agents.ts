@@ -357,8 +357,12 @@ export async function listAgentCrons(agentId: string): Promise<any> {
 // --- Send message to agent ---
 
 export async function sendAgentMessage(agentId: string, req: Request): Promise<any> {
+  console.log(`[message] POST /agents/${agentId}/message`);
   const registry = await loadRegistry();
-  if (!registry.agents[agentId]) throw new Error(`Agent ${agentId} not found`);
+  if (!registry.agents[agentId]) {
+    console.error(`[message] agent not found: ${agentId}`);
+    throw new Error(`Agent ${agentId} not found`);
+  }
 
   const body = await req.json() as Record<string, any>;
 
@@ -385,6 +389,9 @@ export async function sendAgentMessage(agentId: string, req: Request): Promise<a
   // The Agent SDK service on the sprite picks up inbox JSON files and processes them.
   const chatId = session ? `trigger:${session}` : `trigger:${agentId}`;
 
+  const actionLabel = body.action || body.type || "message";
+  console.log(`[message] → ${spriteName} (${actionLabel}) chatId=${chatId}`);
+
   try {
     const result = await sprite([
       "exec", "-s", spriteName,
@@ -394,10 +401,13 @@ export async function sendAgentMessage(agentId: string, req: Request): Promise<a
     ]);
 
     if (result !== "ok") {
+      console.error(`[message] swain-channel-send returned unexpected: ${result}`);
       throw new Error(`swain-channel-send returned: ${result}`);
     }
+    console.log(`[message] ✓ delivered to ${spriteName}`);
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[message] ✗ delivery failed to ${spriteName}: ${errMsg.slice(0, 200)}`);
     throw new Error(`Agent message failed: ${errMsg}`);
   }
 

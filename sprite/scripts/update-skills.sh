@@ -53,6 +53,16 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     fi
   fi
 
+  # Inject ElevenLabs API key if missing (needed for scan episode TTS)
+  if ! sprite exec -s "$name" -- grep -q ELEVENLABS_API_KEY /home/sprite/start.sh 2>/dev/null; then
+    ELEVENLABS_KEY="${ELEVENLABS_API_KEY:-}"
+    ELEVENLABS_VOICE="${ELEVENLABS_VOICE_ID:-1SM7GgM6IMuvQlz2BwM3}"
+    if [ -n "$ELEVENLABS_KEY" ]; then
+      sprite exec -s "$name" -- sed -i "/^export SPRITE_ID/i export ELEVENLABS_API_KEY=\"$ELEVENLABS_KEY\"\nexport ELEVENLABS_VOICE_ID=\"$ELEVENLABS_VOICE\"" /home/sprite/start.sh 2>/dev/null
+      echo "  env: added ELEVENLABS_API_KEY + VOICE_ID"
+    fi
+  fi
+
   # Ensure start.sh launches the Agent SDK (service auto-restarts it on wake)
   if ! sprite exec -s "$name" -- grep -q "exec bun run channel/swain-agent.ts" /home/sprite/start.sh 2>/dev/null; then
     # Remove old launcher lines

@@ -263,10 +263,10 @@ briefing.
 
 15. **Check engagement & notify your captain**
     Run `swain user engagement {{userId}} --json` to see how long it's been since
-    they were active. Then send an iMessage via the `reply` tool:
+    they were active. Then send an iMessage via `swain-reply`. Use `im:{{phone}}` as the chat ID:
 
-    ```
-    reply(chat_id, "<your message> https://www.heyswain.com/app")
+    ```bash
+    swain-reply "im:{{phone}}" "<your message> https://www.heyswain.com/app"
     ```
 
     Adjust tone based on engagement:

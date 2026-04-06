@@ -31,7 +31,10 @@ jq -n \
 # Ensure the agent service is running — it exits after idle timeout,
 # so new messages need to kick it back to life.
 if ! pgrep -f 'bun run channel/swain-agent.ts' > /dev/null 2>&1; then
-  sprite-env services restart channel > /dev/null 2>&1 &
+  # Try the service manager first; if it 404s (stale PID), start directly
+  if ! sprite-env services restart channel > /dev/null 2>&1; then
+    nohup bash /home/sprite/start.sh >> /home/sprite/logs/agent.log 2>&1 &
+  fi
 fi
 
 echo "ok"

@@ -111,6 +111,13 @@ Bun.serve({
 
       console.log(`[bridge] reply from ${spriteId}: ${body.type} → ${body.chatId}`);
 
+      // Normalize chatId — bare phone numbers ("+1234567890") should route to iMessage
+      const isPhone = /^\+\d{7,15}$/.test(body.chatId);
+      if (isPhone) {
+        console.log(`[bridge] bare phone chatId "${body.chatId}" → adding im: prefix`);
+        body.chatId = `im:${body.chatId}`;
+      }
+
       let sent = false;
       if (body.chatId.startsWith("im:")) {
         const address = body.chatId.replace("im:", "");

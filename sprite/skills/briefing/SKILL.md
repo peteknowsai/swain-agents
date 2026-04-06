@@ -78,10 +78,12 @@ Your commentary makes it personal:
 
 ## Notification
 
-After assembly, send an iMessage to let your captain know the briefing is ready:
+After assembly, send an iMessage to let your captain know the briefing is ready.
+
+For cron-triggered briefings (no inbound message), use `im:{{phone}}` as the chat ID:
 
 ```bash
-swain-reply "<chat_id>" "Fresh stuff for you today — https://www.heyswain.com/app"
+swain-reply "im:{{phone}}" "Fresh stuff for you today — https://www.heyswain.com/app"
 ```
 
 **Check engagement first.** Run `swain user engagement <userId> --json` to see how long it's been since they were active. Adjust your tone:

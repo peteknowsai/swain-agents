@@ -4,7 +4,7 @@
  * Image Commands
  * swain image generate
  *
- * Image generation for agents — synchronous via Replicate → Cloudflare Images
+ * Image generation for agents — synchronous via Gemini → Cloudflare Images
  */
 
 import {
@@ -41,7 +41,7 @@ function parseArgs(args: string[]): Record<string, string> {
 
 /**
  * swain image generate "prompt" [--style=<styleId>] [--aspect-ratio=<ratio>] [--resolution=<res>] [--json]
- * Synchronous image generation via Replicate → Cloudflare Images.
+ * Synchronous image generation via Gemini → Cloudflare Images.
  * The --style flag is stored as metadata (cataloging) but NOT sent to the model.
  * The prompt is wrapped with technical boilerplate (aspect ratio, bleed, no-text).
  */
@@ -66,7 +66,7 @@ async function generateImageCommand(args: string[]): Promise<void> {
 
   try {
     if (!jsonOutput) {
-      print(`Generating ${mode === 'flyer' ? 'flyer ' : ''}image via Replicate...`);
+      print(`Generating ${mode === 'flyer' ? 'flyer ' : ''}image via Gemini...`);
       if (styleId) print(`  Style (catalog): ${styleId}`);
     }
 
@@ -77,7 +77,7 @@ async function generateImageCommand(args: string[]): Promise<void> {
         status: 'complete',
         url: result.url,
         imageId: result.imageId,
-        replicateId: result.replicateId,
+        generationId: result.generationId,
         ...(styleId ? { styleId } : {}),
       }, null, 2));
     } else {
@@ -155,7 +155,7 @@ function showHelp(): void {
 ${colors.bold}swain image${colors.reset} - Image generation & upload
 
 ${colors.bold}Commands:${colors.reset}
-  generate "prompt"          Generate image (Replicate → Cloudflare Images)
+  generate "prompt"          Generate image (Gemini → Cloudflare Images)
   upload --url=<url>         Upload an existing image to Cloudflare
 
 ${colors.bold}Options:${colors.reset}
@@ -175,7 +175,7 @@ ${colors.bold}Examples:${colors.reset}
   swain image upload --file=/tmp/screenshot.png --json
 
 ${colors.bold}Notes:${colors.reset}
-  - generate: Uses Replicate API → Cloudflare Images. 10-30 seconds.
+  - generate: Uses Gemini API → Cloudflare Images. 10-30 seconds.
   - upload: Fetches from any URL or local file, uploads to Cloudflare via Convex API.
   - Your prompt is the creative vision — aspect ratio, bleed, no-text are added automatically
   - Pass --style=<id> to catalog which style was used (metadata only)

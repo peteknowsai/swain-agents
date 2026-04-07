@@ -59,7 +59,7 @@ Do not parallelize card creation. Do not spawn subagents. Work through each card
    ```bash
    swain card image <cardId> --style=<styleId> --bg-color=<hex> --prompt="<specific scene description>" --json
    ```
-   This generates an image via Replicate and uploads to Cloudflare. Takes ~30 seconds.
+   This generates an image via Gemini and uploads to Cloudflare. Takes ~30 seconds.
 
 4. **Verify** the card has both image and backgroundColor:
    ```bash

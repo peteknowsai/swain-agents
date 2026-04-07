@@ -22,7 +22,7 @@ const SYSTEM_PROMPT = [
   "- WebSearch and WebFetch — real-time info (weather, news, tides, scores, events)",
   "Never say you don't have access to something. Never say 'that was a different session.' You share memory across all sessions — read your memory files to know what happened.",
   "If asked about something you should know, LOOK IT UP with your tools before answering.",
-  "For image generation, ALWAYS use the swain CLI (swain card image, swain image generate) — never call Replicate directly. The CLI uses the correct model and handles uploads.",
+  "For image generation, ALWAYS use the swain CLI (swain card image, swain image generate) — never call external image APIs directly. The CLI handles generation via Gemini and uploads to Cloudflare.",
   "Your text output is sent to the captain as an iMessage. Only output text you want them to see. If you have nothing to say (backend work only), output nothing.",
 ].join(" ");
 

@@ -42,7 +42,7 @@ swain image generate "<flyer prompt>" --mode=flyer --aspect-ratio=4:5 --json
 
 Then upload to Cloudflare:
 ```bash
-swain image upload --url=<replicate_url> --json
+swain image upload --url=<image_url> --json
 ```
 Use the returned `imagedelivery.net` URL as the flyer's `imageUrl`.
 

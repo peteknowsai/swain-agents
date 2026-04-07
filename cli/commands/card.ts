@@ -773,7 +773,7 @@ async function generateImage(args: string[]): Promise<void> {
   });
 
   if (jsonOutput) {
-    console.log(JSON.stringify({ success: true, cardId, imageUrl, replicateId: result.replicateId }, null, 2));
+    console.log(JSON.stringify({ success: true, cardId, imageUrl, generationId: result.generationId }, null, 2));
   } else {
     printSuccess(`Card ${cardId} image updated`);
     print(`  Image: ${imageUrl}`);

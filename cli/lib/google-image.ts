@@ -4,7 +4,7 @@
  * Generate images via Google Gemini API (Nano Banana 2 / Gemini 3.1 Flash Image)
  * and upload to Cloudflare Images.
  *
- * Replaces replicate-image.ts — same public interface, no polling needed.
+ * Primary image generation backend. Synchronous — no polling needed.
  *
  * Env vars required:
  *   GEMINI_API_KEY              — Google AI API key
@@ -24,7 +24,7 @@ export interface ImageResult {
   generationId: string;
 }
 
-// Keep backwards compat for callers that reference the old type
+/** @deprecated Use ImageResult directly */
 export type ReplicateImageResult = ImageResult;
 
 /**
@@ -189,7 +189,7 @@ async function uploadToCloudflare(
 
 /**
  * Generate an image and upload to Cloudflare Images.
- * Drop-in replacement for the old Replicate-based generateImage().
+ * Generate an image via Gemini and upload to Cloudflare Images.
  *
  * @param prompt - The image generation prompt
  * @param opts.imageInputUrl - Optional source image URL for image-to-image (restyle)

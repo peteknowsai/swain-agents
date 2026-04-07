@@ -10,7 +10,7 @@ import {
   type AgentEntry,
   type AgentRegistry,
 } from "./shared";
-import { sprite } from "./sprite";
+import { sprite, runClaudeOnSprite } from "./sprite";
 import { deleteAdvisor, deleteDesk } from "./provision";
 
 const MAX_FILE_SIZE = 1_048_576; // 1MB
@@ -356,6 +356,26 @@ export async function listAgentCrons(agentId: string): Promise<any> {
 
 // --- Send message to agent ---
 
+function buildTriggerPrompt(body: Record<string, any>, message: string): string {
+  if (body.type || body.action) {
+    return [
+      "Read your CLAUDE.md for context and .claude/memory/MEMORY.md for what you know.",
+      "",
+      "You received this trigger payload:",
+      "```json",
+      message,
+      "```",
+      "",
+      "Find the matching skill and execute it.",
+    ].join("\n");
+  }
+  return [
+    "Read your CLAUDE.md for context and .claude/memory/MEMORY.md for what you know.",
+    "",
+    message,
+  ].join("\n");
+}
+
 export async function sendAgentMessage(agentId: string, req: Request): Promise<any> {
   console.log(`[message] POST /agents/${agentId}/message`);
   const registry = await loadRegistry();
@@ -368,15 +388,11 @@ export async function sendAgentMessage(agentId: string, req: Request): Promise<a
 
   // Accept { message: "..." } or a trigger payload directly (with type/action fields)
   let message: string;
-  let session: string | undefined;
 
   if (typeof body.message === "string") {
     message = body.message;
-    session = body.session;
   } else if (body.type || body.action) {
-    const { session: s, ...payload } = body;
-    message = JSON.stringify(payload);
-    session = s;
+    message = JSON.stringify(body);
   } else {
     throw new Error("message is required — pass { message: string } or a trigger payload with type/action");
   }
@@ -385,31 +401,28 @@ export async function sendAgentMessage(agentId: string, req: Request): Promise<a
   const entry = registry.agents[agentId];
   const spriteName = entry.spriteName || agentId;
 
-  // Route message to the sprite's inbox via swain-channel-send.
-  // The Agent SDK service on the sprite picks up inbox JSON files and processes them.
-  const chatId = session ? `trigger:${session}` : `trigger:${agentId}`;
-
+  // Run claude directly on the sprite via sprite exec (foreground).
+  // This is the same proven path that cron jobs use via wakeAgent().
+  // The old inbox/swain-channel-send approach was unreliable — the agent process
+  // might not be running to pick up the message.
+  const prompt = buildTriggerPrompt(body, message);
   const actionLabel = body.action || body.type || "message";
-  console.log(`[message] → ${spriteName} (${actionLabel}) chatId=${chatId}`);
+  console.log(`[message] → ${spriteName} (${actionLabel}) direct-exec`);
 
-  try {
-    const result = await sprite([
-      "exec", "-s", spriteName,
-      "--", "swain-channel-send",
-      message,
-      chatId,
-    ]);
-
-    if (result !== "ok") {
-      console.error(`[message] swain-channel-send returned unexpected: ${result}`);
-      throw new Error(`swain-channel-send returned: ${result}`);
-    }
-    console.log(`[message] ✓ delivered to ${spriteName}`);
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[message] ✗ delivery failed to ${spriteName}: ${errMsg.slice(0, 200)}`);
-    throw new Error(`Agent message failed: ${errMsg}`);
-  }
+  // Fire-and-forget: run claude on the sprite, log when done.
+  // Don't await — return immediately to preserve the API contract.
+  runClaudeOnSprite(spriteName, prompt)
+    .then(({ result, error, cost }) => {
+      if (error) {
+        console.error(`[message] ✗ ${spriteName} (${actionLabel}) failed: ${error.slice(0, 200)}`);
+      } else {
+        console.log(`[message] ✓ ${spriteName} (${actionLabel}) done ($${cost.toFixed(4)}): ${(result ?? "").slice(0, 100)}`);
+      }
+    })
+    .catch((err) => {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[message] ✗ ${spriteName} (${actionLabel}) threw: ${errMsg.slice(0, 200)}`);
+    });
 
   return { success: true, agentId, spriteName, dispatched: true };
 }

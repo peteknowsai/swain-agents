@@ -63,6 +63,15 @@ for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-|pete-|joe-|aus
     fi
   fi
 
+  # Inject IMESSAGE_API_TOKEN if missing (needed for swain user engagement)
+  if ! sprite exec -s "$name" -- grep -q IMESSAGE_API_TOKEN /home/sprite/start.sh 2>/dev/null; then
+    IMESSAGE_TOKEN="${IMESSAGE_API_TOKEN:-}"
+    if [ -n "$IMESSAGE_TOKEN" ]; then
+      sprite exec -s "$name" -- sed -i "/^export SPRITE_ID/i export IMESSAGE_API_TOKEN=\"$IMESSAGE_TOKEN\"" /home/sprite/start.sh 2>/dev/null
+      echo "  env: added IMESSAGE_API_TOKEN"
+    fi
+  fi
+
   # Ensure start.sh launches the Agent SDK (service auto-restarts it on wake)
   if ! sprite exec -s "$name" -- grep -q "exec bun run channel/swain-agent.ts" /home/sprite/start.sh 2>/dev/null; then
     # Remove old launcher lines

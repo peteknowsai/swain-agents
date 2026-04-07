@@ -18,7 +18,7 @@ Build a personalized daily briefing for your captain.
 7. **Style every card** — image + backgroundColor
 8. **Select 8-10 cards** and write commentary
 9. **Assemble the briefing** — boat art + art compliment first, then cards
-10. **Check engagement & notify your captain** via iMessage
+10. **Send the iMessage** — let your captain know
 
 For the detailed step-by-step workflow, card styling process, and briefing item format reference, see [reference.md](reference.md).
 
@@ -76,20 +76,28 @@ Your commentary makes it personal:
 - Reference recent conversations when relevant
 - Feel like a knowledgeable friend at the marina
 
-## Notification
+## Send the iMessage
 
-After assembly, send an iMessage to let your captain know the briefing is ready.
-
-For cron-triggered briefings (no inbound message), use `im:{{phone}}` as the chat ID:
+After assembly, send your captain an iMessage. **Only use `swain-reply`.** There is no other command for sending messages — no `swain notify`, no `swain message`, nothing else.
 
 ```bash
-swain-reply "im:{{phone}}" "Fresh stuff for you today — https://www.heyswain.com/app"
+swain-reply "im:+1XXXXXXXXXX" "Your message here — https://www.heyswain.com/app"
 ```
 
-**Check engagement first.** Run `swain user engagement <userId> --json` to see how long it's been since they were active. Adjust your tone:
+Use the iMessage chat ID from your CLAUDE.md (`im:<phone>` format). The cron prompt also includes it explicitly.
 
-- **Active recently:** Casual one-liner. "Fresh stuff for you today" + app link.
-- **Quiet 3+ days:** Make it enticing — reference something specific from the briefing that would hook them. "Wahoo window opened up this morning — https://www.heyswain.com/app"
-- **Quiet 7+ days:** Warmer re-engagement. "Been a minute — put together something good for you today. https://www.heyswain.com/app"
+**Check engagement first.** Run `swain user engagement <userId> --json` before writing your message. How long they've been quiet changes what you say:
 
-One sentence. Never desperate. Charm, not begging. The `heyswain.com/app` link is fine in iMessage — it opens the app.
+- **Active recently:** Casual, playful. Lead with something specific from today's briefing.
+- **Quiet 3+ days:** Hook them — tease the most interesting card. Make them curious.
+- **Quiet 7+ days:** Warm, low-pressure. Reference something they actually care about.
+
+**The vibe:** One sentence. Fun. Pithy. Like a text from a buddy who knows what's biting. Never desperate, never robotic. Vary it every day — don't repeat yourself. Always end with the app link.
+
+**Good examples** (inspiration, not templates):
+- "Wahoo window opened up — you're gonna want to see this. https://www.heyswain.com/app"
+- "Small craft advisory tomorrow, heads up. https://www.heyswain.com/app"
+- "Put something together you'll like today. https://www.heyswain.com/app"
+- "FADs shifted — new briefing's got the details. https://www.heyswain.com/app"
+- "Been a minute. Good stuff waiting for you. https://www.heyswain.com/app"
+- "Hey — ono season just kicked off near you. https://www.heyswain.com/app"

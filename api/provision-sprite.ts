@@ -513,6 +513,7 @@ export async function provisionSpriteAdvisor(input: CaptainInput): Promise<{
     phone: phone || "not provided",
     timezone: input.timezone || "America/New_York",
     desk: "",
+    onboardingDone: "",  // new captains are never onboarded yet
   });
 
   // 2. Push CLAUDE.md to sprite
@@ -1056,8 +1057,13 @@ export async function wakeAgent(
   if (entry.status !== "active") throw new Error(`Agent ${agentId} is not active (status: ${entry.status})`);
 
   const spriteName = entry.spriteName;
-  const prompt = options?.message
+  let prompt = options?.message
     ?? `Read your CLAUDE.md for context and .claude/memory/MEMORY.md for what you know. Then run the ${skill} skill.`;
+
+  // Include the iMessage chat ID explicitly so cron skills don't need to derive it
+  if (entry.phone) {
+    prompt += ` If you need to send an iMessage, use chat ID: im:${entry.phone}`;
+  }
 
   try {
     const { result, error } = await runClaudeOnSprite(spriteName, prompt);

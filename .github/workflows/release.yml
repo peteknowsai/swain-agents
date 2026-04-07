@@ -95,3 +95,24 @@ jobs:
             systemctl restart swain-agent-api
             sleep 2
             systemctl is-active swain-agent-api
+
+      - name: Update CLI on all sprites
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 600s
+          script: |
+            export PATH=/root/.local/bin:/root/.bun/bin:$PATH
+            export HOME=/root
+
+            TAG="${GITHUB_REF_NAME:-${{ github.ref_name }}}"
+            DOWNLOAD_URL="https://github.com/peteknowsai/swain-agents/releases/download/${TAG}/swain-linux-x64"
+
+            for name in $(sprite list 2>/dev/null | grep -E '^(advisor-|desk-)'); do
+              OLD=$(sprite exec -s "$name" -- swain --version 2>/dev/null || echo "missing")
+              sprite exec -s "$name" -- bash -c "curl -fsSL -o /usr/local/bin/swain '${DOWNLOAD_URL}' && chmod +x /usr/local/bin/swain" 2>/dev/null
+              NEW=$(sprite exec -s "$name" -- swain --version 2>/dev/null || echo "failed")
+              echo "$name: $OLD → $NEW"
+            done

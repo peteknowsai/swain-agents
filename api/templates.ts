@@ -26,9 +26,21 @@ export function makeSlug(name: string, userId: string): string {
   return `advisor-${namePart}-${idPart}`;
 }
 
-/** Replace {{placeholders}} in template content */
+/** Replace {{placeholders}} and {{#if var}}...{{else}}...{{/if}} blocks in template content */
 export function render(content: string, vars: Record<string, string>): string {
   let result = content;
+
+  // Process {{#if var}}...{{else}}...{{/if}} blocks
+  result = result.replace(
+    /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_, key, ifBlock, elseBlock) => vars[key] ? ifBlock : elseBlock
+  );
+  // {{#if var}}...{{/if}} without else
+  result = result.replace(
+    /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_, key, ifBlock) => vars[key] ? ifBlock : ""
+  );
+
   for (const [key, value] of Object.entries(vars)) {
     result = result.replaceAll(`{{${key}}}`, value);
   }

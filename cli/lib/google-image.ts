@@ -210,12 +210,12 @@ export async function generateImage(
     imageInputBase64 = base64;
   }
 
-  // Generate with retry (once on failure, 3s backoff)
+  // Generate with retry (up to 3 attempts, exponential backoff)
   let lastError: Error | undefined;
   let imageBytes: ArrayBuffer | undefined;
   let mimeType: string | undefined;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const result = await runGemini(
         prompt,
@@ -229,14 +229,14 @@ export async function generateImage(
       break;
     } catch (err: any) {
       lastError = err;
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 3000));
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
       }
     }
   }
 
   if (!imageBytes || !mimeType) {
-    throw lastError || new Error("Image generation failed after 2 attempts");
+    throw lastError || new Error("Image generation failed after 3 attempts");
   }
 
   // Upload to Cloudflare

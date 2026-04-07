@@ -44,7 +44,7 @@ After the boat art item, add a short `text` item complimenting the art. Most day
 - Don't say "tap here" or "click this" — it reads like a bot.
 - Don't mention merch every day — it gets old fast.
 
-**Boat art is mandatory.** If generation fails, retry once with `--best`. If it still fails, flag it in your daily report but still send the briefing without it.
+**Boat art is mandatory.** If generation fails, just retry the same command — don't change the style, the failure is transient. If it fails twice, flag it in your daily report but still send the briefing without it.
 
 ## Card Selection Priority
 

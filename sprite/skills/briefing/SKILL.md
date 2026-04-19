@@ -7,7 +7,19 @@ description: "Create personalized daily briefings for your captain. Use this ski
 
 Build a personalized daily briefing for your captain.
 
-## Workflow
+## Step 0: Check engagement — paused captains get different treatment
+
+**Before anything else**, run `swain user engagement <userId> --json` and branch on the pause state:
+
+```
+paused: false                                   → normal daily workflow (below)
+paused: true  && needsSleepBriefing: true       → build ONE evergreen briefing (see "Evergreen" section)
+paused: true  && needsSleepBriefing: false      → skip entirely. Exit. Nothing to do.
+```
+
+The third case is the common one during a long pause — the evergreen is already served, the captain hasn't come back. Don't generate content, don't send iMessages, just end the run.
+
+## Normal Daily Workflow
 
 1. **Get captain context** — read memory files and check profile
 2. **Generate boat art** — this goes first in the briefing, generate it early
@@ -76,7 +88,42 @@ Your commentary makes it personal:
 - Reference recent conversations when relevant
 - Feel like a knowledgeable friend at the marina
 
+## Evergreen Briefings (paused captains)
+
+When engagement returns `paused: true && needsSleepBriefing: true`, you build a single evergreen "sleep" briefing that will be served to the captain whenever they check in during the pause.
+
+**Assemble with `--kind=evergreen`:**
+
+```bash
+swain briefing assemble --user=<userId> --kind=evergreen --items='<json>' --json
+```
+
+The backend stores it as evergreen, clears `needsSleepBriefing`, and suppresses the platform push — because this isn't a "new briefing" event, it's a passive fallback.
+
+**Do NOT send an iMessage for evergreen briefings.** The captain paused because they stopped engaging. Pinging them defeats the whole point. Generate, assemble, exit.
+
+**Tone: warm and reason-agnostic.** Don't reference why they're paused. Don't say "we haven't heard from you" or "checking in." Treat it like a friend at the marina who's just glad to see them whenever they wander by.
+
+**Content:**
+- Welcome-back greeting in advisor voice
+- Boat art (still open with it — it's the hook regardless)
+- Seasonal/regional notes true for a whole month (e.g., "mahi push through the gulf stream in spring," not "mahi bite tomorrow")
+- Reference the captain's boat, waters, interests — personalization is the whole point
+- Optional closer: "I'll have something fresh for you next time you swing by"
+
+**Avoid in evergreen:**
+- Dates, "today," day-of-week
+- Weather, tides, wind, current conditions
+- News, events, anything time-sensitive
+- Anything that would feel stale a week or a month later
+
+One evergreen per pause cycle. If the captain re-pauses later, backend flips `needsSleepBriefing` back to true and you'll generate a fresh one then.
+
+**Auto-resume:** captain viewing a daily (not evergreen) briefing clears `pausedAt` on the backend. Your next run sees `paused: false` and generates normally — no action needed from you.
+
 ## Send the iMessage
+
+**Skip this step if you just built an evergreen briefing.**
 
 After assembly, send your captain an iMessage. **Only use `swain-reply`.** There is no other command for sending messages — no `swain notify`, no `swain message`, nothing else.
 
@@ -86,7 +133,7 @@ swain-reply "im:+1XXXXXXXXXX" "Your message here — https://www.heyswain.com/ap
 
 Use the iMessage chat ID from your CLAUDE.md (`im:<phone>` format). The cron prompt also includes it explicitly.
 
-**Check engagement first.** Run `swain user engagement <userId> --json` before writing your message. How long they've been quiet changes what you say:
+**Tune message by engagement.** You already ran `swain user engagement` in Step 0. Reuse that data — how long they've been quiet changes what you say:
 
 - **Active recently:** Casual, playful. Lead with something specific from today's briefing.
 - **Quiet 3+ days:** Hook them — tease the most interesting card. Make them curious.

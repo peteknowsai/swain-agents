@@ -223,11 +223,17 @@ async function assembleBriefing(args: string[]): Promise<void> {
   const userId = params['user'] || params['user-id'];
   const date = params['date'];
   const itemsJson = params['items'];
+  const kind = params['kind'];
   const force = args.includes('--force');
   const jsonOutput = params['json'] === 'true';
 
   if (!userId || !itemsJson) {
-    printError('Usage: swain briefing assemble --user=<userId> --items=\'<json>\' [--date=YYYY-MM-DD] [--json]');
+    printError('Usage: swain briefing assemble --user=<userId> --items=\'<json>\' [--kind=daily|evergreen] [--date=YYYY-MM-DD] [--json]');
+    process.exit(1);
+  }
+
+  if (kind && kind !== 'daily' && kind !== 'evergreen') {
+    printError(`Invalid --kind: ${kind}. Must be 'daily' or 'evergreen'.`);
     process.exit(1);
   }
 
@@ -251,6 +257,7 @@ async function assembleBriefing(args: string[]): Promise<void> {
   const body: Record<string, any> = { userId, items };
   if (date) body.date = date;
   if (force) body.force = true;
+  if (kind) body.kind = kind;
 
   const result = await workerRequest('/briefings/assemble', {
     method: 'POST',
@@ -492,6 +499,7 @@ ${colors.bold}OPTIONS${colors.reset}
   --date=<YYYY-MM-DD>     Date (for create/assemble/previous/validate, default: today)
   --days=<n>              Number of days for history (default: 7)
   --items=<json>          JSON array of items (for assemble/validate)
+  --kind=<daily|evergreen> Briefing kind (for assemble, default: daily)
   --force                 (deprecated, ignored) Briefings are append-only
   --confirm               Required for delete (safety net)
   --limit=<n>             Limit results (for list, default: 20)
@@ -508,6 +516,7 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain briefing validate --user=user_abc123 --items='[{"type":"card","id":"card_abc"}]'
   swain briefing delete briefing_xyz789 --confirm
   swain briefing assemble --user=user_abc123 --items='[{"type":"text","content":"Morning!"},{"type":"card","id":"card_abc"}]'
+  swain briefing assemble --user=user_abc123 --kind=evergreen --items='[{"type":"text","content":"Welcome back, captain..."}]'
 `);
 }
 

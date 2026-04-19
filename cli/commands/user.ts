@@ -365,6 +365,10 @@ async function getEngagement(args: string[]): Promise<void> {
     sentByAdvisor: imessageStats?.sent ?? 0,
     receivedFromCaptain: imessageStats?.received ?? 0,
     onboardedAt: convexEngagement?.onboardedAt ?? null,
+    paused: convexEngagement?.paused ?? false,
+    pausedAt: convexEngagement?.pausedAt ?? null,
+    pausedReason: convexEngagement?.pausedReason ?? null,
+    needsSleepBriefing: convexEngagement?.needsSleepBriefing ?? false,
   };
 
   if (jsonOutput) {
@@ -381,6 +385,11 @@ async function getEngagement(args: string[]): Promise<void> {
   print(`  Total Messages:  ${engagement.totalMessages} (${engagement.sentByAdvisor} sent / ${engagement.receivedFromCaptain} received)`);
   print(`  Briefings (7d):  ${engagement.briefingsOpened7d}`);
   print(`  Onboarded:       ${engagement.onboardedAt || '-'}`);
+  if (engagement.paused) {
+    const reason = engagement.pausedReason ? ` (${engagement.pausedReason})` : '';
+    print(`  ${colors.yellow}Paused:          ${engagement.pausedAt || 'yes'}${reason}${colors.reset}`);
+    print(`  ${colors.yellow}Needs sleep brf: ${engagement.needsSleepBriefing ? 'yes' : 'no'}${colors.reset}`);
+  }
   print('');
 }
 

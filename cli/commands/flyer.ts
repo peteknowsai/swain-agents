@@ -317,6 +317,38 @@ async function runUpdate(args: string[]): Promise<void> {
 }
 
 /**
+ * swain flyer backlog --desk=<name> [--json]
+ * Count of unswiped flyers on a desk (scoped to non-paused captains + desk-wide).
+ * Skills use this to skip a run when backlog is high.
+ */
+async function backlogFlyers(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const jsonOutput = isJsonMode(params);
+  const desk = params['desk'];
+
+  if (!desk) {
+    printError('Usage: swain flyer backlog --desk=<name> [--json]');
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/desks/${desk}/flyer-backlog`);
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (!result.success) {
+    printError(result.error || 'Failed to fetch flyer backlog');
+    process.exit(1);
+  }
+
+  print(`\n${colors.bold}FLYER BACKLOG${colors.reset} for ${desk}\n`);
+  print(`  Unswiped: ${result.unseen}`);
+  print('');
+}
+
+/**
  * Show help
  */
 function showHelp(): void {
@@ -326,6 +358,7 @@ ${colors.bold}swain flyer${colors.reset} - Flyer management
 ${colors.bold}COMMANDS${colors.reset}
   batch                   Submit a batch of flyers
   list                    List flyers with optional filters
+  backlog                 Count unswiped flyers on a desk
   run-start               Log start of a flyer generation run
   run-update <runId>      Update run status (completed/failed)
 
@@ -350,6 +383,7 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain flyer list --desk=nyc-harbor --date=2026-03-12 --json
   swain flyer list --user=user_abc --status=liked --json
   swain flyer list --status=active --limit=20 --json
+  swain flyer backlog --desk=nyc-harbor --json
   swain flyer run-start --desk=nyc-harbor --agent=nyc-harbor-desk --json
   swain flyer run-start --user=user_abc --agent=pool-05 --json
   swain flyer run-update run_abc123 --status=completed --flyer-count=12 --json
@@ -371,6 +405,9 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'list':
         await listFlyers(commandArgs);
+        break;
+      case 'backlog':
+        await backlogFlyers(commandArgs);
         break;
       case 'run-start':
         await runStart(commandArgs);

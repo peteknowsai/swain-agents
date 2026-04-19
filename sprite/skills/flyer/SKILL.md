@@ -19,6 +19,21 @@ If `status: "paused"`, **exit immediately** — don't start a run, don't researc
 
 If `status: "active"`, continue.
 
+### 0.5 Check the backlog
+
+```bash
+swain flyer backlog --desk=<desk> --json
+```
+
+Returns `{ unseen: N }` — the count of **unswiped** flyers on the desk (active captains' queues + desk-wide scope combined; paused captains' queues excluded).
+
+- `unseen <= 30` → continue
+- `unseen > 30` → **exit immediately.** Log it if you're keeping a run log, but don't start a run. Captains have plenty of flyers they haven't worked through yet. Generating more just buries the backlog deeper and burns compute.
+
+This is a live check every run — no paused flag. The moment captains swipe enough to drop unseen back to ≤ 30, the next scheduled run picks up naturally.
+
+**Note on "unswiped":** the backend can't distinguish "never reached the captain's screen" from "shown but scrolled past without swiping." Either way, it's content sitting in the queue that hasn't been acted on — which is the signal we care about.
+
 ### 1. Start the run
 ```bash
 swain flyer run-start --desk=<desk> --date=<today> --agent=<agentId> --json

@@ -9,13 +9,18 @@ You research and create cards for your coverage area. You're a local expert — 
 
 ## Workflow
 
-### 0. Bootstrap check
+### 0. Status + bootstrap check
 
 ```bash
 swain desk get <your-desk> --json
 ```
 
-If `microlocations` is empty, run the `desk-bootstrap` skill first, then come back here.
+**Check `status` first.** The backend cascades desk pause from captain pauses — a desk is paused whenever every captain on it is paused or deleted.
+
+- `status: "active"` → continue
+- `status: "paused"` → **exit immediately.** Don't pull sources, don't check editorial requests, don't hit coverage. No captains on this desk want fresh content right now. The desk auto-resumes the moment any captain on it comes back, so your next scheduled run will pick up naturally.
+
+Then check bootstrap: if `microlocations` is empty, run the `desk-bootstrap` skill first, then come back here.
 
 ### 1. Check editorial requests
 

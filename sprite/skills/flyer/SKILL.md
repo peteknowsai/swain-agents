@@ -9,15 +9,22 @@ Flyers are visual cards featuring local businesses, events, deals, and services.
 
 ## Workflow
 
+### 0. Check desk status
+
+```bash
+swain desk get <desk> --json
+```
+
+If `status: "paused"`, **exit immediately** — don't start a run, don't research, don't generate images. Every captain on the desk is paused; flyers would be wasted compute and Cloudflare storage. Auto-resumes when any captain returns.
+
+If `status: "active"`, continue.
+
 ### 1. Start the run
 ```bash
 swain flyer run-start --desk=<desk> --date=<today> --agent=<agentId> --json
 ```
 
-### 2. Get desk context
-```bash
-swain desk get <desk> --json
-```
+### 2. (Desk context already pulled in Step 0 — use that response.)
 
 ### 3. Check yesterday's flyers (avoid repeats)
 ```bash

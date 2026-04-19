@@ -2,7 +2,7 @@
 
 /**
  * User Commands
- * swain user list|get|update|engagement|onboard-status
+ * swain user list|get|update|engagement|pause|resume|onboard-status
  */
 
 import {
@@ -393,6 +393,81 @@ async function getEngagement(args: string[]): Promise<void> {
   print('');
 }
 
+/**
+ * swain user pause <userId> [--reason=manual|auto_inactive] [--json]
+ * Manually pause a captain (skips daily briefings, cascades to desk).
+ */
+async function pauseUser(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = params['user'] || args.find(a => !a.startsWith('--'));
+  const reason = params['reason'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: swain user pause <userId> [--reason=manual|auto_inactive] [--json]');
+    process.exit(1);
+  }
+
+  if (reason && reason !== 'manual' && reason !== 'auto_inactive') {
+    printError(`Invalid --reason: ${reason}. Must be 'manual' or 'auto_inactive'.`);
+    process.exit(1);
+  }
+
+  const body: Record<string, string> = {};
+  if (reason) body.reason = reason;
+
+  const result = await workerRequest(`/users/${userId}/pause`, {
+    method: 'POST',
+    body,
+  });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (!result.success) {
+    printError(result.error || 'Failed to pause user');
+    process.exit(1);
+  }
+
+  printSuccess(`Paused ${userId}${reason ? ` (${reason})` : ''}`);
+  print('');
+}
+
+/**
+ * swain user resume <userId> [--json]
+ * Manually resume a paused captain (reactivates desk if it was paused alongside).
+ */
+async function resumeUser(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = params['user'] || args.find(a => !a.startsWith('--'));
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: swain user resume <userId> [--json]');
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/users/${userId}/resume`, {
+    method: 'POST',
+    body: {},
+  });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (!result.success) {
+    printError(result.error || 'Failed to resume user');
+    process.exit(1);
+  }
+
+  printSuccess(`Resumed ${userId}`);
+  print('');
+}
+
 function showHelp(): void {
   print(`
 ${colors.bold}swain user${colors.reset} - User management
@@ -402,6 +477,8 @@ ${colors.bold}COMMANDS${colors.reset}
   get <userId>            Get user details (includes advisor memories)
   update <userId>         Update user profile fields
   engagement <userId>     Get engagement stats (last active, message count)
+  pause <userId>          Manually pause a captain (cascades to desk)
+  resume <userId>         Manually resume a paused captain
   onboard-status <id>     Get or set onboarding status
 
 ${colors.bold}UPDATE FIELDS${colors.reset}
@@ -444,6 +521,7 @@ ${colors.bold}UPDATE FIELDS${colors.reset}
 ${colors.bold}OPTIONS${colors.reset}
   --limit=<n>             Limit results (for list, default: 200)
   --status=<status>       Set onboarding status (in_progress|completed)
+  --reason=<reason>       Pause reason: manual|auto_inactive (default: manual)
   --json                  Output as JSON
 
 ${colors.bold}EXAMPLES${colors.reset}
@@ -453,6 +531,9 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain user update user_abc123 --marinaLocation=fort-lauderdale --location="Fort Lauderdale, FL"
   swain user update user_abc123 --experienceLevel=beginner --primaryUse="fishing,diving" --json
   swain user engagement user_abc123 --json
+  swain user pause user_abc123
+  swain user pause user_abc123 --reason=auto_inactive
+  swain user resume user_abc123
   swain user onboard-status user_abc123
   swain user onboard-status user_abc123 --status=completed
 `);
@@ -475,6 +556,12 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'engagement':
         await getEngagement(commandArgs);
+        break;
+      case 'pause':
+        await pauseUser(commandArgs);
+        break;
+      case 'resume':
+        await resumeUser(commandArgs);
         break;
       case 'onboard-status':
         await onboardStatus(commandArgs);

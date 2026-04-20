@@ -369,6 +369,9 @@ async function getEngagement(args: string[]): Promise<void> {
     pausedAt: convexEngagement?.pausedAt ?? null,
     pausedReason: convexEngagement?.pausedReason ?? null,
     needsSleepBriefing: convexEngagement?.needsSleepBriefing ?? false,
+    outreachPaused: convexEngagement?.outreachPaused ?? false,
+    outreachPausedAt: convexEngagement?.outreachPausedAt ?? null,
+    outreachPausedReason: convexEngagement?.outreachPausedReason ?? null,
   };
 
   if (jsonOutput) {
@@ -389,6 +392,10 @@ async function getEngagement(args: string[]): Promise<void> {
     const reason = engagement.pausedReason ? ` (${engagement.pausedReason})` : '';
     print(`  ${colors.yellow}Paused:          ${engagement.pausedAt || 'yes'}${reason}${colors.reset}`);
     print(`  ${colors.yellow}Needs sleep brf: ${engagement.needsSleepBriefing ? 'yes' : 'no'}${colors.reset}`);
+  }
+  if (engagement.outreachPaused) {
+    const reason = engagement.outreachPausedReason ? ` — "${engagement.outreachPausedReason}"` : '';
+    print(`  ${colors.yellow}Outreach muted:  ${engagement.outreachPausedAt || 'yes'}${reason}${colors.reset}`);
   }
   print('');
 }
@@ -468,6 +475,79 @@ async function resumeUser(args: string[]): Promise<void> {
   print('');
 }
 
+/**
+ * swain user outreach-pause <userId> --reason="<verbatim quote>" [--json]
+ * Stop unsolicited outbound messages to a captain. Orthogonal to content pause —
+ * briefings still build, only the push/notification side is muted. Replies to
+ * captain-initiated messages are still allowed.
+ */
+async function outreachPauseUser(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = params['user'] || args.find(a => !a.startsWith('--'));
+  const reason = params['reason'];
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: swain user outreach-pause <userId> --reason="<verbatim quote>" [--json]');
+    process.exit(1);
+  }
+
+  const body: Record<string, string> = {};
+  if (reason) body.reason = reason;
+
+  const result = await workerRequest(`/users/${userId}/pauseOutreach`, {
+    method: 'POST',
+    body,
+  });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (!result.success) {
+    printError(result.error || 'Failed to pause outreach');
+    process.exit(1);
+  }
+
+  printSuccess(`Outreach paused for ${userId}${reason ? ` — "${reason}"` : ''}`);
+  print('');
+}
+
+/**
+ * swain user outreach-resume <userId> [--json]
+ * Re-enable unsolicited outbound messages. Only runs when the captain has
+ * explicitly asked to be contacted again.
+ */
+async function outreachResumeUser(args: string[]): Promise<void> {
+  const params = parseArgs(args);
+  const userId = params['user'] || args.find(a => !a.startsWith('--'));
+  const jsonOutput = params['json'] === 'true';
+
+  if (!userId) {
+    printError('Usage: swain user outreach-resume <userId> [--json]');
+    process.exit(1);
+  }
+
+  const result = await workerRequest(`/users/${userId}/resumeOutreach`, {
+    method: 'POST',
+    body: {},
+  });
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (!result.success) {
+    printError(result.error || 'Failed to resume outreach');
+    process.exit(1);
+  }
+
+  printSuccess(`Outreach resumed for ${userId}`);
+  print('');
+}
+
 function showHelp(): void {
   print(`
 ${colors.bold}swain user${colors.reset} - User management
@@ -479,6 +559,8 @@ ${colors.bold}COMMANDS${colors.reset}
   engagement <userId>     Get engagement stats (last active, message count)
   pause <userId>          Manually pause a captain (cascades to desk)
   resume <userId>         Manually resume a paused captain
+  outreach-pause <userId> Mute unsolicited outbound (captain asked to stop)
+  outreach-resume <userId>  Un-mute unsolicited outbound
   onboard-status <id>     Get or set onboarding status
 
 ${colors.bold}UPDATE FIELDS${colors.reset}
@@ -534,6 +616,8 @@ ${colors.bold}EXAMPLES${colors.reset}
   swain user pause user_abc123
   swain user pause user_abc123 --reason=auto_inactive
   swain user resume user_abc123
+  swain user outreach-pause user_abc123 --reason="stop texting me"
+  swain user outreach-resume user_abc123
   swain user onboard-status user_abc123
   swain user onboard-status user_abc123 --status=completed
 `);
@@ -562,6 +646,12 @@ export async function run(args: string[]): Promise<void> {
         break;
       case 'resume':
         await resumeUser(commandArgs);
+        break;
+      case 'outreach-pause':
+        await outreachPauseUser(commandArgs);
+        break;
+      case 'outreach-resume':
+        await outreachResumeUser(commandArgs);
         break;
       case 'onboard-status':
         await onboardStatus(commandArgs);

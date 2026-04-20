@@ -7,9 +7,11 @@ description: "Create personalized daily briefings for your captain. Use this ski
 
 Build a personalized daily briefing for your captain.
 
-## Step 0: Check engagement — paused captains get different treatment
+## Step 0: Check engagement — pause states drive everything
 
-**Before anything else**, run `swain user engagement <userId> --json` and branch on the pause state:
+**Before anything else**, run `swain user engagement <userId> --json`. You'll use the response twice: once here to branch on content pause, and again at the end to gate the iMessage on outreach pause.
+
+Branch on the content pause state (`paused`):
 
 ```
 paused: false                                   → normal daily workflow (below)
@@ -18,6 +20,8 @@ paused: true  && needsSleepBriefing: false      → skip entirely. Exit. Nothing
 ```
 
 The third case is the common one during a long pause — the evergreen is already served, the captain hasn't come back. Don't generate content, don't send iMessages, just end the run.
+
+**Also note `outreachPaused`** from the same response. It's independent of `paused` — a captain can have outreach muted while content still flows. You'll use it at the "Send the iMessage" step below to decide whether to push.
 
 ## Normal Daily Workflow
 
@@ -124,6 +128,8 @@ One evergreen per pause cycle. If the captain re-pauses later, backend flips `ne
 ## Send the iMessage
 
 **Skip this step if you just built an evergreen briefing.**
+
+**Skip this step if `outreachPaused: true` from Step 0.** The captain asked you to stop reaching out. The briefing is still assembled and waiting in the app — that's fine, they can open it when they want. But the push does not go out. Do not queue, do not retry later.
 
 After assembly, send your captain an iMessage. **Only use `swain-reply`.** There is no other command for sending messages — no `swain notify`, no `swain message`, nothing else.
 

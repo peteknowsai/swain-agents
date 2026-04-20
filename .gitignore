@@ -6,6 +6,7 @@ cli/bin/
 .env
 .cursor/
 .claude/worktrees/
+.claude/scheduled_tasks.lock
 .sprite
 bun.lock
 last-processed.json

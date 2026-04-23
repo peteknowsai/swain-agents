@@ -1,17 +1,17 @@
 /**
- * replicate-image.ts
+ * replicate-image.ts (historical name)
  *
- * Generate images via Replicate API (google/nano-banana-2)
- * and upload to Cloudflare Images.
+ * Generate images via OpenAI gpt-image-2 and upload to Cloudflare Images.
+ * Name is retained while callers migrate; rename to openai-image.ts in a
+ * follow-up when the Convex path also migrates.
  *
  * Env vars required:
- *   REPLICATE_API_TOKEN        — Replicate API token
+ *   OPENAI_API_KEY             — OpenAI API key
  *   CLOUDFLARE_ACCOUNT_ID      — Cloudflare account ID
  *   CLOUDFLARE_IMAGES_API_TOKEN — Cloudflare Images API token
  */
 
-const REPLICATE_MODEL_URL =
-  "https://api.replicate.com/v1/models/google/nano-banana-2/predictions";
+import OpenAI from "openai";
 
 const CF_DELIVERY_HASH = process.env.CLOUDFLARE_DELIVERY_HASH || "7NA-8FN5mTUANBxov63ekA";
 const CF_DELIVERY_BASE = `https://imagedelivery.net/${CF_DELIVERY_HASH}`;
@@ -19,21 +19,43 @@ const CF_DELIVERY_BASE = `https://imagedelivery.net/${CF_DELIVERY_HASH}`;
 export interface ReplicateImageResult {
   url: string;        // Cloudflare delivery URL
   imageId: string;    // Cloudflare image ID
-  replicateId: string; // Replicate prediction ID
+  replicateId: string; // OpenAI response id (field name kept for caller compat)
+}
+
+type Size = "1024x1024" | "1536x1024" | "1024x1536" | "auto";
+type Quality = "low" | "medium" | "high" | "auto";
+
+/**
+ * Collapse the rich aspect-ratio strings we accept (1:1, 4:3, 16:9, 21:9,
+ * 9:16, match_input_image, …) into the 3 pixel sizes gpt-image-2 supports.
+ */
+export function aspectToSize(aspect?: string): Size {
+  if (!aspect || aspect === "1:1" || aspect === "square") return "1024x1024";
+  if (aspect === "match_input_image" || aspect === "auto") return "auto";
+  const [w, h] = aspect.split(":").map(Number);
+  if (!w || !h) return "1024x1024";
+  if (Math.abs(w - h) / Math.max(w, h) < 0.05) return "1024x1024";
+  return w > h ? "1536x1024" : "1024x1536";
 }
 
 /**
- * Check that all required env vars are set. Throws with a clear message if not.
+ * Map the legacy --resolution flag to OpenAI quality tiers.
+ * 2K/4K is how agents request the merch-upscale spend today; map those to
+ * high quality. Everything else gets medium (the day-to-day default).
  */
+export function resolutionToQuality(resolution?: string): Quality {
+  return resolution === "2K" || resolution === "4K" ? "high" : "medium";
+}
+
 function checkEnv(): {
-  replicateToken: string;
+  openaiKey: string;
   cfAccountId: string;
   cfImagesToken: string;
 } {
-  const replicateToken = process.env.REPLICATE_API_TOKEN;
-  if (!replicateToken) {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) {
     throw new Error(
-      "REPLICATE_API_TOKEN is not set. Ask Pete for the token and add it to your environment."
+      "OPENAI_API_KEY is not set. Add it to the 1Password environment or your shell."
     );
   }
 
@@ -51,157 +73,90 @@ function checkEnv(): {
     );
   }
 
-  return { replicateToken, cfAccountId, cfImagesToken };
+  return { openaiKey, cfAccountId, cfImagesToken };
 }
 
-/**
- * Extract the image URL from a Replicate prediction output.
- * NB2 may return { images: [{ url }] } or a flat array/string.
- */
-function extractOutputUrl(output: any): string {
-  const url = output?.images?.[0]?.url
-    ?? (Array.isArray(output) ? output[0] : output);
-  if (!url || typeof url !== 'string') {
-    throw new Error(`Unexpected Replicate output shape: ${JSON.stringify(output)}`);
-  }
-  return url;
-}
-
-/**
- * Create a prediction on Replicate and poll until complete.
- * Returns the output image URL from Replicate (temporary).
- */
-async function runReplicate(
+async function runOpenAI(
   prompt: string,
-  replicateToken: string,
+  openaiKey: string,
   imageInputUrl?: string,
   aspectRatio?: string,
-  resolution?: string
-): Promise<{ outputUrl: string; predictionId: string }> {
-  // Build input — image-to-image when a source image is provided
-  const input: Record<string, any> = {
-    prompt,
-    aspect_ratio: imageInputUrl ? "match_input_image" : (aspectRatio || "4:3"),
-    output_format: "jpg",
-    resolution: resolution || "1K",
-  };
+  resolution?: string,
+): Promise<{ pngBuffer: Buffer; responseId: string }> {
+  const openai = new OpenAI({ apiKey: openaiKey });
+  const size = aspectToSize(aspectRatio);
+  const quality = resolutionToQuality(resolution);
+
+  console.log(
+    `[openai-image] q=${quality} size=${size} img2img=${!!imageInputUrl} prompt=${prompt.length}ch`
+  );
+
   if (imageInputUrl) {
-    input.image_input = [imageInputUrl];
-  }
-
-  // Create prediction
-  const createRes = await fetch(REPLICATE_MODEL_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${replicateToken}`,
-      "Content-Type": "application/json",
-      Prefer: "wait",  // Use Replicate's sync mode — waits up to 60s
-    },
-    body: JSON.stringify({ input }),
-  });
-
-  if (!createRes.ok) {
-    const errText = await createRes.text();
-    throw new Error(
-      `Replicate create prediction failed [${createRes.status}]: ${errText}`
-    );
-  }
-
-  let prediction = (await createRes.json()) as any;
-
-  // If the "Prefer: wait" header worked, we may already have output
-  if (prediction.status === "succeeded" && prediction.output) {
-    const outputUrl = extractOutputUrl(prediction.output);
-    return { outputUrl, predictionId: prediction.id };
-  }
-
-  if (prediction.status === "failed" || prediction.status === "canceled") {
-    throw new Error(
-      `Replicate prediction ${prediction.status}: ${prediction.error || "unknown error"}`
-    );
-  }
-
-  // Poll for completion
-  const pollUrl =
-    prediction.urls?.get ||
-    `https://api.replicate.com/v1/predictions/${prediction.id}`;
-  const maxPollTime = 120_000; // 2 minutes
-  const pollInterval = 2_000;
-  const startTime = Date.now();
-
-  while (Date.now() - startTime < maxPollTime) {
-    await new Promise((r) => setTimeout(r, pollInterval));
-
-    const pollRes = await fetch(pollUrl, {
-      headers: { Authorization: `Bearer ${replicateToken}` },
+    const r = await fetch(imageInputUrl);
+    if (!r.ok) {
+      throw new Error(`Failed to fetch input image [${r.status}]`);
+    }
+    const ab = await r.arrayBuffer();
+    const type = r.headers.get("content-type") || "image/png";
+    const ext = type.includes("jpeg") ? "jpg" : type.includes("webp") ? "webp" : "png";
+    const file = new File([ab], `input.${ext}`, { type });
+    const res = await openai.images.edit({
+      model: "gpt-image-2",
+      prompt,
+      image: file,
+      size,
+      quality,
+      n: 1,
     });
-
-    if (!pollRes.ok) {
-      const errText = await pollRes.text();
-      throw new Error(
-        `Replicate poll failed [${pollRes.status}]: ${errText}`
-      );
+    const first = res.data?.[0];
+    if (!first?.b64_json) {
+      throw new Error("OpenAI images.edit returned no image data");
     }
-
-    prediction = await pollRes.json();
-
-    if (prediction.status === "succeeded" && prediction.output) {
-      const outputUrl = extractOutputUrl(prediction.output);
-      return { outputUrl, predictionId: prediction.id };
-    }
-
-    if (prediction.status === "failed" || prediction.status === "canceled") {
-      throw new Error(
-        `Replicate prediction ${prediction.status}: ${prediction.error || "unknown error"}`
-      );
-    }
-
-    // Still processing — continue polling
+    return {
+      pngBuffer: Buffer.from(first.b64_json, "base64"),
+      responseId: String(res.created ?? Date.now()),
+    };
   }
 
-  throw new Error("Replicate prediction timed out after 120s");
+  const res = await openai.images.generate({
+    model: "gpt-image-2",
+    prompt,
+    size,
+    quality,
+    n: 1,
+  });
+  const first = res.data?.[0];
+  if (!first?.b64_json) {
+    throw new Error("OpenAI images.generate returned no image data");
+  }
+  return {
+    pngBuffer: Buffer.from(first.b64_json, "base64"),
+    responseId: String(res.created ?? Date.now()),
+  };
 }
 
-/**
- * Download an image from a URL and upload it to Cloudflare Images.
- * Returns the Cloudflare delivery URL and image ID.
- */
-async function uploadToCloudflare(
-  imageUrl: string,
+async function uploadBufferToCloudflare(
+  imageBuffer: Buffer,
   cfAccountId: string,
   cfImagesToken: string
 ): Promise<{ url: string; imageId: string }> {
-  // Download image bytes
-  const imgRes = await fetch(imageUrl);
-  if (!imgRes.ok) {
-    throw new Error(
-      `Failed to download image from Replicate [${imgRes.status}]`
-    );
-  }
-  const imageData = await imgRes.arrayBuffer();
-
-  // Upload to Cloudflare Images
   const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/images/v1`;
   const formData = new FormData();
   formData.append(
     "file",
-    new Blob([imageData], { type: "image/jpeg" }),
-    "image.jpg"
+    new Blob([new Uint8Array(imageBuffer)], { type: "image/png" }),
+    "image.png"
   );
 
   const cfRes = await fetch(cfUrl, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${cfImagesToken}`,
-    },
+    headers: { Authorization: `Bearer ${cfImagesToken}` },
     body: formData,
   });
 
   if (!cfRes.ok) {
     const errText = await cfRes.text();
-    throw new Error(
-      `Cloudflare Images upload failed [${cfRes.status}]: ${errText}`
-    );
+    throw new Error(`Cloudflare Images upload failed [${cfRes.status}]: ${errText}`);
   }
 
   const cfJson = (await cfRes.json()) as {
@@ -217,39 +172,40 @@ async function uploadToCloudflare(
 
   const imageId = cfJson.result.id;
   const url = `${CF_DELIVERY_BASE}/${imageId}/public`;
-
   return { url, imageId };
 }
 
 /**
- * Generate an image from a prompt using Replicate and upload to Cloudflare Images.
+ * Generate an image from a prompt using OpenAI gpt-image-2 and upload to
+ * Cloudflare Images.
  *
  * @param prompt - The image generation prompt
- * @param opts.imageInputUrl - Optional source image URL for image-to-image (restyle) mode
- * @returns Cloudflare delivery URL, image ID, and Replicate prediction ID
+ * @param opts.imageInputUrl - Optional source image URL for image-to-image (restyle)
+ * @param opts.aspectRatio   - Aspect ratio hint; mapped to the 3 sizes gpt-image-2 supports
+ * @param opts.resolution    - Legacy tier flag. "2K"/"4K" ⇒ high quality, else medium
+ * @returns Cloudflare delivery URL, image ID, and OpenAI response id
  */
 export async function generateImage(
   prompt: string,
   opts?: { imageInputUrl?: string; aspectRatio?: string; resolution?: string }
 ): Promise<ReplicateImageResult> {
-  const { replicateToken, cfAccountId, cfImagesToken } = checkEnv();
+  const { openaiKey, cfAccountId, cfImagesToken } = checkEnv();
 
-  // Step 1: Generate via Replicate (retry once on failure)
   let lastError: Error | undefined;
-  let outputUrl: string | undefined;
-  let predictionId: string | undefined;
+  let pngBuffer: Buffer | undefined;
+  let responseId: string | undefined;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const result = await runReplicate(
+      const result = await runOpenAI(
         prompt,
-        replicateToken,
+        openaiKey,
         opts?.imageInputUrl,
         opts?.aspectRatio,
         opts?.resolution
       );
-      outputUrl = result.outputUrl;
-      predictionId = result.predictionId;
+      pngBuffer = result.pngBuffer;
+      responseId = result.responseId;
       break;
     } catch (err: any) {
       lastError = err;
@@ -259,16 +215,15 @@ export async function generateImage(
     }
   }
 
-  if (!outputUrl || !predictionId) {
+  if (!pngBuffer || !responseId) {
     throw lastError || new Error("Image generation failed after 2 attempts");
   }
 
-  // Step 2: Download and upload to Cloudflare Images
-  const { url, imageId } = await uploadToCloudflare(
-    outputUrl,
+  const { url, imageId } = await uploadBufferToCloudflare(
+    pngBuffer,
     cfAccountId,
     cfImagesToken
   );
 
-  return { url, imageId, replicateId: predictionId };
+  return { url, imageId, replicateId: responseId };
 }

@@ -204,6 +204,12 @@ swain image upload --url=<imageUrl> [--filename=<name>] --json
 
 **`--mode=flyer`** switches from photo-style generation to designed promotional graphics. Use for flyers — produces bold headlines, color blocks, and layout elements instead of "no text" photography.
 
+**`--aspect-ratio`** accepts any W:H you want (e.g. `1:1`, `4:3`, `16:9`, `21:9`, `9:16`). The model supports three sizes internally — your aspect gets bucketed to square, landscape (1536×1024), or portrait (1024×1536). Pick whichever aspect reads your intent best.
+
+**`--resolution`** picks the cost/quality tier:
+- `1K` (or omit): medium quality — the default for day-to-day work
+- `2K` / `4K`: high quality — use only for merch upscales, when a captain has committed to ordering something physical (print, mug, sticker). Substantially more expensive.
+
 ### Setup & Skills
 ```bash
 swain setup [--dir=<path>] --json

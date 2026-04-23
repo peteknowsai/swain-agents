@@ -24,107 +24,9 @@ import { sendMessageToSprite, checkHealth } from "./lib/sprites.ts";
 import { runCatchUp, setLastProcessed } from "./lib/catchup.ts";
 
 const PORT = Number(process.env.BRIDGE_PORT ?? 3848);
-const SWAIN_API_URL = process.env.SWAIN_API_URL ?? "https://wandering-sparrow-224.convex.site";
-const SWAIN_API_TOKEN = process.env.SWAIN_API_TOKEN ?? "";
 
 console.log(`[bridge] registry: ${listAll().length} sprite(s) from DB`);
 
-const STOP_RE = /^(stop|stop\.|stop!|stop please|please stop|mute|unsubscribe|quit|off|no more|no more messages|leave me alone|enough)\.?!?$/i;
-const RESUME_RE = /^(start|resume|continue|go|back on|turn on|start again|start messaging|you can message me|talk to me)\.?!?$/i;
-
-async function lookupUserIdByPhone(phone: string): Promise<string | null> {
-  if (!SWAIN_API_TOKEN) {
-    console.error("[bridge] SWAIN_API_TOKEN missing — cannot look up user by phone");
-    return null;
-  }
-  const url = `${SWAIN_API_URL}/api/users/by-phone/${encodeURIComponent(phone)}`;
-  try {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${SWAIN_API_TOKEN}` } });
-    if (!res.ok) {
-      console.warn(`[bridge] by-phone lookup failed (${res.status}) for ${phone}`);
-      return null;
-    }
-    const data = (await res.json()) as { userId?: string };
-    return data.userId ?? null;
-  } catch (err) {
-    console.error(`[bridge] by-phone lookup error:`, err);
-    return null;
-  }
-}
-
-async function setOutreachPaused(
-  userId: string,
-  paused: boolean,
-  reason: string,
-): Promise<boolean> {
-  if (!SWAIN_API_TOKEN) return false;
-  const action = paused ? "pauseOutreach" : "resumeOutreach";
-  const url = `${SWAIN_API_URL}/api/users/${userId}/${action}`;
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SWAIN_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(paused ? { reason } : {}),
-    });
-    if (!res.ok) {
-      console.warn(`[bridge] ${action} failed (${res.status}) for ${userId}`);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error(`[bridge] ${action} error:`, err);
-    return false;
-  }
-}
-
-/**
- * Detect opt-out / opt-in keywords and flip the outreach flag deterministically.
- * Returns true if the message was handled here — caller should NOT forward to sprite.
- */
-async function handleOutreachControl(parsed: {
-  text: string;
-  address: string;
-}): Promise<boolean> {
-  const trimmed = parsed.text.trim();
-  const isStop = STOP_RE.test(trimmed);
-  const isResume = RESUME_RE.test(trimmed);
-  if (!isStop && !isResume) return false;
-
-  const userId = await lookupUserIdByPhone(parsed.address);
-  if (!userId) {
-    console.log(`[bridge] outreach control from unknown phone ${parsed.address} — forwarding to sprite`);
-    return false;
-  }
-
-  if (isStop) {
-    const ok = await setOutreachPaused(userId, true, trimmed);
-    if (!ok) return false;
-    console.log(`[bridge] outreach-pause set for ${userId} ("${trimmed}")`);
-    await imessageReply(
-      parsed.address,
-      "Got it — I'll stop reaching out. Text anytime.",
-    );
-    return true;
-  }
-
-  // isResume
-  const ok = await setOutreachPaused(userId, false, trimmed);
-  if (!ok) return false;
-  console.log(`[bridge] outreach-resume set for ${userId}`);
-  await imessageReply(
-    parsed.address,
-    "You got it — I'll start sending stuff your way again.",
-  );
-  return true;
-}
-
-/**
- * Process an inbound iMessage — deliver to sprite, reply comes async.
- * Returns true if message was successfully delivered to the sprite's inbox.
- */
 async function processInboundIMessage(parsed: {
   text: string;
   address: string;
@@ -134,10 +36,6 @@ async function processInboundIMessage(parsed: {
   console.log(
     `[bridge] iMessage from ${parsed.address}: ${parsed.text.slice(0, 80)}`
   );
-
-  // Deterministic opt-out/opt-in handling — short-circuits sprite forwarding
-  const handled = await handleOutreachControl(parsed);
-  if (handled) return true;
 
   const entry = findByPhone(parsed.address) ?? findDefaultForIMessage();
   if (!entry) {
